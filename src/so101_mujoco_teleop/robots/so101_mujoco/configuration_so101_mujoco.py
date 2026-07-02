@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from lerobot.configs.robot import RobotConfig
+from lerobot.robots.config import RobotConfig
 
 
 @RobotConfig.register_subclass("so101_mujoco")
@@ -23,7 +23,10 @@ class SO101MujocoConfig(RobotConfig):
     camera_width: int = 640
     camera_height: int = 480
     camera_names: list[str] = field(default_factory=lambda: ["front", "top", "wrist"])
-    show_collision_geometry: bool = True
+    show_collision_geometry: bool = False
+
+    # Live GLFW rendering window (disable for headless/CI)
+    render_window: bool = True
 
     # Control speeds
     lin_speed: float = 0.04

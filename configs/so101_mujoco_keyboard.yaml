@@ -10,7 +10,8 @@ robot:
   camera_width: 640
   camera_height: 480
   camera_names: [front, top, wrist]
-  show_collision_geometry: true
+  show_collision_geometry: false
+  render_window: true
   lin_speed: 0.04
   yaw_speed: 1.20
   grip_speed: 0.7

@@ -1,0 +1,83 @@
+<mujoco model="SO101_Pick_Scene">
+    <include file="so101_new_calib.xml"/>
+
+    <option timestep=".001" noslip_iterations="20" noslip_tolerance="1e-6">
+      <!-- Improved contact solver for better grasping -->
+      <!-- Smaller timestep = better contact resolution -->
+      <flag contact="enable" override="enable"/>
+    </option>
+    
+    <default>
+      <!-- High friction for grasping -->
+      <!-- solimp: softer contacts = better force distribution, less penetration -->
+      <geom friction="1.0 0.005 0.0001" solimp="0.99 0.99 0.001" solref="0.01 1"/>
+    </default>
+
+    <statistic center="0.2 0.15 0.2" extent=".6"/>
+
+    <visual>
+      <headlight diffuse=".4 .4 .4" ambient=".5 .5 .5"/>
+      <global azimuth="0" elevation="-30" offheight="480" offwidth="640"/>
+      <quality offsamples="8"/>
+    </visual>
+
+    <asset>
+      <texture type="skybox" builtin="gradient" rgb1=".3 .5 .7" rgb2="0 0 0" width="32" height="512"/>
+      <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb1=".1 .2 .3" rgb2=".2 .3 .4"/>
+      <material name="grid" texture="grid" texrepeat="30 30" texuniform="true" reflectance="0"/>
+    </asset>
+
+    <worldbody>
+      <camera name="top" pos="0.2 0.25 0.5" quat="0.707107 0 0 0.707107" fovy="60"/>
+
+      <!-- Front camera - angled view showing robot and workspace in front -->
+      <camera name="front" pos="0.25 0.5 0.05" euler="-1.4 0.2 3.14159" fovy="65"/>
+      <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1" specular=".3 .3 .3"/>
+      <light pos="0.2 0.3 .5" mode="targetbodycom" target="block" diffuse=".8 .8 .8" specular=".3 .3 .3"/>
+      <geom name="floor" size="3 3 0.01" type="plane" material="grid"/>
+
+      <!-- Block for pick task - positioned in robot's forward workspace (+Y direction) -->
+      <body name="block" pos="0.2 0.15 .015">
+        <freejoint name="block"/>
+        <!-- Block dimensions: 2cm x 3cm x 1.5cm -->
+        <!-- High friction for reliable grasping -->
+        <!-- margin: prevents penetration by adding a buffer around geometry -->
+        <!-- condim: 4 = use friction cone with elliptic approximation for better grip -->
+        <!-- softer solimp: allows slight deformation, better force distribution -->
+        <geom name="block" type="box" size=".015 .015 .015" mass="0.05" rgba=".6 .3 .6 1" 
+              friction="2 0.01 0.0001" solimp="0.95 0.95 0.001" solref="0.02 1"
+              margin="0.003" condim="4"/>
+      </body>
+
+      <!-- Container for drop task - positioned to the right of robot -->
+      <body name="container" pos="0.3 0.2 0.01">
+        <!-- Container dimensions: 9cm x 9cm x 2cm height (inner 8cm x 8cm) -->
+        <!-- Wall thickness: 0.5cm, Wall height: 2cm -->
+
+        <!-- Bottom plate -->
+        <geom name="container_bottom" type="box" size="0.045 0.045 0.0025" pos="0 0 -0.00975" rgba="0.8 0.6 0.4 1"/>
+
+        <!-- Side walls -->
+        <geom name="container_side_x_neg" type="box" size="0.0025 0.04 0.01" pos="-0.0425 0 0" rgba="0.8 0.6 0.4 1"/>
+        <geom name="container_side_x_pos" type="box" size="0.0025 0.04 0.01" pos="0.0425 0 0" rgba="0.8 0.6 0.4 1"/>
+        <geom name="container_side_y_neg" type="box" size="0.045 0.0025 0.01" pos="0 -0.0425 0" rgba="0.8 0.6 0.4 1"/>
+        <geom name="container_side_y_pos" type="box" size="0.045 0.0025 0.01" pos="0 0.0425 0" rgba="0.8 0.6 0.4 1"/>
+      </body>
+
+      <!-- Mocap target for operational space control -->
+      <body name="target" pos="0.2 0.15 .3" quat="0 1 0 0" mocap="true">
+        <geom name="target" type="box" size=".03 .03 .03" contype="0" conaffinity="0" rgba=".6 .3 .3 0"/>
+      </body>
+    </worldbody>
+
+    <sensor>
+      <framepos name="block_pos" objtype="geom" objname="block"/>
+      <framequat name="block_quat" objtype="geom" objname="block"/>
+
+      <!-- SO-101 end-effector sensors -->
+      <framepos name="so101/ee_pos" objtype="site" objname="gripperframe"/>
+      <framequat name="so101/ee_quat" objtype="site" objname="gripperframe"/>
+      <framelinvel name="so101/ee_vel" objtype="site" objname="gripperframe"/>
+      <frameangvel name="so101/ee_angvel" objtype="site" objname="gripperframe"/>
+    </sensor>
+  </mujoco>
