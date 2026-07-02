@@ -1,0 +1,40 @@
+[project]
+name = "so101-mujoco-teleop"
+version = "0.1.0"
+description = "SO-101 MuJoCo teleoperation and dataset collection with LeRobot"
+requires-python = ">=3.12"
+dependencies = [
+    "mujoco>=3.0.0,<4.0.0",
+    "scipy>=1.10.0",
+    "lerobot[kinematics]",
+    "matplotlib>=3.10.6",
+]
+
+[tool.uv.sources]
+lerobot = { path = "lerobot", editable = true }
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.0",
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+]
+smolvla = [
+    "lerobot[smolvla]",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["so101_mujoco_teleop*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
