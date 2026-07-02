@@ -1,4 +1,4 @@
-# SO-101 MuJoCo recording with Joy-Con teleop (planned)
+# SO-101 MuJoCo recording with keyboard teleop
 
 robot:
   type: so101_mujoco
@@ -11,7 +11,7 @@ robot:
   camera_height: 480
   camera_names: [front, top, wrist]
   show_collision_geometry: false
-  render_window: true
+  render_window: false
   lin_speed: 0.04
   yaw_speed: 1.20
   grip_speed: 0.7
@@ -31,16 +31,14 @@ robot:
   tool_axis_site: [0.0, -1.0, 0.0]
 
 teleop:
-  type: so101_joycon
-  side: left
-  device: auto
+  type: so101_keyboard
 
 dataset:
-  repo_id: alexhegit/so101_mujoco_joycon_test
-  root: ./datasets/joycon-test
-  single_task: "SO-101 MuJoCo Joy-Con manipulation"
+  repo_id: alexhegit/so101_mujoco_keyboard_test
+  root: ./datasets/keyboard-test
+  single_task: "SO-101 MuJoCo keyboard manipulation"
   fps: 30
-  episode_time_s: 120
+  episode_time_s: 2
   reset_time_s: 1
   num_episodes: 1
   video: true

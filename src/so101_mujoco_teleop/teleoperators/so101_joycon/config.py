@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from lerobot.configs.teleoperator import TeleoperatorConfig
+from lerobot.teleoperators.config import TeleoperatorConfig
 
 
 @TeleoperatorConfig.register_subclass("so101_joycon")

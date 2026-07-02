@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from lerobot.configs.robot import RobotConfig
+from lerobot.robots.config import RobotConfig
 
 
 @RobotConfig.register_subclass("so101_leader")
