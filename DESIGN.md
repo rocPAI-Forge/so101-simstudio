@@ -36,7 +36,8 @@ Build a clean, maintainable SO-101 teleoperation and dataset-collection project 
 │  Robot Layer  │                       │  Teleop Layer   │
 │               │                       │                 │
 │ so101_mujoco  │                       │ so101_keyboard  │
-│ so101_leader  │                       │ so101_joycon    │
+│ so101_real_   │                       │ so101_joycon    │
+│ follower      │                       │ so101_leader    │
 │ (planned)     │                       │ so101_gamepad   │
 │               │                       │ (planned)       │
 └───────┬───────┘                       └────────┬────────┘
@@ -74,7 +75,7 @@ All teleoperators produce a **normalized velocity command**:
 The robot layer converts this into its native action format:
 
 - **MuJoCo robot**: velocities are fed into a Jacobian-based controller that outputs target joint positions.
-- **Real leader robot**: velocities are integrated to target joint positions and tracked by the physical arm.
+- **Real leader robot**: velocities are integrated to target joint positions and tracked by the physical arm. The leader arm itself is a teleoperator input device, not a robot execution target.
 
 This decoupling means any teleoperator can drive any robot without code changes.
 
@@ -91,10 +92,11 @@ so101-mujoco-teleop/
 │       │   └── action_mapping.py     # Teleop output → robot action
 │       ├── robots/
 │       │   ├── so101_mujoco/         # MuJoCo simulation
-│       │   └── so101_leader/         # Real leader arm (stub)
+│       │   └── so101_real_follower/  # Real follower arm (stub)
 │       ├── teleoperators/
 │       │   ├── so101_keyboard/       # Keyboard teleop
-│       │   └── so101_joycon/         # Joy-Con teleop (stub)
+│       │   ├── so101_joycon/         # Joy-Con teleop (stub)
+│       │   └── so101_leader/         # Real leader arm as teleop input (stub)
 │       └── scripts/
 │           ├── record.py             # Optional LeRobot wrapper
 │           └── train.py              # Custom training (later)
@@ -122,9 +124,10 @@ For simplicity, this project may use a single package with namespace subpackages
 
 ```
 lerobot_robot_so101_mujoco/
-lerobot_robot_so101_leader/
+lerobot_robot_so101_real_follower/
 lerobot_teleoperator_so101_keyboard/
 lerobot_teleoperator_so101_joycon/
+lerobot_teleoperator_so101_leader/
 ```
 
 All pointing back to `src/so101_mujoco_teleop` modules.
