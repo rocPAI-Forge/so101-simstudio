@@ -12,7 +12,7 @@ class SO101LeaderTeleop(Teleoperator):
     Reads leader arm joint positions and uses them to drive a robot.
     """
 
-    name = "so101_leader"
+    name = "so101_leader_arm"
     config_class = SO101LeaderTeleopConfig
 
     def __init__(self, config: SO101LeaderTeleopConfig):

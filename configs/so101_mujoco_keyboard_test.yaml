@@ -11,7 +11,7 @@ robot:
   camera_height: 480
   camera_names: [front, top, wrist]
   show_collision_geometry: false
-  render_window: false
+  render_window: true
   lin_speed: 0.04
   yaw_speed: 1.20
   grip_speed: 0.7
@@ -38,9 +38,9 @@ dataset:
   root: ./datasets/keyboard-test
   single_task: "SO-101 MuJoCo keyboard manipulation"
   fps: 30
-  episode_time_s: 2
-  reset_time_s: 1
-  num_episodes: 1
+  episode_time_s: 30
+  reset_time_s: 3
+  num_episodes: 3
   video: true
   push_to_hub: false
   private: false
