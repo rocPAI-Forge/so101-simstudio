@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from lerobot.teleoperators.config import TeleoperatorConfig
 
 
-@TeleoperatorConfig.register_subclass("so101_leader")
+@TeleoperatorConfig.register_subclass("so101_leader_arm")
 @dataclass
 class SO101LeaderTeleopConfig(TeleoperatorConfig):
     """Configuration for using a real SO-101 leader arm as teleoperator input."""
