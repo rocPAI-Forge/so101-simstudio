@@ -18,7 +18,7 @@ source .venv/bin/activate
 python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
 
 # Record demonstrations with keyboard
-python lerobot/src/lerobot/scripts/lerobot_record.py \
+uv run python -m so101_mujoco_teleop.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml
 ```
 
@@ -34,11 +34,26 @@ python lerobot/src/lerobot/scripts/lerobot_record.py \
 
 ## Notes
 
-- Python 3.12+ is required by the latest LeRobot submodule.
+- Python 3.12+ is required.
 - `lerobot/` is a git submodule; if missing run `git submodule update --init --recursive`.
-- The SO-101 MuJoCo robot and keyboard teleop are registered with LeRobot through explicit imports in `lerobot/src/lerobot/scripts/lerobot_record.py` (the distribution-based third-party plugin discovery only sees top-level distribution names, so our namespace subpackages are imported explicitly there).
+- The project keeps `lerobot/` unmodified at runtime. SO-101 plugin registration and keyboard-listener integration are handled by project wrapper scripts under `src/so101_mujoco_teleop/scripts/`.
+- Known-good upstream LeRobot commit: `c746ca2d`.
+- Do not assume the latest LeRobot release tag is compatible with this project; upgrade the submodule only after validating record and replay flows.
 - The live recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, `FOCUSED=FALSE` and `FOCUS_ON_SHOW=FALSE` are **not** set, so the window remains visible.
 - Rendering performance depends heavily on GPU availability. On CPU-only machines the loop will run slower than 30 Hz and emit a warning, but it will still record frames and save episodes.
+
+## Commands
+
+```bash
+# Record
+uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml
+
+# Replay one episode
+uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoco_replay.yaml
+
+# Replay all episodes sequentially
+uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml
+```
 
 ## ROCm Environment
 

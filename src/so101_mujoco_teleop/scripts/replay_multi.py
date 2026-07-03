@@ -9,11 +9,10 @@ import sys
 from pathlib import Path
 
 import yaml
-
-from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-
 from lerobot.datasets import LeRobotDataset
 from lerobot.utils.utils import init_logging
+
+from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
 
 
 def main():
