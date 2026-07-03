@@ -7,9 +7,10 @@ SO-101 MuJoCo teleoperation and behavior-cloning dataset collection, built on Hu
 - **`lerobot/`**: HuggingFace LeRobot submodule (latest upstream). One import line was added to `lerobot/src/lerobot/scripts/lerobot_record.py` to register the project's third-party robot/teleop classes; see "Plugin registration" below.
 - **`src/so101_mujoco_teleop/`**: Project-specific robot and teleoperator implementations.
   - `robots/so101_mujoco/`: MuJoCo simulation robot.
-  - `robots/so101_leader/`: Real SO-101 leader arm (stub).
+  - `robots/so101_real_follower/`: Real SO-101 follower arm (stub).
   - `teleoperators/so101_keyboard/`: Keyboard teleop.
   - `teleoperators/so101_joycon/`: Nintendo Switch Joy-Con teleop (stub).
+  - `teleoperators/so101_leader/`: Real SO-101 leader arm used as teleoperator input (stub).
   - `common/`: Shared constants and action mapping utilities.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Explicit imports in `lerobot_record.py` handle registration.
 - **`SO101/`**: MuJoCo scene and robot assets.

@@ -1,19 +1,22 @@
-"""SO-101 real leader arm implementation (stub)."""
+"""SO-101 real follower arm implementation (stub)."""
 
 from lerobot.robots.robot import Robot
 from lerobot.types import RobotAction, RobotObservation
 from lerobot.utils.errors import DeviceNotConnectedError
 
-from so101_mujoco_teleop.robots.so101_leader.configuration_so101_leader import SO101LeaderConfig
+from so101_mujoco_teleop.robots.so101_real_follower.config import SO101RealFollowerConfig
 
 
-class SO101LeaderRobot(Robot):
-    """Real SO-101 leader arm (placeholder)."""
+class SO101RealFollowerRobot(Robot):
+    """Real SO-101 follower arm (placeholder).
 
-    config_class = SO101LeaderConfig
-    name = "so101_leader"
+    Receives target joint positions and drives physical motors.
+    """
 
-    def __init__(self, config: SO101LeaderConfig):
+    config_class = SO101RealFollowerConfig
+    name = "so101_real_follower"
+
+    def __init__(self, config: SO101RealFollowerConfig):
         super().__init__(config)
         self.config = config
         self._connected = False
@@ -27,10 +30,10 @@ class SO101LeaderRobot(Robot):
         return False
 
     def connect(self, calibrate: bool = True) -> None:
-        raise NotImplementedError("so101_leader hardware support not yet implemented")
+        raise NotImplementedError("so101_real_follower hardware support not yet implemented")
 
     def calibrate(self) -> None:
-        raise NotImplementedError("so101_leader hardware support not yet implemented")
+        raise NotImplementedError("so101_real_follower hardware support not yet implemented")
 
     def configure(self, **kwargs) -> None:
         pass
