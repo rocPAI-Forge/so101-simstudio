@@ -108,8 +108,7 @@ class SO101KeyboardTeleop(Teleoperator):
                 logger.info("pynput keyboard listener started successfully.")
             else:
                 logger.warning(
-                    "pynput listener started but is not alive. "
-                    "Keyboard teleoperator will produce no actions."
+                    "pynput listener started but is not alive. Keyboard teleoperator will produce no actions."
                 )
                 self.listener = None
         except Exception as e:
