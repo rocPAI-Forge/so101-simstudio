@@ -13,7 +13,8 @@ info()  { printf '\033[1;34m%s\033[0m\n' "$*"; }
 die()   { printf '\033[1;31merror: %s\033[0m\n' "$*" >&2; exit 1; }
 
 command -v uv >/dev/null || die "uv not found — https://docs.astral.sh/uv/getting-started/installation/"
-[[ "$($PYTHON --version 2>&1)" == Python<3.12* ]] && die "$PYTHON must be >=3.12"
+py_version="$($PYTHON -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+[[ "$py_version" < "3.12" ]] && die "$PYTHON must be >=3.12"
 
 SYNC_ONLY=false
 [[ "${1:-}" == "--sync" ]] && SYNC_ONLY=true
@@ -26,17 +27,23 @@ fi
 
 PY="$ROCM_VENV/bin/python"
 
-# ── install project (no-deps first to avoid pulling CUDA torch) ────────
-info "Installing so101-mujoco-teleop (editable, no-deps) ..."
-uv pip install --python "$PY" --no-deps -e ".[smolvla]"
+# ── install torch (ROCm 7.2) first, before any deps that may pull torch ──
+info "Installing torch via --torch-backend rocm7.2 ..."
+uv pip install --python "$PY" --torch-backend rocm7.2 --force-reinstall torch torchvision
 
-# ── install lerobot (local editable, no-deps) ──────────────────────────
-info "Installing lerobot (editable, no-deps) ..."
-uv pip install --python "$PY" --no-deps -e "lerobot[kinematics,smolvla]"
+TORCH_CONSTRAINTS="$(mktemp)"
+trap 'rm -f "$TORCH_CONSTRAINTS"' EXIT
+"$PY" - <<'PY' > "$TORCH_CONSTRAINTS"
+import torch
+import torchvision
 
-# ── install remaining deps (excluding torch) ────────────────────────────
+print(f"torch=={torch.__version__}")
+print(f"torchvision=={torchvision.__version__}")
+PY
+
+# ── install remaining deps, constraining torch/torchvision to ROCm builds ─
 info "Installing remaining dependencies ..."
-uv pip install --python "$PY" \
+uv pip install --python "$PY" --constraints "$TORCH_CONSTRAINTS" \
     "mujoco>=3.0.0,<4.0.0" \
     "scipy>=1.10.0" \
     "matplotlib>=3.10.6" \
@@ -46,7 +53,7 @@ uv pip install --python "$PY" \
     "cmake>=3.29.0.1" \
     "einops>=0.8.0" \
     "opencv-python-headless>=4.9.0" \
-    "av>=14.2.0" \
+    "av>=15.0.0,<16.0.0" \
     "jsonlines>=4.0.0" \
     "packaging>=24.2" \
     "pynput>=1.7.7" \
@@ -59,15 +66,20 @@ uv pip install --python "$PY" \
     "deepdiff>=7.0.1,<9.0.0" \
     "imageio[ffmpeg]>=2.34.0,<3.0.0" \
     "termcolor>=2.4.0,<4.0.0" \
-    "placo>=0.9.6" \
+    "placo>=0.9.6,<0.9.16" \
+    "cmeel-urdfdom>=4,<5" \
+    "cmeel-tinyxml2<11" \
     "transformers>=4.53.0" \
     "num2words>=0.5.14" \
     "accelerate>=1.7.0" \
     "safetensors>=0.4.3"
 
-# ── install torch (ROCm 7.2) LAST, force-reinstall to override any CUDA ─
-info "Installing torch via --torch-backend rocm7.2 ..."
-uv pip install --python "$PY" --torch-backend rocm7.2 --force-reinstall torch torchvision
+# ── install local editable packages last, without deps ───────────────────
+info "Installing so101-mujoco-teleop (editable, no-deps) ..."
+uv pip install --python "$PY" --no-deps -e ".[smolvla]"
+
+info "Installing lerobot (editable, no-deps) ..."
+uv pip install --python "$PY" --no-deps -e "lerobot[kinematics,smolvla]"
 
 # ── install dev/test deps ──────────────────────────────────────────────
 info "Installing dev/test deps ..."
