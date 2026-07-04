@@ -11,11 +11,11 @@
 - [x] 零 submodule 修改
 - [x] 插件注册 wrapper 机制
 
-## v0.0.2 (dev-v0.0.2)
+## v0.0.2 ✅ (release-v0.0.2)
 
 ### 硬件在环
-- [ ] Leader arm 遥操作（Feetech STS3215，位置直通）
-- [ ] Leader arm 校准流程
+- [x] Leader arm 遥操作（Feetech STS3215，位置直通）
+- [x] Leader arm 校准流程（复用 LeRobot SOLeader）
 - [ ] Real follower 驱动（stub → 实现）
 
 ### 数据质量
@@ -26,6 +26,13 @@
 - [ ] 数据集标注（lerobot_annotate）
 - [ ] 行为克隆训练（lerobot_train）
 - [ ] Policy 推理 + MuJoCo rollout
+
+### 工程
+- [x] 双控制范式（velocity / position）
+- [x] 自动缩放（归一化值 → MuJoCo 弧度）
+- [x] teleoperate 脚本
+- [x] llm-wiki 知识库
+- [x] ROADMAP 项目规划
 
 ### 扩展输入
 - [ ] Joy-Con 遥操作（速度范式）
