@@ -5,16 +5,24 @@
 Build a clean, maintainable SO-101 teleoperation and dataset-collection project that:
 
 1. Uses latest HuggingFace LeRobot as a submodule **without modifying it**.
-2. Runs SO-101 in MuJoCo simulation for keyboard teleop (MVP).
-3. Is architected to support Joy-Con, gamepad, and real SO-101 leader-arm teleop.
-4. Supports ROCm natively via `uv`.
-5. Uses Python 3.12+.
+2. Runs SO-101 in MuJoCo simulation with keyboard and leader-arm teleop.
+3. Supports ROCm natively via `uv`.
+4. Uses Python 3.12+.
+5. Supports behavior cloning training and policy inference.
 
-## Non-Goals (for MVP)
+## Implemented
 
-- Training pipelines (planned but not in first iteration).
-- Real robot hardware drivers (interface stubbed, implementation later).
-- Joy-Con / gamepad implementation (interface stubbed, implementation later).
+- Keyboard teleoperation (velocity paradigm)
+- Leader arm teleoperation (position paradigm, Feetech STS3215)
+- Dataset recording and replay
+- Dataset visualization (via LeRobot's Rerun viewer)
+
+## Planned
+
+- Real follower arm hardware driver
+- Joy-Con / gamepad teleoperation
+- Behavior cloning training
+- Policy inference + MuJoCo rollout
 
 ## High-Level Architecture
 
@@ -59,7 +67,9 @@ Build a clean, maintainable SO-101 teleoperation and dataset-collection project 
 
 ## Action Semantics
 
-All teleoperators produce a **normalized velocity command**:
+Two control paradigms are supported:
+
+### Velocity (keyboard, Joy-Con)
 
 ```python
 {
@@ -72,41 +82,51 @@ All teleoperators produce a **normalized velocity command**:
 }
 ```
 
-The robot layer converts this into its native action format:
+MuJoCo robot uses Jacobian-based IK to convert velocities to joint positions.
 
-- **MuJoCo robot**: velocities are fed into a Jacobian-based controller that outputs target joint positions.
-- **Real leader robot**: velocities are integrated to target joint positions and tracked by the physical arm. The leader arm itself is a teleoperator input device, not a robot execution target.
+### Position (leader arm)
 
-This decoupling means any teleoperator can drive any robot without code changes.
+```python
+{
+    "shoulder_pan.pos": float,   # rad, target joint position
+    "shoulder_lift.pos": float,
+    "elbow_flex.pos": float,
+    "wrist_flex.pos": float,
+    "wrist_roll.pos": float,
+    "gripper.pos": float,
+}
+```
+
+Leader arm outputs are auto-scaled from normalized motor values to MuJoCo radians.
 
 ## Package Layout
 
 ```
 so101-mujoco-teleop/
-├── lerobot/                          # HF LeRobot submodule
+├── lerobot/                          # HF LeRobot submodule (pinned, unmodified)
 ├── src/
 │   └── so101_mujoco_teleop/
-│       ├── __init__.py
-│       ├── common/
-│       │   ├── constants.py          # Joint names, limits, defaults
-│       │   └── action_mapping.py     # Teleop output → robot action
 │       ├── robots/
-│       │   ├── so101_mujoco/         # MuJoCo simulation
+│       │   ├── so101_mujoco/         # MuJoCo simulation (working)
 │       │   └── so101_real_follower/  # Real follower arm (stub)
 │       ├── teleoperators/
-│       │   ├── so101_keyboard/       # Keyboard teleop
+│       │   ├── so101_keyboard/       # Keyboard teleop (working)
 │       │   ├── so101_joycon/         # Joy-Con teleop (stub)
-│       │   └── so101_leader/         # Real leader arm as teleop input (stub)
+│       │   └── so101_leader/         # Leader arm teleop (working)
+│       ├── common/                   # Shared constants and action mapping
 │       └── scripts/
-│           ├── record.py             # Optional LeRobot wrapper
-│           └── train.py              # Custom training (later)
+│           ├── record.py             # LeRobot record wrapper
+│           ├── replay.py             # Episode replay
+│           ├── replay_multi.py       # Multi-episode replay
+│           ├── teleoperate.py        # Live teleoperation
+│           └── dataset_viz.py        # Dataset visualization
 ├── SO101/                            # MuJoCo assets
-├── configs/
-│   ├── so101_mujoco_keyboard.yaml
-│   └── so101_mujoco_joycon.yaml
+├── configs/                          # Recording/teleop configs
+├── llm-wiki/                         # Reusable development knowledge
 ├── scripts/
-│   └── setup-rocm.sh
-├── pyproject.toml
+│   └── setup-rocm.sh                 # ROCm environment setup
+├── ROADMAP.md                        # Development roadmap
+├── DESIGN.md
 ├── README.md
 └── AGENTS.md
 ```
