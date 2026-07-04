@@ -58,3 +58,6 @@ class SO101MujocoConfig(RobotConfig):
     # End-effector
     ee_site_name: str = "wrist_site"
     tool_axis_site: list[float] = field(default_factory=lambda: [0.0, -1.0, 0.0])
+
+    # Action mode: "velocity" (keyboard) or "position" (leader arm)
+    action_mode: str = "velocity"

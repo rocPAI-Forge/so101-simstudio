@@ -63,6 +63,7 @@ class SO101MujocoRobot(Robot):
         self.dq_filt: np.ndarray | None = None
         self.j_lo: np.ndarray | None = None
         self.j_hi: np.ndarray | None = None
+        self._mujoco_joint_range: dict[str, tuple[float, float]] = {}
 
         # Timing
         self.control_dt = 1.0 / config.control_fps
@@ -130,15 +131,18 @@ class SO101MujocoRobot(Robot):
 
     @cached_property
     def action_features(self) -> dict[str, type]:
-        """Define action structure (normalized velocity commands from teleop/policy)."""
-        return {
-            "vx": float,
-            "vy": float,
-            "vz": float,
-            "wrist_flex_rate": float,
-            "yaw_rate": float,
-            "gripper_delta": float,
-        }
+        """Define action structure based on action_mode config."""
+        if self.config.action_mode == "position":
+            return {f"{joint}.pos": float for joint in self.JOINT_NAMES}
+        else:
+            return {
+                "vx": float,
+                "vy": float,
+                "vz": float,
+                "wrist_flex_rate": float,
+                "yaw_rate": float,
+                "gripper_delta": float,
+            }
 
     @property
     def is_connected(self) -> bool:
@@ -207,6 +211,12 @@ class SO101MujocoRobot(Robot):
                 mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_JOINT, joint_name)
             ]
             self.act_ids[joint_name] = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_ACTUATOR, joint_name)
+            # Extract ctrlrange from actuator for position scaling
+            act_id = self.act_ids[joint_name]
+            self._mujoco_joint_range[joint_name] = (
+                float(self.model.actuator_ctrlrange[act_id, 0]),
+                float(self.model.actuator_ctrlrange[act_id, 1]),
+            )
 
         self.robot_qpos_indices = np.array([self.dof_ids[name] for name in self.JOINT_NAMES])
 
@@ -431,19 +441,40 @@ class SO101MujocoRobot(Robot):
         return action_to_record
 
     def _send_action_position(self, action: RobotAction) -> RobotAction:
-        """Position-based control for replay/policy execution."""
+        """Position-based control for replay/policy execution.
+
+        Supports two input ranges:
+        - Radians (from replay/policy): applied directly
+        - Normalized (from leader arm -100..+100 / 0..100): scaled to MuJoCo ctrlrange
+
+        Returns the action actually sent (scaled to radians) so the dataset
+        records consistent values.
+        """
+        scaled_action = {}
         for joint_name in self.JOINT_NAMES:
             key = f"{joint_name}.pos"
-            if key in action:
-                target_pos = float(action[key])
-                self.data.ctrl[self.act_ids[joint_name]] = target_pos
+            if key not in action:
+                continue
+            val = float(action[key])
+            # Detect if value is in normalized range (abs > pi suggests normalized)
+            if abs(val) > 4.0:
+                # Normalized leader arm range: scale to MuJoCo ctrlrange
+                if joint_name == "gripper":
+                    lo, hi = 0.0, 100.0
+                else:
+                    lo, hi = -100.0, 100.0
+                mj_lo, mj_hi = self._mujoco_joint_range[joint_name]
+                t = (val - lo) / (hi - lo)
+                val = mj_lo + t * (mj_hi - mj_lo)
+            self.data.ctrl[self.act_ids[joint_name]] = val
+            scaled_action[key] = val
 
         n_physics_steps = int((1.0 / self.config.record_fps) / self.physics_dt)
         for _ in range(n_physics_steps):
             mj.mj_step(self.model, self.data)
 
         self._render_glfw()
-        return action.copy()
+        return scaled_action
 
     def _control_step(
         self,

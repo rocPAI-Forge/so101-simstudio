@@ -38,12 +38,6 @@ git submodule update --init --recursive
 - Do not assume the latest LeRobot release tag is compatible.
 - Upgrade the submodule only in a dedicated branch, then re-run record/replay smoke tests before merging.
 
-If downloads are slow, a PyPI mirror can be used via `UV_INDEX_URL`, e.g.:
-
-```bash
-UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple uv sync
-```
-
 ## Commands
 
 | Task | Command |
@@ -53,6 +47,8 @@ UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple uv sync
 | Test | `make test` |
 | MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/pick_scene.xml` |
 | Record (keyboard) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
+| Teleoperate (leader arm) | `uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
+| Record (leader arm) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_leader.yaml` |
 | Short functional test | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
 | Replay one episode | `uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoco_replay.yaml` |
 | Replay all episodes | `uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
@@ -62,7 +58,10 @@ UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple uv sync
 
 - **Python**: 3.12+ required by latest LeRobot.
 - **LeRobot integration**: Robots and teleoperators are packaged as third-party plugins (`lerobot_robot_*` / `lerobot_teleoperator_*`) so the submodule stays unmodified. Because they share the project distribution, project wrapper scripts import their config classes explicitly before calling LeRobot entry points.
-- **Action semantics**: All teleoperators output a normalized velocity dict `{vx, vy, vz, wrist_flex_rate, yaw_rate, gripper_delta}`. The MuJoCo robot's `send_action` converts velocities into joint position targets internally; saved dataset actions are the velocity commands.
+- **Action semantics**: Two control paradigms supported:
+  - **Velocity** (keyboard): `{vx, vy, vz, wrist_flex_rate, yaw_rate, gripper_delta}` — MuJoCo robot uses Jacobian IK to convert to joint positions internally.
+  - **Position** (leader arm): `{joint.pos: float}` — direct joint position mapping,1:1 from leader to follower.
+  - MuJoCo robot's `send_action` auto-detects format via key names.
 - **Window visibility**: The MuJoCo recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, do **not** set `FOCUSED=FALSE` or `FOCUS_ON_SHOW=FALSE`, or the window may be invisible. Set `render_window: false` in the robot config to disable the GLFW window for headless/CI runs.
 - **Rendering performance**: Camera rendering is done with MuJoCo's offscreen renderer. On CPU-only machines the record loop will be slower than 30 Hz; it still records and saves episodes, but a GPU is strongly recommended for real teleoperation.
 
@@ -71,3 +70,18 @@ UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple uv sync
 - Uses `.venv-rocm` created by `scripts/setup-rocm.sh`.
 - Installs torch with `--torch-backend rocm7.2` after project deps to avoid pulling CUDA torch.
 - Commands: `make rocm-lint`, `make rocm-test`, `make rocm-format`.
+
+## Reusable Knowledge
+
+Project-agnostic development knowledge lives in `llm-wiki/`:
+
+| Topic | Path |
+|-------|------|
+| PyPI mirrors | `llm-wiki/python-dev/mirrors.md` |
+| uv constraints | `llm-wiki/python-dev/uv-constraints.md` |
+| ROCm setup | `llm-wiki/gpu-compute/rocm-setup.md` |
+| PyTorch backends | `llm-wiki/gpu-compute/torch-backends.md` |
+| Input listeners | `llm-wiki/platform-quirks/input-listeners.md` |
+| GLFW window | `llm-wiki/platform-quirks/glfw-window.md` |
+| MuJoCo | `llm-wiki/robot-sim/mujoco-setup.md` |
+| LeRobot plugins | `llm-wiki/robot-sim/lerobot-plugin.md` |
