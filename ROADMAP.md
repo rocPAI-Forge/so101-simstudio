@@ -37,7 +37,19 @@
 ### 扩展输入
 - [ ] Joy-Con 遥操作（速度范式）
 
-## 控制范式
+## v0.0.3 (dev-v0.0.3)
+
+### 数据质量
+- [x] 数据集可视化（dataset_viz 脚本，pyav 解码）
+- [ ] 录制后自动校验（帧率、动作范围、完整性）
+
+### 行为克隆
+- [ ] 数据集标注（lerobot_annotate）
+- [ ] 行为克隆训练（lerobot_train）
+- [ ] Policy 推理 + MuJoCo rollout
+
+### 扩展输入
+- [ ] Joy-Con 遥操作（速度范式）
 - **位置直通**: Leader arm → `{joint.pos}` → MuJoCo（1:1 映射）
 - **速度命令**: Keyboard / Joy-Con / VR → `{vx, vy, vz, ...}` → MuJoCo IK
 - MuJoCo robot 已支持双路径（`send_action` 自动检测）
