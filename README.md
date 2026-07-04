@@ -2,7 +2,7 @@
 
 SO-101 robotic arm teleoperation and dataset collection in MuJoCo simulation, built on top of HuggingFace LeRobot.
 
-Supports keyboard teleoperation today, with stubs reserved for Joy-Con, Xbox gamepad, and real SO-101 leader arm teleoperation.
+Supports keyboard teleoperation and real SO-101 leader arm teleoperation (Feetech STS3215).
 
 ## Quick Start
 
@@ -28,9 +28,12 @@ uv run python -m so101_mujoco_teleop.scripts.record \
 |-----------|--------|
 | SO-101 MuJoCo robot (`so101_mujoco`) | Working |
 | Keyboard teleop (`so101_keyboard`) | Working |
+| Leader arm teleop (`so101_leader`) | Working (Feetech STS3215) |
+| Dataset recording and replay | Working |
+| Dataset visualization | Working (via LeRobot Rerun) |
 | Joy-Con teleop (`so101_joycon`) | Stub |
-| SO-101 leader arm robot (`so101_leader`) | Stub |
-| Training with train/eval splits | Planned |
+| Real follower arm (`so101_real_follower`) | Stub |
+| Behavior cloning training | Planned |
 
 ## Notes
 
@@ -45,14 +48,24 @@ uv run python -m so101_mujoco_teleop.scripts.record \
 ## Commands
 
 ```bash
-# Record
+# Record with keyboard
 uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml
+
+# Teleoperate with leader arm (live control, no recording)
+uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
+
+# Record with leader arm
+uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_leader.yaml
 
 # Replay one episode
 uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoco_replay.yaml
 
 # Replay all episodes sequentially
 uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml
+
+# Visualize dataset (opens Rerun viewer)
+uv run python -m so101_mujoco_teleop.scripts.dataset_viz \
+    --repo-id <repo_id> --root <root> --episode 0
 
 # Build / repair the ROCm environment
 make rocm-sync
