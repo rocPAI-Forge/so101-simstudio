@@ -1,15 +1,38 @@
-"""SO-101 real leader arm teleoperator (stub)."""
+"""SO-101 real leader arm teleoperator.
 
-from lerobot.teleoperators.teleoperator import Teleoperator
-from lerobot.types import RobotAction
+Wraps LeRobot's SOLeader implementation for Feetech STS3215 motors.
+Reads normalized positions and scales to MuJoCo radian targets.
+"""
+
+from lerobot.teleoperators.so_leader.so_leader import SOLeader
 
 from so101_mujoco_teleop.teleoperators.so101_leader.config import SO101LeaderTeleopConfig
 
+# MuJoCo joint ranges (from so101_new_calib.xml ctrlrange)
+_MUJOCO_JOINT_RANGE = {
+    "shoulder_pan": (-1.91986, 1.91986),
+    "shoulder_lift": (-1.74533, 1.74533),
+    "elbow_flex": (-1.69, 1.69),
+    "wrist_flex": (-1.65806, 1.65806),
+    "wrist_roll": (-2.74385, 2.84121),
+    "gripper": (-0.17453, 1.74533),
+}
 
-class SO101LeaderTeleop(Teleoperator):
-    """Real SO-101 leader arm as teleoperator input (placeholder).
+# Leader arm normalized ranges (from FeetechMotorsBus norm modes)
+_LEADER_RANGE_ARM = (-100.0, 100.0)   # RANGE_M100_100 for arm joints
+_LEADER_RANGE_GRIPPER = (0.0, 100.0)  # RANGE_0_100 for gripper
 
-    Reads leader arm joint positions and uses them to drive a robot.
+
+class SO101LeaderTeleop(SOLeader):
+    """SO-101 leader arm teleoperator (Feetech STS3215, 5 DOF + gripper).
+
+    Reads joint positions via sync_read, scales normalized values to
+    MuJoCo radian targets, and outputs:
+      {shoulder_pan.pos, shoulder_lift.pos, elbow_flex.pos,
+       wrist_flex.pos, wrist_roll.pos, gripper.pos}
+
+    Output is always in MuJoCo radians, ready for direct use by
+    MuJoCo robot's send_action (position mode).
     """
 
     name = "so101_leader_arm"
@@ -17,20 +40,15 @@ class SO101LeaderTeleop(Teleoperator):
 
     def __init__(self, config: SO101LeaderTeleopConfig):
         super().__init__(config)
-        self.config = config
-        self._connected = False
 
-    def connect(self) -> None:
-        raise NotImplementedError("so101_leader teleop not yet implemented")
-
-    def is_connected(self) -> bool:
-        return self._connected
-
-    def get_action(self) -> RobotAction:
-        raise NotImplementedError("so101_leader teleop not yet implemented")
-
-    def send_feedback(self, action: RobotAction, **kwargs) -> None:
-        pass
-
-    def disconnect(self) -> None:
-        self._connected = False
+    def get_action(self) -> dict[str, float]:
+        """Read leader arm positions and scale to MuJoCo radians."""
+        raw = super().get_action()
+        scaled = {}
+        for key, val in raw.items():
+            joint = key.removesuffix(".pos")
+            lo, hi = _LEADER_RANGE_GRIPPER if joint == "gripper" else _LEADER_RANGE_ARM
+            mj_lo, mj_hi = _MUJOCO_JOINT_RANGE[joint]
+            t = (val - lo) / (hi - lo)
+            scaled[key] = mj_lo + t * (mj_hi - mj_lo)
+        return scaled

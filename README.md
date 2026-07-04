@@ -53,7 +53,20 @@ uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoc
 
 # Replay all episodes sequentially
 uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml
+
+# Build / repair the ROCm environment
+make rocm-sync
+
+# Short headless ROCm smoke test
+make rocm-smoke-record
 ```
+
+## ROCm Notes
+
+- `.venv-rocm` is a local virtualenv created by `scripts/setup-rocm.sh` / `make rocm-sync`; it is not a repo artifact and should not be committed.
+- The ROCm setup installs `torch` / `torchvision` with `--torch-backend rocm7.2` before installing the rest of the stack, to avoid accidentally resolving Linux CUDA wheels.
+- `make rocm-smoke-record` runs a short headless MuJoCo recording smoke test using `configs/so101_mujoco_keyboard_smoke.yaml`.
+- The ROCm setup intentionally pins a compatible PyAV range (`av>=15,<16`) and a stable `placo` / `pin` / `cmeel-*` combination to avoid runtime ABI issues.
 
 ## ROCm Environment
 
