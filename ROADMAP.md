@@ -39,17 +39,12 @@
 
 ## v0.0.3 (dev-v0.0.3)
 
-### 数据质量
-- [x] 数据集可视化（dataset_viz 脚本，pyav 解码）
+### 遥操作体验
+- [ ] 画中画摄像头画面（rerun 实时显示 front/top/wrist，操作者看摄像头而非仿真窗口）
 - [ ] 录制后自动校验（帧率、动作范围、完整性）
+- [ ] Joy-Con 遥操作（速度范式）
 
-### 行为克隆
-- [ ] 数据集标注（lerobot_annotate）
+### 行为克隆（延后）
 - [ ] 行为克隆训练（lerobot_train）
 - [ ] Policy 推理 + MuJoCo rollout
-
-### 扩展输入
-- [ ] Joy-Con 遥操作（速度范式）
-- **位置直通**: Leader arm → `{joint.pos}` → MuJoCo（1:1 映射）
-- **速度命令**: Keyboard / Joy-Con / VR → `{vx, vy, vz, ...}` → MuJoCo IK
-- MuJoCo robot 已支持双路径（`send_action` 自动检测）
+- > **注**: 待遥操作方案优化后再进行，确保数据质量

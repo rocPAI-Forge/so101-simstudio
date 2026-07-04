@@ -45,6 +45,21 @@ uv run python -m so101_mujoco_teleop.scripts.record \
 - The live recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, `FOCUSED=FALSE` and `FOCUS_ON_SHOW=FALSE` are **not** set, so the window remains visible.
 - Rendering performance depends heavily on GPU availability. On CPU-only machines the loop will run slower than 30 Hz and emit a warning, but it will still record frames and save episodes.
 
+## Camera Feed (Teleop)
+
+Teleop 时可在 Rerun 中实时显示摄像头画面，操作者可从摄像头视角而非第三人称仿真视角进行操控。
+
+```bash
+# 只显示 Rerun 摄像头画面（默认）
+uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode rerun
+
+# 只显示 MuJoCo 窗口
+uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode mujoco
+
+# 两个都显示
+uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode both
+```
+
 ## Commands
 
 ```bash

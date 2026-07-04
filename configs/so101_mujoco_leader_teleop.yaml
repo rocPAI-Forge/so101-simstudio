@@ -38,3 +38,4 @@ teleop:
   use_degrees: false
 
 fps: 30
+view_mode: rerun  # "mujoco", "rerun", or "both"
