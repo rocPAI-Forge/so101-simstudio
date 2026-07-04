@@ -11,14 +11,6 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-# ---------------------------------------------------------------------------
-# 1. Register project plugins with LeRobot's ChoiceRegistry.
-# ---------------------------------------------------------------------------
-from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-from so101_mujoco_teleop.teleoperators.so101_leader import (  # noqa: F401
-    SO101LeaderTeleopConfig,
-)
-
 from lerobot.configs import parser
 from lerobot.robots import RobotConfig, make_robot_from_config
 from lerobot.teleoperators import (
@@ -27,6 +19,14 @@ from lerobot.teleoperators import (
 )
 from lerobot.utils.import_utils import register_third_party_plugins
 from lerobot.utils.utils import init_logging
+
+# ---------------------------------------------------------------------------
+# 1. Register project plugins with LeRobot's ChoiceRegistry.
+# ---------------------------------------------------------------------------
+from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
+from so101_mujoco_teleop.teleoperators.so101_leader import (  # noqa: F401
+    SO101LeaderTeleopConfig,
+)
 
 
 @dataclass

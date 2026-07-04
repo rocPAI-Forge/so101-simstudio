@@ -8,7 +8,6 @@ Usage:
 """
 
 import argparse
-import sys
 
 from lerobot.datasets import LeRobotDataset
 from lerobot.utils.import_utils import register_third_party_plugins
@@ -31,7 +30,7 @@ def main():
         video_backend="pyav",
     )
 
-    print(f"\nDataset info:")
+    print("\nDataset info:")
     print(f"  Episodes: {dataset.num_episodes}")
     print(f"  Frames: {dataset.num_frames}")
     print(f"  FPS: {dataset.fps}")
@@ -54,7 +53,9 @@ def main():
     if actions:
         actions_tensor = torch.stack(actions)
         print(f"\nAction stats (first {n_samples} frames):")
-        names = dataset.features.get("action", {}).get("names", [f"dim_{i}" for i in range(actions_tensor.shape[1])])
+        names = dataset.features.get("action", {}).get(
+            "names", [f"dim_{i}" for i in range(actions_tensor.shape[1])]
+        )
         for i, name in enumerate(names):
             vals = actions_tensor[:, i]
             print(f"  {name}: min={vals.min():.4f}, max={vals.max():.4f}, mean={vals.mean():.4f}")
