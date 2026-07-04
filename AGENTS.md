@@ -52,6 +52,7 @@ git submodule update --init --recursive
 | Short functional test | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
 | Replay one episode | `uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoco_replay.yaml` |
 | Replay all episodes | `uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
+| Dataset visualization | `uv run python -m so101_mujoco_teleop.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
 | ROCm setup | `make rocm-sync` |
 
 ## Key Conventions
