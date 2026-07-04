@@ -19,7 +19,7 @@ _MUJOCO_JOINT_RANGE = {
 }
 
 # Leader arm normalized ranges (from FeetechMotorsBus norm modes)
-_LEADER_RANGE_ARM = (-100.0, 100.0)   # RANGE_M100_100 for arm joints
+_LEADER_RANGE_ARM = (-100.0, 100.0)  # RANGE_M100_100 for arm joints
 _LEADER_RANGE_GRIPPER = (0.0, 100.0)  # RANGE_0_100 for gripper
 
 
