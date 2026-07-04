@@ -64,7 +64,7 @@ def main():
         from lerobot.scripts.lerobot_dataset_viz import visualize_dataset
 
         print("\nLaunching Rerun viewer...")
-        visualize_dataset(dataset, display_mode="rerun")
+        visualize_dataset(dataset, episode_index=args.episode, display_mode="rerun")
     except Exception as e:
         print(f"\nRerun visualization unavailable: {e}")
         print("Showing basic stats only.")
