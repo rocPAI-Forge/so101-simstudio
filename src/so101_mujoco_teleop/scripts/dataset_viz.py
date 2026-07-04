@@ -8,7 +8,6 @@ Usage:
 """
 
 import argparse
-import sys
 
 from lerobot.datasets import LeRobotDataset
 from lerobot.scripts.lerobot_dataset_viz import visualize_dataset
