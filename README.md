@@ -31,7 +31,7 @@ uv run python -m so101_mujoco_teleop.scripts.record \
 | Leader arm teleop (`so101_leader`) | Working (Feetech STS3215) |
 | Dataset recording and replay | Working |
 | Dataset visualization | Working (via LeRobot Rerun) |
-| Joy-Con teleop (`so101_joycon`) | Stub |
+| Joy-Con teleop (`so101_joycon`) | Working |
 | Real follower arm (`so101_real_follower`) | Stub |
 | Behavior cloning training | Planned |
 
@@ -60,11 +60,93 @@ uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_
 uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode both
 ```
 
+## Joy-Con Teleop
+
+支持 Nintendo Switch Joy-Con 单手柄操控 SO-101 机械臂。使用 [joycon-robotics](https://github.com/box2ai-robotics/joycon-robotics) 库实现位置-速度转换。
+
+### 安装
+
+```bash
+# 安装 joycon-robotics（submodule + 补丁）
+make joycon-sync
+```
+
+### 按键映射
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Joy-Con 按键映射                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────────┐          ┌─────────────────────┐          │
+│  │     左手 Joy-Con    │          │     右手 Joy-Con    │          │
+│  ├─────────────────────┤          ├─────────────────────┤          │
+│  │                     │          │                     │          │
+│  │    [L]              │          │              [R]    │          │
+│  │   Z轴上升           │          │   Z轴上升           │          │
+│  │                     │          │                     │          │
+│  │  ┌───┐              │          │              ┌───┐  │          │
+│  │  │ ↑ │ 重录         │          │         [Y] │   │  │          │
+│  │  ├───┤              │          │              ├───┤  │          │
+│  │←─┤   ├─→ 下一ep    │          │  [A] [B]     │   │  │          │
+│  │  ├───┤              │          │              ├───┤  │          │
+│  │  │ ↓ │              │          │         [X] │   │  │          │
+│  │  └───┘              │          │              └───┘  │          │
+│  │                     │          │                     │          │
+│  │  [ZL] 夹爪关闭      │          │      [ZR] 夹爪关闭  │          │
+│  │  松开=夹爪打开      │          │      松开=夹爪打开  │          │
+│  │                     │          │                     │          │
+│  │  [-]  停止录制      │          │      [+]  停止录制  │          │
+│  │                     │          │                     │          │
+│  │  摇杆: XY平移       │          │      摇杆: XY平移   │          │
+│  │  倾斜: 腕部旋转     │          │      倾斜: 腕部旋转 │          │
+│  └─────────────────────┘          └─────────────────────┘          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 控制模式
+
+| 功能 | 描述 |
+|------|------|
+| X轴移动 | 摇杆左右 |
+| Y轴移动 | 摇杆前后 |
+| Z轴上升 | R键（右手）/ L键（左手）|
+| Z轴下降 | 摇杆按下 |
+| 腕部旋转 | 倾斜手柄（陀螺仪）|
+| 夹爪关闭 | ZR按住（右手）/ ZL按住（左手）|
+| 夹爪打开 | 松开 ZR/ZL |
+| 下一episode | A键（右手）/ 左方向键（左手）|
+| 重录当前episode | Y键（右手）/ 上方向键（左手）|
+| 停止录制 | Plus（右手）/ Minus（左手）|
+
+### 使用方法
+
+```bash
+# 右手 Joy-Con 录制
+uv run python -m so101_mujoco_teleop.scripts.record \
+    --config configs/so101_mujoco_joycon.yaml
+
+# 左手 Joy-Con 录制
+uv run python -m so101_mujoco_teleop.scripts.record \
+    --config configs/so101_mujoco_joycon_left.yaml
+
+# Joy-Con 实时控制（不录制）
+uv run python -m so101_mujoco_teleop.scripts.teleoperate \
+    --config configs/so101_mujoco_joycon_teleop.yaml
+```
+
 ## Commands
 
 ```bash
 # Record with keyboard
 uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml
+
+# Record with Joy-Con (right hand)
+uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon.yaml
+
+# Record with Joy-Con (left hand)
+uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon_left.yaml
 
 # Teleoperate with leader arm (live control, no recording)
 uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
@@ -85,6 +167,9 @@ uv run python -m so101_mujoco_teleop.scripts.dataset_viz \
 # Validate dataset quality
 uv run python -m so101_mujoco_teleop.scripts.validate_dataset \
     --root ./datasets/leader-test
+
+# Setup Joy-Con environment
+make joycon-sync
 
 # Build / repair the ROCm environment
 make rocm-sync

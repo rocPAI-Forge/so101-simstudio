@@ -9,8 +9,8 @@ SO-101 MuJoCo teleoperation and behavior-cloning dataset collection, built on Hu
   - `robots/so101_mujoco/`: MuJoCo simulation robot.
   - `robots/so101_real_follower/`: Real SO-101 follower arm (stub).
   - `teleoperators/so101_keyboard/`: Keyboard teleop.
-  - `teleoperators/so101_joycon/`: Nintendo Switch Joy-Con teleop (stub).
-  - `teleoperators/so101_leader/`: Real SO-101 leader arm used as teleoperator input (stub).
+  - `teleoperators/so101_joycon/`: Nintendo Switch Joy-Con teleop (supports left/right).
+  - `teleoperators/so101_leader/`: Real SO-101 leader arm used as teleoperator input.
   - `common/`: Shared constants and action mapping utilities.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
 - **`SO101/`**: MuJoCo scene and robot assets.
@@ -47,6 +47,8 @@ git submodule update --init --recursive
 | Test | `make test` |
 | MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/pick_scene.xml` |
 | Record (keyboard) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
+| Record (Joy-Con right) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon.yaml` |
+| Record (Joy-Con left) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
 | Teleoperate (leader arm) | `uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
 | Record (leader arm) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_leader.yaml` |
 | Short functional test | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
@@ -54,6 +56,7 @@ git submodule update --init --recursive
 | Replay all episodes | `uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
 | Dataset visualization | `uv run python -m so101_mujoco_teleop.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
 | Dataset validation | `uv run python -m so101_mujoco_teleop.scripts.validate_dataset --root <dataset_root>` |
+| Joy-Con setup | `make joycon-sync` |
 | ROCm setup | `make rocm-sync` |
 
 ## Key Conventions
