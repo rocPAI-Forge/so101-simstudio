@@ -1,0 +1,40 @@
+diff --git a/joyconrobotics/device.py b/joyconrobotics/device.py
+index 4ca7965..a0f411c 100644
+--- a/joyconrobotics/device.py
++++ b/joyconrobotics/device.py
+@@ -23,9 +23,6 @@ def get_device_ids(debug=False):
+         if not product_string:
+             continue
+         
+-        if serial[0:6] != '9c:54:':
+-            return (0x057A, product_id, serial)
+-        
+         out.append((vendor_id, product_id, serial))
+ 
+         if debug:
+diff --git a/joyconrobotics/joycon.py b/joyconrobotics/joycon.py
+index 4ee4e4a..cb1dec4 100644
+--- a/joyconrobotics/joycon.py
++++ b/joyconrobotics/joycon.py
+@@ -28,7 +28,7 @@ class JoyCon:
+             raise ValueError(f'product_id is invalid: {product_id!r}')
+         
+         if serial[:9] not in JOYCON_SERIAL_HEAD:
+-            raise ValueError(f'serial is invalid: {serial!r}')
++            print(f"\033[33mWarning: serial {serial} does not match expected format. Continuing anyway.\033[0m")
+ 
+         self.vendor_id   = vendor_id
+         self.product_id  = product_id
+diff --git a/joyconrobotics/joyconrobotics.py b/joyconrobotics/joyconrobotics.py
+index 428922d..da0ec5d 100644
+--- a/joyconrobotics/joyconrobotics.py
++++ b/joyconrobotics/joyconrobotics.py
+@@ -231,7 +231,7 @@ class JoyconRobotics:
+         self.button_control = 0
+         
+         if device_serial != JOYCON_SERIAL_SUPPORT and self.joycon_id != None:
+-            raise IOError("There is no joycon for robotics")
++            print(f"\033[33mWarning: Joy-Con serial {device_serial} does not match expected {JOYCON_SERIAL_SUPPORT}. Continuing anyway.\033[0m")
+         
+         self.running = True
+         self.lock = threading.Lock()
