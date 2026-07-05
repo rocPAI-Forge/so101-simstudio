@@ -16,16 +16,6 @@
 ### 硬件在环
 - [x] Leader arm 遥操作（Feetech STS3215，位置直通）
 - [x] Leader arm 校准流程（复用 LeRobot SOLeader）
-- [ ] Real follower 驱动（stub → 实现）
-
-### 数据质量
-- [ ] 录制后自动校验（帧率、动作范围、完整性）
-- [ ] 数据集可视化（lerobot_dataset_viz）
-
-### 行为克隆
-- [ ] 数据集标注（lerobot_annotate）
-- [ ] 行为克隆训练（lerobot_train）
-- [ ] Policy 推理 + MuJoCo rollout
 
 ### 工程
 - [x] 双控制范式（velocity / position）
@@ -33,9 +23,6 @@
 - [x] teleoperate 脚本
 - [x] llm-wiki 知识库
 - [x] ROADMAP 项目规划
-
-### 扩展输入
-- [ ] Joy-Con 遥操作（速度范式）
 
 ## v0.0.3 (dev-v0.0.3)
 
@@ -45,6 +32,15 @@
 - [ ] Joy-Con 遥操作（速度范式）
 
 ### 行为克隆（延后）
-- [ ] 行为克隆训练（lerobot_train）
-- [ ] Policy 推理 + MuJoCo rollout
 - > **注**: 待遥操作方案优化后再进行，确保数据质量
+
+## 远期任务
+
+### 自动化数据生成流水线
+- [ ] 数据集标注（lerobot_annotate，VLM 自动生成语言标签）
+- [ ] 行为克隆训练（lerobot_train）
+- [ ] Policy 推理 + MuJoCo rollout（自动生产轨迹）
+- > **流程**: 录制少量种子数据 → 标注 → 训练策略 → 策略自动 rollout → 生成大规模数据集
+
+### 真机硬件
+- [ ] Real follower 驱动（stub → 真实 SO-101 从臂实现）
