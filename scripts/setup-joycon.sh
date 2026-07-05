@@ -1,22 +1,23 @@
 #!/bin/bash
-# 安装 joycon-robotics 并应用补丁
+# 安装 joycon-robotics (submodule) 并应用补丁
 set -e
 
-JOYCON_REPO="/home/amd/Repo/joycon-robotics"
-PATCH_DIR="$(dirname "$0")/patches"
-VENV_DIR="$(dirname "$0")/.venv"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+SUBMODULE_DIR="$PROJECT_DIR/third_party/joycon-robotics"
+PATCH_FILE="$PROJECT_DIR/patches/joycon-robotics.patch"
 
 echo "=== 安装 joycon-robotics ==="
 
 # 安装到项目 venv
-cd "$(dirname "$0")"
-uv pip install -e "$JOYCON_REPO"
+cd "$PROJECT_DIR"
+uv pip install -e "$SUBMODULE_DIR"
 
 # 应用补丁
 echo "=== 应用补丁 ==="
-cd "$JOYCON_REPO"
-if git apply --check "$PATCH_DIR/joycon-robotics.patch" 2>/dev/null; then
-    git apply "$PATCH_DIR/joycon-robotics.patch"
+cd "$SUBMODULE_DIR"
+if git apply --check "$PATCH_FILE" 2>/dev/null; then
+    git apply "$PATCH_FILE"
     echo "✓ 补丁已应用"
 else
     echo "⚠ 补丁可能已应用或不再适用"
