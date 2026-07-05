@@ -82,6 +82,10 @@ uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101
 uv run python -m so101_mujoco_teleop.scripts.dataset_viz \
     --repo-id <repo_id> --root <root> --episode 0
 
+# Validate dataset quality
+uv run python -m so101_mujoco_teleop.scripts.validate_dataset \
+    --root ./datasets/leader-test
+
 # Build / repair the ROCm environment
 make rocm-sync
 
