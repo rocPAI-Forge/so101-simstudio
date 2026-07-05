@@ -1,7 +1,8 @@
-# SO-101 MuJoCo recording with Joy-Con teleop (planned)
+# SO-101 MuJoCo recording with Joy-Con teleop
 
 robot:
   type: so101_mujoco
+  action_mode: velocity  # Joy-Con uses velocity control
   xml_path: SO101/pick_scene.xml
   cube_positions_path: configs/cube_positions.json
   record_fps: 30
@@ -32,8 +33,11 @@ robot:
 
 teleop:
   type: so101_joycon
-  side: left
+  side: right
   device: auto
+  translation_scale: 1.5
+  z_scale: 1.0
+  rotation_scale: 0.8
 
 dataset:
   repo_id: alexhegit/so101_mujoco_joycon_test
