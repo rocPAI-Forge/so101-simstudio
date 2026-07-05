@@ -18,8 +18,8 @@ class SO101JoyConTeleopConfig(TeleoperatorConfig):
     z_scale: float = 1.0  # Scale for z translation
     rotation_scale: float = 0.5  # Scale for gyroscope rotation rates
 
-    # Button mapping
-    gripper_toggle_button: str = "zr"  # Button to toggle gripper
-    next_episode_button: str = "a"  # Button for next episode
-    restart_episode_button: str = "y"  # Button for restart episode
-    reset_joycon_button: str = "plus"  # Button to reset Joy-Con calibration
+    # Button mapping (right Joy-Con defaults)
+    gripper_button: str = "zr"  # ZR (right) or ZL (left) - auto-detected based on side
+    next_episode_button: str = "a"  # Right: A, Left: Left arrow
+    restart_episode_button: str = "y"  # Right: Y, Left: Up arrow
+    stop_button: str = "plus"  # Right: Plus, Left: Minus
