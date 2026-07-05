@@ -28,7 +28,7 @@ rocm-test:
 
 rocm-smoke-record:
 	rm -rf datasets/keyboard-smoke-rocm
-	$(ROCM_PY) -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard_smoke.yaml
+	$(ROCM_PY) -m simstudio.scripts.record --config configs/so101_mujoco_keyboard_smoke.yaml
 
 rocm-format:
 	.venv-rocm/bin/ruff format

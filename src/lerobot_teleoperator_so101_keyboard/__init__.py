@@ -4,7 +4,7 @@ Importing this package registers SO101KeyboardTeleopConfig with LeRobot's
 TeleoperatorConfig registry and exposes the SO101KeyboardTeleop class.
 """
 
-from so101_mujoco_teleop.teleoperators.so101_keyboard import (
+from simstudio.teleoperators.so101_keyboard import (
     SO101KeyboardTeleop,
     SO101KeyboardTeleopConfig,
 )

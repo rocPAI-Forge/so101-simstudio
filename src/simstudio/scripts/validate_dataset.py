@@ -8,7 +8,7 @@ Checks:
   - Data integrity (parquet readable, no corruption)
 
 Usage:
-    uv run python -m so101_mujoco_teleop.scripts.validate_dataset \
+    uv run python -m simstudio.scripts.validate_dataset \
         --root ./datasets/leader-test
 """
 

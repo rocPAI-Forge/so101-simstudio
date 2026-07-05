@@ -105,7 +105,7 @@ Leader arm outputs are auto-scaled from normalized motor values to MuJoCo radian
 so101-mujoco-teleop/
 ├── lerobot/                          # HF LeRobot submodule (pinned, unmodified)
 ├── src/
-│   └── so101_mujoco_teleop/
+│   └── simstudio/
 │       ├── robots/
 │       │   ├── so101_mujoco/         # MuJoCo simulation (working)
 │       │   └── so101_real_follower/  # Real follower arm (stub)
@@ -150,7 +150,7 @@ lerobot_teleoperator_so101_joycon/
 lerobot_teleoperator_so101_leader/
 ```
 
-All pointing back to `src/so101_mujoco_teleop` modules.
+All pointing back to `src/simstudio` modules.
 
 ## Migration from robopicker
 

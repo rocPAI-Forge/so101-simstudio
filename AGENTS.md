@@ -1,11 +1,11 @@
 # AGENTS.md
 
-SO-101 MuJoCo teleoperation and behavior-cloning dataset collection, built on HuggingFace LeRobot.
+SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 
 ## Project Layout
 
-- **`lerobot/`**: HuggingFace LeRobot submodule pinned to a known-good upstream commit. The submodule is kept unmodified; all SO-101-specific registration and runtime behavior live in project wrapper scripts under `src/so101_mujoco_teleop/scripts/`.
-- **`src/so101_mujoco_teleop/`**: Project-specific robot and teleoperator implementations.
+- **`lerobot/`**: HuggingFace LeRobot submodule pinned to a known-good upstream commit. The submodule is kept unmodified; all SO-101-specific registration and runtime behavior live in project wrapper scripts under `src/simstudio/scripts/`.
+- **`src/simstudio/`**: Project-specific robot and teleoperator implementations.
   - `robots/so101_mujoco/`: MuJoCo simulation robot.
   - `robots/so101_real_follower/`: Real SO-101 follower arm (stub).
   - `teleoperators/so101_keyboard/`: Keyboard teleop.
@@ -46,16 +46,16 @@ git submodule update --init --recursive
 | Format | `make format` |
 | Test | `make test` |
 | MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/pick_scene.xml` |
-| Record (keyboard) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
-| Record (Joy-Con right) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon.yaml` |
-| Record (Joy-Con left) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
-| Teleoperate (leader arm) | `uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
-| Record (leader arm) | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_leader.yaml` |
-| Short functional test | `uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
-| Replay one episode | `uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoco_replay.yaml` |
-| Replay all episodes | `uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
-| Dataset visualization | `uv run python -m so101_mujoco_teleop.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
-| Dataset validation | `uv run python -m so101_mujoco_teleop.scripts.validate_dataset --root <dataset_root>` |
+| Record (keyboard) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
+| Record (Joy-Con right) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml` |
+| Record (Joy-Con left) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
+| Teleoperate (leader arm) | `uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
+| Record (leader arm) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml` |
+| Short functional test | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
+| Replay one episode | `uv run python -m simstudio.scripts.replay --config configs/so101_mujoco_replay.yaml` |
+| Replay all episodes | `uv run python -m simstudio.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
+| Dataset visualization | `uv run python -m simstudio.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
+| Dataset validation | `uv run python -m simstudio.scripts.validate_dataset --root <dataset_root>` |
 | Joy-Con setup | `make joycon-sync` |
 | ROCm setup | `make rocm-sync` |
 

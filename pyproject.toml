@@ -1,7 +1,7 @@
 [project]
-name = "so101-mujoco-teleop"
+name = "so101-simstudio"
 version = "0.1.0"
-description = "SO-101 MuJoCo teleoperation and dataset collection with LeRobot"
+description = "SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot"
 requires-python = ">=3.12"
 dependencies = [
     "mujoco>=3.0.0,<4.0.0",
@@ -31,7 +31,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = [
-    "so101_mujoco_teleop*",
+    "simstudio*",
     "lerobot_robot_so101_mujoco*",
     "lerobot_teleoperator_so101_keyboard*",
 ]
