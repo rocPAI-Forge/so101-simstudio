@@ -1,0 +1,73 @@
+# 左手 Joy-Con 配置
+teleoperator:
+  type: so101_joycon
+  side: "left"
+  translation_scale: 2.0
+  z_scale: 1.0
+  rotation_scale: 0.5
+
+robot:
+  type: so101_mujoco
+  gripper_action: open
+  use_tendon: false
+  action_mode: velocity
+  robot_cls: so101_mujoco
+  teleop_cls: so101_joycon
+  camera_names:
+    - front
+    - top
+    - wrist
+  render_window: false
+  gripper_control_mode: velocity
+
+teleoperation:
+  fps: 30
+  teleop_device: keyboard
+  camera_backend: opencv
+  view_mode: mujoco
+
+task:
+  type: empty
+  features:
+    - name: vx
+      dtype: float32
+      shape: [1]
+    - name: vy
+      dtype: float32
+      shape: [1]
+    - name: vz
+      dtype: float32
+      shape: [1]
+    - name: wrist_flex_rate
+      dtype: float32
+      shape: [1]
+    - name: yaw_rate
+      dtype: float32
+      shape: [1]
+    - name: gripper_delta
+      dtype: float32
+      shape: [1]
+
+dataset:
+  repo_id: "alexhegit/so101_mujoco_joycon_left_test"
+  root: "datasets/joycon-left-test"
+  episodes: 5
+  resume: false
+
+episode:
+  control_time_s: 10
+  reset_time_s: 2
+  reset_joints:
+    shoulder_pan: 0.0
+    shoulder_lift: 0.0
+    elbow_flex: 0.0
+    wrist_flex: 0.0
+    wrist_roll: 0.0
+    gripper: 0.0
+
+recording:
+  video_width: 640
+  video_height: 480
+  video_fps: 30
+  encode_backend: pyav
+  push_to_hub: false

@@ -76,10 +76,16 @@ class SO101JoyConTeleop(Teleoperator):
         self._prev_posture = list(posture)
         self._prev_time = time.time()
         print(f"✓ Connected to {side} Joy-Con")
-        print("  摇杆: 左右=X轴, 前后=Y轴, R键=上升, 摇杆按下=下降")
-        print("  倾斜手柄: 腕部旋转")
-        print("  ZR按住=夹爪关闭, 松开=夹爪打开")
-        print("  A=下一episode, Y=重录, Plus=停止")
+        if side == "right":
+            print("  摇杆: 左右=X轴, 前后=Y轴, R键=上升, 摇杆按下=下降")
+            print("  倾斜手柄: 腕部旋转")
+            print("  ZR按住=夹爪关闭, 松开=夹爪打开")
+            print("  A=下一episode, Y=重录, Plus=停止")
+        else:
+            print("  摇杆: 左右=X轴, 前后=Y轴, L键=上升, 摇杆按下=下降")
+            print("  倾斜手柄: 腕部旋转")
+            print("  ZL按住=夹爪关闭, 松开=夹爪打开")
+            print("  左方向键=下一episode, 上方向键=重录, Minus=停止")
 
     def calibrate(self) -> None:
         pass
@@ -124,15 +130,22 @@ class SO101JoyConTeleop(Teleoperator):
         wrist_flex_rate = droll * self.config.rotation_scale
         yaw_rate = dyaw * self.config.rotation_scale
 
-        # Gripper: ZR hold = close, release = open
+        # Gripper: ZR (right) or ZL (left) hold = close, release = open
         # gripper_delta: negative = close, positive = open
         report = self._jc.joycon._input_report
-        zr_pressed = bool((report[3] >> 7) & 1) if report[0] == 0x30 else False
-        gripper_delta = -1.0 if zr_pressed else 1.0
+        if self.config.side == "right":
+            # ZR button: bit 7 of report[3]
+            grip_pressed = bool((report[3] >> 7) & 1) if report[0] == 0x30 else False
+        else:
+            # ZL button: bit 7 of report[3]
+            grip_pressed = bool((report[3] >> 7) & 1) if report[0] == 0x30 else False
+        gripper_delta = -1.0 if grip_pressed else 1.0
 
-        # Button control mapping
+        # Button control mapping from joycon-robotics
         # button_control: 1=next episode, -1=restart, 0=none
-        # (handled by LeRobot's event system)
+        # These are mapped to LeRobot events in the calling code
+        # Right Joy-Con: A=next, Y=restart, Plus=stop
+        # Left Joy-Con: Left=next, Up=restart, Minus=stop
 
         return {
             "vx": vx,
