@@ -1,4 +1,4 @@
-.PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record
+.PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync
 
 # ---------------------------------------------------------------------------
 # CUDA / CPU (default) — uses .venv
@@ -36,3 +36,10 @@ rocm-format:
 
 rocm-lint:
 	.venv-rocm/bin/ruff check
+
+# ---------------------------------------------------------------------------
+# Joy-Con — install joycon-robotics with patches
+# ---------------------------------------------------------------------------
+
+joycon-sync:
+	scripts/setup-joycon.sh
