@@ -5,7 +5,7 @@ Convert normalized teleoperator velocity commands into robot-native action dicts
 
 from typing import Any
 
-from so101_mujoco_teleop.common.constants import JOINT_NAMES
+from simstudio.common.constants import JOINT_NAMES
 
 
 def velocity_to_position_action(

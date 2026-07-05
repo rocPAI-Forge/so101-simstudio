@@ -4,7 +4,7 @@ Reads joint positions from Feetech STS3215 leader arm and sends them
 as position targets to the MuJoCo SO-101 robot.
 
 Usage:
-    uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
+    uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
 """
 
 import logging
@@ -24,12 +24,12 @@ from lerobot.utils.utils import init_logging
 # ---------------------------------------------------------------------------
 # 1. Register project plugins with LeRobot's ChoiceRegistry.
 # ---------------------------------------------------------------------------
-from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-from so101_mujoco_teleop.teleoperators.so101_leader import (  # noqa: F401
+from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
+from simstudio.teleoperators.so101_leader import (  # noqa: F401
     SO101LeaderTeleopConfig,
 )
 
-RERUN_APPLICATION_ID = "so101_mujoco_teleop"
+RERUN_APPLICATION_ID = "simstudio"
 
 
 @dataclass

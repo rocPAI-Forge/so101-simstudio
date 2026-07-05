@@ -19,7 +19,7 @@ from lerobot.robots.robot import Robot
 from lerobot.types import RobotAction, RobotObservation
 from lerobot.utils.errors import DeviceNotConnectedError
 
-from so101_mujoco_teleop.robots.so101_mujoco.configuration_so101_mujoco import SO101MujocoConfig
+from simstudio.robots.so101_mujoco.configuration_so101_mujoco import SO101MujocoConfig
 
 logger = logging.getLogger(__name__)
 

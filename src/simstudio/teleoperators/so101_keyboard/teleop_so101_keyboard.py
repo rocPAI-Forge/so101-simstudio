@@ -15,7 +15,7 @@ from lerobot.types import RobotAction
 from lerobot.utils.decorators import check_if_already_connected
 from lerobot.utils.import_utils import _pynput_available, require_package
 
-from so101_mujoco_teleop.teleoperators.so101_keyboard.config import SO101KeyboardTeleopConfig
+from simstudio.teleoperators.so101_keyboard.config import SO101KeyboardTeleopConfig
 
 logger = logging.getLogger(__name__)
 

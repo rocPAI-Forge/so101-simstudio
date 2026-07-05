@@ -6,7 +6,7 @@ Reads normalized positions and scales to MuJoCo radian targets.
 
 from lerobot.teleoperators.so_leader.so_leader import SOLeader
 
-from so101_mujoco_teleop.teleoperators.so101_leader.config import SO101LeaderTeleopConfig
+from simstudio.teleoperators.so101_leader.config import SO101LeaderTeleopConfig
 
 # MuJoCo joint ranges (from so101_new_calib.xml ctrlrange)
 _MUJOCO_JOINT_RANGE = {

@@ -4,7 +4,7 @@ Importing this package registers SO101MujocoConfig with LeRobot's RobotConfig
 registry and exposes the SO101Mujoco robot class.
 """
 
-from so101_mujoco_teleop.robots.so101_mujoco import (
+from simstudio.robots.so101_mujoco import (
     SO101Mujoco,
     SO101MujocoConfig,
     SO101MujocoRobot,

@@ -5,7 +5,7 @@ from lerobot.teleoperators.config import TeleoperatorConfig
 
 
 def test_robot_config_registration():
-    from so101_mujoco_teleop.robots.so101_mujoco.configuration_so101_mujoco import (
+    from simstudio.robots.so101_mujoco.configuration_so101_mujoco import (
         SO101MujocoConfig,
     )
 
@@ -13,7 +13,7 @@ def test_robot_config_registration():
 
 
 def test_teleop_config_registration():
-    from so101_mujoco_teleop.teleoperators.so101_keyboard.config import (
+    from simstudio.teleoperators.so101_keyboard.config import (
         SO101KeyboardTeleopConfig,
     )
 
@@ -23,7 +23,7 @@ def test_teleop_config_registration():
 def test_robot_factory():
     from lerobot.robots import make_robot_from_config
 
-    from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig
+    from simstudio.robots.so101_mujoco import SO101MujocoConfig
 
     robot = make_robot_from_config(SO101MujocoConfig())
     assert robot.name == "so101_mujoco"
@@ -34,7 +34,7 @@ def test_robot_factory():
 def test_teleop_factory():
     from lerobot.teleoperators import make_teleoperator_from_config
 
-    from so101_mujoco_teleop.teleoperators.so101_keyboard import SO101KeyboardTeleopConfig
+    from simstudio.teleoperators.so101_keyboard import SO101KeyboardTeleopConfig
 
     teleop = make_teleoperator_from_config(SO101KeyboardTeleopConfig())
     assert teleop.name == "so101_keyboard"

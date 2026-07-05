@@ -12,7 +12,7 @@ import yaml
 from lerobot.datasets import LeRobotDataset
 from lerobot.utils.utils import init_logging
 
-from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
+from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
             break
 
     if config_path is None:
-        print("Usage: python -m so101_mujoco_teleop.scripts.replay_multi --config <yaml>")
+        print("Usage: python -m simstudio.scripts.replay_multi --config <yaml>")
         sys.exit(1)
 
     with open(config_path) as f:

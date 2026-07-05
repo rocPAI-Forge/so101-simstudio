@@ -1,8 +1,8 @@
-# SO-101 MuJoCo Teleop
+# SO-101 SimStudio
 
-SO-101 robotic arm teleoperation and dataset collection in MuJoCo simulation, built on top of HuggingFace LeRobot.
+SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot, built on top of HuggingFace LeRobot.
 
-Supports keyboard teleoperation and real SO-101 leader arm teleoperation (Feetech STS3215).
+Supports keyboard, Joy-Con, and real SO-101 leader arm teleoperation (Feetech STS3215).
 
 ## Quick Start
 
@@ -18,7 +18,7 @@ source .venv/bin/activate
 python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
 
 # Record demonstrations with keyboard
-uv run python -m so101_mujoco_teleop.scripts.record \
+uv run python -m simstudio.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml
 ```
 
@@ -39,7 +39,7 @@ uv run python -m so101_mujoco_teleop.scripts.record \
 
 - Python 3.12+ is required.
 - `lerobot/` is a git submodule; if missing run `git submodule update --init --recursive`.
-- The project keeps `lerobot/` unmodified at runtime. SO-101 plugin registration and keyboard-listener integration are handled by project wrapper scripts under `src/so101_mujoco_teleop/scripts/`.
+- The project keeps `lerobot/` unmodified at runtime. SO-101 plugin registration and keyboard-listener integration are handled by project wrapper scripts under `src/simstudio/scripts/`.
 - Known-good upstream LeRobot commit: `c746ca2d`.
 - Do not assume the latest LeRobot release tag is compatible with this project; upgrade the submodule only after validating record and replay flows.
 - The live recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, `FOCUSED=FALSE` and `FOCUS_ON_SHOW=FALSE` are **not** set, so the window remains visible.
@@ -51,13 +51,13 @@ Teleop 时可在 Rerun 中实时显示摄像头画面，操作者可从摄像头
 
 ```bash
 # 只显示 Rerun 摄像头画面（默认）
-uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode rerun
+uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode rerun
 
 # 只显示 MuJoCo 窗口
-uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode mujoco
+uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode mujoco
 
 # 两个都显示
-uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode both
+uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode both
 ```
 
 ## Joy-Con Teleop
@@ -124,15 +124,15 @@ make joycon-sync
 
 ```bash
 # 右手 Joy-Con 录制
-uv run python -m so101_mujoco_teleop.scripts.record \
+uv run python -m simstudio.scripts.record \
     --config configs/so101_mujoco_joycon.yaml
 
 # 左手 Joy-Con 录制
-uv run python -m so101_mujoco_teleop.scripts.record \
+uv run python -m simstudio.scripts.record \
     --config configs/so101_mujoco_joycon_left.yaml
 
 # Joy-Con 实时控制（不录制）
-uv run python -m so101_mujoco_teleop.scripts.teleoperate \
+uv run python -m simstudio.scripts.teleoperate \
     --config configs/so101_mujoco_joycon_teleop.yaml
 ```
 
@@ -140,32 +140,32 @@ uv run python -m so101_mujoco_teleop.scripts.teleoperate \
 
 ```bash
 # Record with keyboard
-uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_keyboard.yaml
+uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml
 
 # Record with Joy-Con (right hand)
-uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon.yaml
+uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml
 
 # Record with Joy-Con (left hand)
-uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_joycon_left.yaml
+uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml
 
 # Teleoperate with leader arm (live control, no recording)
-uv run python -m so101_mujoco_teleop.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
+uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
 
 # Record with leader arm
-uv run python -m so101_mujoco_teleop.scripts.record --config configs/so101_mujoco_leader.yaml
+uv run python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml
 
 # Replay one episode
-uv run python -m so101_mujoco_teleop.scripts.replay --config configs/so101_mujoco_replay.yaml
+uv run python -m simstudio.scripts.replay --config configs/so101_mujoco_replay.yaml
 
 # Replay all episodes sequentially
-uv run python -m so101_mujoco_teleop.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml
+uv run python -m simstudio.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml
 
 # Visualize dataset (opens Rerun viewer)
-uv run python -m so101_mujoco_teleop.scripts.dataset_viz \
+uv run python -m simstudio.scripts.dataset_viz \
     --repo-id <repo_id> --root <root> --episode 0
 
 # Validate dataset quality
-uv run python -m so101_mujoco_teleop.scripts.validate_dataset \
+uv run python -m simstudio.scripts.validate_dataset \
     --root ./datasets/leader-test
 
 # Setup Joy-Con environment

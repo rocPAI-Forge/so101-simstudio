@@ -4,7 +4,7 @@ from lerobot.robots.robot import Robot
 from lerobot.types import RobotAction, RobotObservation
 from lerobot.utils.errors import DeviceNotConnectedError
 
-from so101_mujoco_teleop.robots.so101_real_follower.config import SO101RealFollowerConfig
+from simstudio.robots.so101_real_follower.config import SO101RealFollowerConfig
 
 
 class SO101RealFollowerRobot(Robot):

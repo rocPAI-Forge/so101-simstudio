@@ -20,13 +20,13 @@ import yaml
 #    These imports must happen BEFORE we import lerobot_record, because
 #    lerobot_record itself imports the same config classes.
 # ---------------------------------------------------------------------------
-from so101_mujoco_teleop.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-from so101_mujoco_teleop.robots.so101_real_follower import SO101RealFollowerConfig  # noqa: F401
-from so101_mujoco_teleop.teleoperators.so101_joycon import SO101JoyConTeleopConfig  # noqa: F401
-from so101_mujoco_teleop.teleoperators.so101_keyboard import (  # noqa: F401
+from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
+from simstudio.robots.so101_real_follower import SO101RealFollowerConfig  # noqa: F401
+from simstudio.teleoperators.so101_joycon import SO101JoyConTeleopConfig  # noqa: F401
+from simstudio.teleoperators.so101_keyboard import (  # noqa: F401
     SO101KeyboardTeleopConfig,
 )
-from so101_mujoco_teleop.teleoperators.so101_leader import (  # noqa: F401
+from simstudio.teleoperators.so101_leader import (  # noqa: F401
     SO101LeaderTeleopConfig,
 )
 

@@ -13,7 +13,7 @@ from typing import Any
 from lerobot.teleoperators.teleoperator import Teleoperator
 from lerobot.types import RobotAction
 
-from so101_mujoco_teleop.teleoperators.so101_joycon.config import SO101JoyConTeleopConfig
+from simstudio.teleoperators.so101_joycon.config import SO101JoyConTeleopConfig
 
 
 class SO101JoyConTeleop(Teleoperator):
@@ -56,8 +56,8 @@ class SO101JoyConTeleop(Teleoperator):
     def connect(self, calibrate: bool = False) -> None:
         try:
             from joyconrobotics import JoyconRobotics
-        except ImportError:
-            raise ImportError("joyconrobotics not installed")
+        except ImportError as err:
+            raise ImportError("joyconrobotics not installed") from err
 
         side = self.config.side
         print(f"Connecting to {side} Joy-Con...")

@@ -1,7 +1,7 @@
 """Visualize recorded dataset using LeRobot's built-in Rerun viewer.
 
 Usage:
-    .venv-rocm/bin/python -m so101_mujoco_teleop.scripts.dataset_viz \
+    .venv-rocm/bin/python -m simstudio.scripts.dataset_viz \
         --repo-id alexhegit/so101_mujoco_leader_test \
         --root ./datasets/leader-test \
         --episode 0
