@@ -8,6 +8,8 @@ When the SO101 keyboard teleop is active, we monkey-patch
 ``init_keyboard_listener`` to skip the TerminalKeyListener (which conflicts
 with pynput) and instead route arrow-key / ESC recording controls through
 the teleop's own ``_on_press`` callback.
+
+Supports view_mode parameter for Rerun camera feed display during recording.
 """
 
 import sys
@@ -30,27 +32,44 @@ from simstudio.teleoperators.so101_leader import (  # noqa: F401
     SO101LeaderTeleopConfig,
 )
 
+
 # ---------------------------------------------------------------------------
-# 2. Detect teleop type from YAML config and monkey-patch init_keyboard_listener.
-#    The patched version, when SO101 keyboard is active, returns a minimal
-#    events dict with listener=None — arrow keys / ESC are handled by the
-#    teleop's pynput listener instead.
+# 2. Detect teleop type and view_mode from YAML config, then monkey-patch
+#    init_keyboard_listener if keyboard teleop is active.
 # ---------------------------------------------------------------------------
 
 
-def _detect_teleop_type() -> str | None:
-    """Extract teleop.type from the --config YAML file on the command line."""
+def _detect_config_value(key_path: str) -> str | None:
+    """Extract a value from the --config YAML file on the command line."""
     for i, arg in enumerate(sys.argv):
         if arg == "--config" and i + 1 < len(sys.argv):
             cfg_path = Path(sys.argv[i + 1])
             if cfg_path.exists():
                 with open(cfg_path) as f:
                     cfg = yaml.safe_load(f)
-                return cfg.get("teleop", {}).get("type")
+                # Support nested keys like "teleop.type"
+                keys = key_path.split(".")
+                value = cfg
+                for k in keys:
+                    if isinstance(value, dict):
+                        value = value.get(k)
+                    else:
+                        return None
+                return value
     return None
 
 
-_teleop_type = _detect_teleop_type()
+def _detect_view_mode() -> str:
+    """Detect view_mode from command line arguments."""
+    # Check command line
+    for i, arg in enumerate(sys.argv):
+        if arg == "--view_mode" and i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+    return "mujoco"  # default
+
+
+_teleop_type = _detect_config_value("teleop.type")
+_view_mode = _detect_view_mode()
 
 if _teleop_type == "so101_keyboard":
     import lerobot.utils.keyboard_input as _ki
@@ -75,12 +94,40 @@ if _teleop_type == "so101_keyboard":
 
 
 # ---------------------------------------------------------------------------
-# 3. Entry point — register plugins, then call LeRobot's record().
+# 3. Entry point — register plugins, configure view_mode, then call LeRobot's record().
 # ---------------------------------------------------------------------------
 def main():
+    import logging
+
+    # Convert view_mode to LeRobot's display_data/display_mode format
+    display_data = _view_mode in ("rerun", "both")
+    display_mode = "rerun" if display_data else "rerun"
+
+    # Remove view_mode from argv and add display_data/display_mode if needed
+    argv_filtered = []
+    skip_next = False
+    for i, arg in enumerate(sys.argv):
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--view_mode":
+            skip_next = True
+            continue
+        if arg in ("--display_data", "--display_mode"):
+            skip_next = True
+            continue
+        argv_filtered.append(arg)
+
+    # Add display_data/display_mode if view_mode is not mujoco
+    if _view_mode != "mujoco":
+        argv_filtered.extend(["--display_data", str(display_data)])
+        argv_filtered.extend(["--display_mode", display_mode])
+
     # Replace argv so LeRobot's draccus parser sees its own script name.
-    argv = ["lerobot_record.py"] + sys.argv[1:]
+    argv = ["lerobot_record.py"] + argv_filtered[1:]  # skip script name
     sys.argv = argv
+
+    logging.info(f"View mode: {_view_mode} -> display_data={display_data}, display_mode={display_mode}")
 
     # Import AFTER patching so record() sees our patched init_keyboard_listener.
     from lerobot.scripts.lerobot_record import record  # noqa: E402

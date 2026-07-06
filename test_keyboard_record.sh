@@ -1,17 +1,19 @@
 #!/bin/bash
 # Keyboard 录制测试脚本
-# 用法: ./test_keyboard_record.sh [episodes] [resume]
+# 用法: ./test_keyboard_record.sh [episodes] [resume] [view_mode]
 
 set -e
 
 EPISODES=${1:-3}
 RESUME=${2:-false}
+VIEW_MODE=${3:-mujoco}
 ROOT="./datasets/keyboard-record-test"
 REPO_ID="alexhegit/so101_mujoco_keyboard_record_test"
 
 echo "=== Keyboard Record Test ==="
 echo "Episodes: $EPISODES"
 echo "Resume: $RESUME"
+echo "View mode: $VIEW_MODE"
 echo "Dataset: $ROOT"
 echo ""
 echo "Controls:"
@@ -29,9 +31,10 @@ echo "  Right arrow: Save episode, next one"
 echo "  ESC: Stop recording"
 echo ""
 
-.venv-rocm/bin/python -m simstudio.scripts.record \
+PATH=".venv-rocm/bin:$PATH" .venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml \
     --dataset.root "$ROOT" \
     --dataset.repo_id "$REPO_ID" \
     --dataset.num_episodes "$EPISODES" \
-    --resume "$RESUME"
+    --resume "$RESUME" \
+    --view_mode "$VIEW_MODE"
