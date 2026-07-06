@@ -62,7 +62,7 @@ uv pip install --python "$PY" --constraints "$TORCH_CONSTRAINTS" \
     "torchcodec>=0.2.1,<0.6.0" \
     "draccus==0.10.0" \
     "gymnasium>=0.29.1,<1.0.0" \
-    "rerun-sdk>=0.21.0,<0.23.0" \
+    "rerun-sdk>=0.24.0,<0.34.0" \
     "deepdiff>=7.0.1,<9.0.0" \
     "imageio[ffmpeg]>=2.34.0,<3.0.0" \
     "termcolor>=2.4.0,<4.0.0" \
