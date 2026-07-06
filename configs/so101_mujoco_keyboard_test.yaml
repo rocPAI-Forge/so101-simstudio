@@ -7,8 +7,8 @@ robot:
   record_fps: 30
   control_fps: 180
   physics_fps: 360
-  camera_width: 640
-  camera_height: 480
+  camera_width: 320
+  camera_height: 240
   camera_names: [front, top, wrist]
   show_collision_geometry: false
   render_window: true
@@ -37,7 +37,7 @@ dataset:
   repo_id: alexhegit/so101_mujoco_keyboard_test
   root: ./datasets/keyboard-test
   single_task: "SO-101 MuJoCo keyboard manipulation"
-  fps: 30
+  fps: 60
   episode_time_s: 30
   reset_time_s: 3
   num_episodes: 3

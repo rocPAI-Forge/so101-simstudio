@@ -11,7 +11,6 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-import rerun as rr
 from lerobot.configs import parser
 from lerobot.robots import RobotConfig, make_robot_from_config
 from lerobot.teleoperators import (
@@ -25,11 +24,9 @@ from lerobot.utils.utils import init_logging
 # 1. Register project plugins with LeRobot's ChoiceRegistry.
 # ---------------------------------------------------------------------------
 from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-from simstudio.teleoperators.so101_keyboard import SO101KeyboardTeleopConfig  # noqa: F401
 from simstudio.teleoperators.so101_joycon import SO101JoyConTeleopConfig  # noqa: F401
+from simstudio.teleoperators.so101_keyboard import SO101KeyboardTeleopConfig  # noqa: F401
 from simstudio.teleoperators.so101_leader import SO101LeaderTeleopConfig  # noqa: F401
-
-RERUN_APPLICATION_ID = "simstudio"
 
 
 @dataclass
@@ -37,7 +34,6 @@ class TeleoperateConfig:
     teleop: TeleoperatorConfig = field(default_factory=TeleoperatorConfig)
     robot: RobotConfig = field(default_factory=RobotConfig)
     fps: int = 30
-    view_mode: str = "rerun"  # "mujoco", "rerun", or "both"
 
 
 @parser.wrap()
@@ -48,25 +44,14 @@ def teleoperate(cfg: TeleoperateConfig):
     teleop = make_teleoperator_from_config(cfg.teleop)
     robot = make_robot_from_config(cfg.robot)
 
-    # Configure render_window based on view_mode
-    if cfg.view_mode in ("mujoco", "both"):
-        robot.config.render_window = True
-    else:
-        robot.config.render_window = False
-
     print("Connecting leader arm...")
     teleop.connect(calibrate=True)
 
     print("Connecting MuJoCo robot...")
     robot.connect(calibrate=False)
 
-    # Initialize rerun for camera feed display
-    if cfg.view_mode in ("rerun", "both"):
-        rr.init(RERUN_APPLICATION_ID, spawn=True)
-
-    print(f"Teleoperation started (view_mode={cfg.view_mode}). Press Ctrl+C to stop.")
+    print("Teleoperation started. Press Ctrl+C to stop.")
     dt = 1.0 / cfg.fps
-    frame_count = 0
 
     try:
         while True:
@@ -77,20 +62,6 @@ def teleoperate(cfg: TeleoperateConfig):
 
             # Send to MuJoCo robot (position-based)
             robot.send_action(action)
-
-            # Log camera feeds to rerun every frame
-            if cfg.view_mode in ("rerun", "both"):
-                obs = robot.get_observation()
-                rr.set_time("timeline", timestamp=time.time())
-                for cam_name in robot.config.camera_names:
-                    key = f"camera_{cam_name}"
-                    if key in obs:
-                        rr.log(key, rr.Image(obs[key]))
-
-            frame_count += 1
-            if frame_count % 100 == 0:
-                elapsed = time.perf_counter() - start
-                logging.info(f"Frame {frame_count} @ {1.0 / elapsed:.1f} FPS")
 
             elapsed = time.perf_counter() - start
             if elapsed < dt:
