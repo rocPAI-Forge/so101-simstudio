@@ -145,11 +145,11 @@ if _teleop_type == "so101_keyboard":
 
 
 def _patch_rerun_for_record():
-    """Monkey-patch robot.get_observation() to log camera feeds to rerun.
+    """Patch robot to log camera feeds to rerun AFTER action is executed.
 
-    Instead of using LeRobot's broken visualization pipeline (static=True),
-    we log camera images the same way teleoperate.py does: simple rr.log()
-    with rr.set_time() each frame.
+    LeRobot's record loop calls get_observation() BEFORE send_action(),
+    causing 1-frame display delay. Fix: log cameras in send_action() after
+    physics step, so rerun shows the result of the current action.
     """
     import logging
 
@@ -159,25 +159,26 @@ def _patch_rerun_for_record():
 
     def _patched_make_robot(cfg):
         robot = _original_make_robot(cfg)
-        _original_get_obs = robot.get_observation
+        _original_send = robot.send_action
 
-        # Only log front camera for lower latency (top/wrist available in dataset)
         _log_cameras = ["front"]
 
-        def _get_obs_and_log():
-            obs = _original_get_obs()
+        def _send_and_log(action):
+            result = _original_send(action)
+            # Log camera AFTER action is applied — no 1-frame delay
             rr.set_time("timeline", timestamp=time.time())
+            obs = robot.get_observation()
             for cam_name in _log_cameras:
                 key = f"observation.camera_{cam_name}"
                 if key in obs:
                     rr.log(key, rr.Image(obs[key]))
-            return obs
+            return result
 
-        robot.get_observation = _get_obs_and_log
+        robot.send_action = _send_and_log
         return robot
 
     _robots.make_robot_from_config = _patched_make_robot
-    logging.info("Patched robot.get_observation to log camera feeds to rerun")
+    logging.info("Patched robot.send_action to log cameras to rerun (no delay)")
 
 
 # ---------------------------------------------------------------------------

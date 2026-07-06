@@ -74,6 +74,9 @@ class SO101KeyboardTeleop(Teleoperator):
         self._use_evdev = False
         self.logs: dict[str, Any] = {}
         self._recording_events: dict[str, bool] | None = None
+        # Low-pass filter for smoother velocity control
+        self._prev_action: dict[str, float] = {}
+        self._filter_alpha: float = 0.4  # 0=full smooth, 1=no smooth
 
     def set_recording_events(self, events: dict[str, bool]) -> None:
         """Set the recording events dict so arrow keys/ESC can control recording."""
@@ -284,14 +287,18 @@ class SO101KeyboardTeleop(Teleoperator):
 
         self.logs["read_pos_dt_s"] = time.perf_counter() - before_read_t
 
-        return {
-            "vx": vx,
-            "vy": vy,
-            "vz": vz,
+        # Apply low-pass filter for smoother motion
+        raw = {
+            "vx": vx, "vy": vy, "vz": vz,
             "wrist_flex_rate": wrist_flex_rate,
-            "yaw_rate": yaw_rate,
-            "gripper_delta": gripper_delta,
+            "yaw_rate": yaw_rate, "gripper_delta": gripper_delta,
         }
+        if self._prev_action:
+            for k in raw:
+                raw[k] = self._filter_alpha * raw[k] + (1 - self._filter_alpha) * self._prev_action.get(k, 0.0)
+        self._prev_action = raw.copy()
+
+        return raw
 
     def send_feedback(self, action: RobotAction, **kwargs) -> None:
         pass
