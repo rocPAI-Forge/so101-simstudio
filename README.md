@@ -1,201 +1,126 @@
 # SO-101 SimStudio
 
-SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot, built on top of HuggingFace LeRobot.
+SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 
-Supports keyboard, Joy-Con, and real SO-101 leader arm teleoperation (Feetech STS3215).
+## 项目定位
 
-## Quick Start
+SO-101 SimStudio 是一个基于 MuJoCo 仿真环境的机器人遥操作平台，用于生成高质量的专家轨迹数据集，支持行为克隆训练。
+
+**核心能力**：
+- 多种遥操作方式（Keyboard、Joy-Con、Leader Arm）
+- 高保真 MuJoCo 物理仿真
+- 标准化数据集格式（LeRobot）
+- 可扩展的模块化架构
+
+## 功能特性
+
+### 遥操作支持
+
+| 方式 | 状态 | 说明 |
+|------|------|------|
+| Keyboard | ✅ | WASD + 方向键控制 |
+| Joy-Con | ✅ | 支持左手/右手 |
+| Leader Arm | ✅ | Feetech STS3215 实物臂 |
+
+### 数据集功能
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 录制 | ✅ | 支持多 episode、续录 |
+| 回放 | ✅ | 单集/多集回放 |
+| 验证 | ✅ | 数据质量检查 |
+| 可视化 | ✅ | Rerun 3D 可视化 |
+
+### 仿真环境
+
+- **机器人**: SO-101 6自由度机械臂
+- **场景**: 桌面抓取任务
+- **相机**: 前视/俯视/腕部 三视角
+- **物理**: MuJoCo 高保真仿真
+
+## 系统要求
+
+### 最低配置
+
+- **OS**: Ubuntu 20.04+ / macOS 12+
+- **Python**: 3.12+
+- **GPU**: 支持 OpenGL 3.3+ 的显卡
+- **RAM**: 8GB+
+
+### 推荐配置
+
+- **GPU**: AMD ROCm 兼容显卡（如 RX 6800 XT）
+- **RAM**: 16GB+
+- **存储**: 10GB+ 可用空间
+
+### 软件依赖
+
+- MuJoCo 3.x
+- PyTorch 2.x（ROCm 或 CUDA）
+- LeRobot（作为 git submodule）
+
+## 架构概览
+
+```
+so101-simstudio/
+├── src/simstudio/           # 核心代码
+│   ├── robots/              # 机器人实现
+│   │   ├── so101_mujoco/    # MuJoCo 仿真机器人
+│   │   └── so101_real_follower/  # 真实机器人（预留）
+│   ├── teleoperators/       # 遥操作实现
+│   │   ├── so101_keyboard/  # 键盘控制
+│   │   ├── so101_joycon/    # Joy-Con 控制
+│   │   └── so101_leader/    # Leader arm 控制
+│   ├── scripts/             # 入口脚本
+│   └── common/              # 共享工具
+├── configs/                 # 配置文件
+├── SO101/                   # MuJoCo 场景资产
+├── lerobot/                 # LeRobot submodule
+└── third_party/             # 第三方依赖
+```
+
+## 快速开始
+
+详见 [QUICKSTART.md](QUICKSTART.md)
 
 ```bash
+# 安装
 git clone --recursive https://github.com/alexhegit/so101-mujoco-teleop.git
 cd so101-mujoco-teleop
+make rocm-sync
 
-# CUDA / CPU environment
-uv sync
-source .venv/bin/activate
-
-# Launch MuJoCo scene preview
-python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
-
-# Record demonstrations with keyboard
-uv run python -m simstudio.scripts.record \
+# 录制数据集
+.venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml
 ```
 
-## Project Status
+## 项目状态
 
-| Component | Status |
-|-----------|--------|
-| SO-101 MuJoCo robot (`so101_mujoco`) | Working |
-| Keyboard teleop (`so101_keyboard`) | Working |
-| Leader arm teleop (`so101_leader`) | Working (Feetech STS3215) |
-| Dataset recording and replay | Working |
-| Dataset visualization | Working (via LeRobot Rerun) |
-| Joy-Con teleop (`so101_joycon`) | Working |
-| Real follower arm (`so101_real_follower`) | Stub |
-| Behavior cloning training | Planned |
-
-## Notes
-
-- Python 3.12+ is required.
-- `lerobot/` is a git submodule; if missing run `git submodule update --init --recursive`.
-- The project keeps `lerobot/` unmodified at runtime. SO-101 plugin registration and keyboard-listener integration are handled by project wrapper scripts under `src/simstudio/scripts/`.
-- Known-good upstream LeRobot commit: `c746ca2d`.
-- Do not assume the latest LeRobot release tag is compatible with this project; upgrade the submodule only after validating record and replay flows.
-- The live recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, `FOCUSED=FALSE` and `FOCUS_ON_SHOW=FALSE` are **not** set, so the window remains visible.
-- Rendering performance depends heavily on GPU availability. On CPU-only machines the loop will run slower than 30 Hz and emit a warning, but it will still record frames and save episodes.
-
-## Camera Feed (Teleop)
-
-Teleop 时可在 Rerun 中实时显示摄像头画面，操作者可从摄像头视角而非第三人称仿真视角进行操控。
-
-```bash
-# 只显示 Rerun 摄像头画面（默认）
-uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode rerun
-
-# 只显示 MuJoCo 窗口
-uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode mujoco
-
-# 两个都显示
-uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml --view_mode both
-```
-
-## Joy-Con Teleop
-
-支持 Nintendo Switch Joy-Con 单手柄操控 SO-101 机械臂。使用 [joycon-robotics](https://github.com/box2ai-robotics/joycon-robotics) 库实现位置-速度转换。
-
-### 安装
-
-```bash
-# 安装 joycon-robotics（submodule + 补丁）
-make joycon-sync
-```
-
-### 按键映射
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Joy-Con 按键映射                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────────┐          ┌─────────────────────┐          │
-│  │     左手 Joy-Con    │          │     右手 Joy-Con    │          │
-│  ├─────────────────────┤          ├─────────────────────┤          │
-│  │                     │          │                     │          │
-│  │    [L]              │          │              [R]    │          │
-│  │   Z轴上升           │          │   Z轴上升           │          │
-│  │                     │          │                     │          │
-│  │  ┌───┐              │          │              ┌───┐  │          │
-│  │  │ ↑ │ 重录         │          │         [Y] │   │  │          │
-│  │  ├───┤              │          │              ├───┤  │          │
-│  │←─┤   ├─→ 下一ep    │          │  [A] [B]     │   │  │          │
-│  │  ├───┤              │          │              ├───┤  │          │
-│  │  │ ↓ │              │          │         [X] │   │  │          │
-│  │  └───┘              │          │              └───┘  │          │
-│  │                     │          │                     │          │
-│  │  [ZL] 夹爪关闭      │          │      [ZR] 夹爪关闭  │          │
-│  │  松开=夹爪打开      │          │      松开=夹爪打开  │          │
-│  │                     │          │                     │          │
-│  │  [-]  停止录制      │          │      [+]  停止录制  │          │
-│  │                     │          │                     │          │
-│  │  摇杆: XY平移       │          │      摇杆: XY平移   │          │
-│  │  倾斜: 腕部旋转     │          │      倾斜: 腕部旋转 │          │
-│  └─────────────────────┘          └─────────────────────┘          │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 控制模式
-
-| 功能 | 描述 |
+| 组件 | 状态 |
 |------|------|
-| X轴移动 | 摇杆左右 |
-| Y轴移动 | 摇杆前后 |
-| Z轴上升 | R键（右手）/ L键（左手）|
-| Z轴下降 | 摇杆按下 |
-| 腕部旋转 | 倾斜手柄（陀螺仪）|
-| 夹爪关闭 | ZR按住（右手）/ ZL按住（左手）|
-| 夹爪打开 | 松开 ZR/ZL |
-| 下一episode | A键（右手）/ 左方向键（左手）|
-| 重录当前episode | Y键（右手）/ 上方向键（左手）|
-| 停止录制 | Plus（右手）/ Minus（左手）|
+| MuJoCo 仿真机器人 | ✅ Working |
+| Keyboard 遥操作 | ✅ Working |
+| Joy-Con 遥操作 | ✅ Working |
+| Leader Arm 遥操作 | ✅ Working |
+| 数据集录制/回放 | ✅ Working |
+| 数据集验证 | ✅ Working |
+| 真实机器人 | 🔲 Planned |
+| 行为克隆训练 | 🔲 Planned |
 
-### 使用方法
+## 版本历史
 
-```bash
-# 右手 Joy-Con 录制
-uv run python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_joycon.yaml
+- **v0.1.0** (2026-07-06): 首个正式版本，支持多种遥操作
+- **v0.0.3**: 添加 Joy-Con 支持
+- **v0.0.2**: 添加 Leader Arm 支持
+- **v0.0.1**: 初始版本
 
-# 左手 Joy-Con 录制
-uv run python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_joycon_left.yaml
+## 相关文档
 
-# Joy-Con 实时控制（不录制）
-uv run python -m simstudio.scripts.teleoperate \
-    --config configs/so101_mujoco_joycon_teleop.yaml
-```
+- [快速开始](QUICKSTART.md)
+- [项目架构](DESIGN.md)
+- [项目路线图](ROADMAP.md)
+- [开发指南](AGENTS.md)
 
-## Commands
-
-```bash
-# Record with keyboard
-uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml
-
-# Record with Joy-Con (right hand)
-uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml
-
-# Record with Joy-Con (left hand)
-uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml
-
-# Teleoperate with leader arm (live control, no recording)
-uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml
-
-# Record with leader arm
-uv run python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml
-
-# Replay one episode
-uv run python -m simstudio.scripts.replay --config configs/so101_mujoco_replay.yaml
-
-# Replay all episodes sequentially
-uv run python -m simstudio.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml
-
-# Visualize dataset (opens Rerun viewer)
-uv run python -m simstudio.scripts.dataset_viz \
-    --repo-id <repo_id> --root <root> --episode 0
-
-# Validate dataset quality
-uv run python -m simstudio.scripts.validate_dataset \
-    --root ./datasets/leader-test
-
-# Setup Joy-Con environment
-make joycon-sync
-
-# Build / repair the ROCm environment
-make rocm-sync
-
-# Short headless ROCm smoke test
-make rocm-smoke-record
-```
-
-## ROCm Notes
-
-- `.venv-rocm` is a local virtualenv created by `scripts/setup-rocm.sh` / `make rocm-sync`; it is not a repo artifact and should not be committed.
-- The ROCm setup installs `torch` / `torchvision` with `--torch-backend rocm7.2` before installing the rest of the stack, to avoid accidentally resolving Linux CUDA wheels.
-- `make rocm-smoke-record` runs a short headless MuJoCo recording smoke test using `configs/so101_mujoco_keyboard_smoke.yaml`.
-- The ROCm setup intentionally pins a compatible PyAV range (`av>=15,<16`) and a stable `placo` / `pin` / `cmeel-*` combination to avoid runtime ABI issues.
-
-## ROCm Environment
-
-```bash
-make rocm-sync      # or: ./scripts/setup-rocm.sh
-source .venv-rocm/bin/activate
-```
-
-## Architecture
-
-See [DESIGN.md](DESIGN.md) for full architecture and migration plan.
-
-## License
+## 许可证
 
 Apache-2.0
