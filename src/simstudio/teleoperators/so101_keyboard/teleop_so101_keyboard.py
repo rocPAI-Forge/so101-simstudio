@@ -1,11 +1,11 @@
 """SO-101 keyboard teleoperator.
 
 Outputs normalized velocity commands for SO-101 end-effector control.
-Uses evdev for Wayland (reads /dev/input/event* directly) or pynput for X11.
+Uses pynput for global key capture, following the pattern in
+lerobot.teleoperators.keyboard.teleop_keyboard.
 """
 
 import logging
-import os
 import time
 from queue import Queue
 from typing import Any
@@ -13,30 +13,20 @@ from typing import Any
 from lerobot.teleoperators.teleoperator import Teleoperator
 from lerobot.types import RobotAction
 from lerobot.utils.decorators import check_if_already_connected
+from lerobot.utils.import_utils import _pynput_available, require_package
 
 from simstudio.teleoperators.so101_keyboard.config import SO101KeyboardTeleopConfig
 
 logger = logging.getLogger(__name__)
 
-# Try evdev first (works on Wayland)
-EVDEV_AVAILABLE = False
-_evdev_listener = None
-try:
-    from simstudio.teleoperators.so101_keyboard.evdev_listener import EvdevKeyListener
-    EVDEV_AVAILABLE = True
-except ImportError:
-    pass
-
-# Try pynput as fallback (X11 only)
-PYNPUT_AVAILABLE = False
+PYNPUT_AVAILABLE = _pynput_available
 keyboard = None
-try:
-    from lerobot.utils.import_utils import _pynput_available
-    PYNPUT_AVAILABLE = _pynput_available
-    if PYNPUT_AVAILABLE:
+if PYNPUT_AVAILABLE:
+    try:
         from pynput import keyboard
-except Exception:
-    pass
+    except Exception as e:
+        PYNPUT_AVAILABLE = False
+        logger.info("Could not import pynput keyboard backend: %s", e)
 
 
 class SO101KeyboardTeleop(Teleoperator):
@@ -60,23 +50,14 @@ class SO101KeyboardTeleop(Teleoperator):
     config_class = SO101KeyboardTeleopConfig
 
     def __init__(self, config: SO101KeyboardTeleopConfig):
-        if EVDEV_AVAILABLE:
-            pass  # evdev doesn't require pynput
-        else:
-            from lerobot.utils.import_utils import require_package
-            require_package("pynput", extra="pynput-dep")
+        require_package("pynput", extra="pynput-dep")
         super().__init__(config)
         self.config = config
         self.event_queue: Queue[tuple[str, bool]] = Queue()
         self.current_pressed: dict[str, bool] = {}
         self.listener = None
-        self._evdev_listener = None
-        self._use_evdev = False
         self.logs: dict[str, Any] = {}
         self._recording_events: dict[str, bool] | None = None
-        # Low-pass filter for smoother velocity control
-        self._prev_action: dict[str, float] = {}
-        self._filter_alpha: float = 0.4  # 0=full smooth, 1=no smooth
 
     def set_recording_events(self, events: dict[str, bool]) -> None:
         """Set the recording events dict so arrow keys/ESC can control recording."""
@@ -99,8 +80,6 @@ class SO101KeyboardTeleop(Teleoperator):
 
     @property
     def is_connected(self) -> bool:
-        if self._use_evdev:
-            return self._evdev_listener is not None and self._evdev_listener._running
         return PYNPUT_AVAILABLE and isinstance(self.listener, keyboard.Listener) and self.listener.is_alive()
 
     @property
@@ -109,38 +88,24 @@ class SO101KeyboardTeleop(Teleoperator):
 
     @check_if_already_connected
     def connect(self, calibrate: bool = True) -> None:
-        self._use_evdev = False
-
-        # Try evdev first (works on Wayland, reads /dev/input/event* directly)
-        if EVDEV_AVAILABLE:
-            try:
-                evdev_listener = EvdevKeyListener(on_key=self._on_evdev_key)
-                if evdev_listener.start():
-                    self._evdev_listener = evdev_listener
-                    self._use_evdev = True
-                    logger.info("Using evdev keyboard listener (Wayland-compatible)")
-                    return
-            except Exception as e:
-                logger.warning(f"evdev listener failed: {e}")
-
-        # Fallback to pynput (X11 only)
         if not PYNPUT_AVAILABLE:
-            logger.warning(
-                "Neither evdev nor pynput available. Keyboard teleoperator will produce no actions."
-            )
+            logger.warning("pynput not installed. Keyboard teleoperator will produce no actions.")
             self.listener = None
             return
 
-        # Try pynput directly
+        # Try pynput directly — the conservative pynput_can_capture() check
+        # rejects Wayland even when XWayland is available (GLFW works fine).
+        # Start the listener and verify it actually works.
         try:
             self.listener = keyboard.Listener(
                 on_press=self._on_press,
                 on_release=self._on_release,
             )
             self.listener.start()
+            # Give the listener a moment to start and verify it's alive
             time.sleep(0.1)
             if self.listener.is_alive():
-                logger.info("pynput keyboard listener started successfully (X11 mode)")
+                logger.info("pynput keyboard listener started successfully.")
             else:
                 logger.warning(
                     "pynput listener started but is not alive. Keyboard teleoperator will produce no actions."
@@ -192,30 +157,6 @@ class SO101KeyboardTeleop(Teleoperator):
             self.event_queue.put((key_char.lower(), False))
         else:
             self.event_queue.put((str(key), False))
-
-    def _on_evdev_key(self, key_name: str, is_pressed: bool) -> None:
-        """Handle evdev key events (called from evdev listener thread)."""
-        # Recording control keys (press once, not held)
-        if key_name == "esc":
-            if self._recording_events is not None and is_pressed:
-                print("Escape key pressed. Stopping data recording...")
-                self._recording_events["stop_recording"] = True
-                self._recording_events["exit_early"] = True
-            return
-        if key_name == "right":
-            if self._recording_events is not None and is_pressed:
-                print("Right arrow pressed. Saving current episode...")
-                self._recording_events["exit_early"] = True
-            return
-        if key_name == "left":
-            if self._recording_events is not None and is_pressed:
-                print("Left arrow pressed. Canceling current episode...")
-                self._recording_events["rerecord_episode"] = True
-                self._recording_events["exit_early"] = True
-            return
-
-        # Movement keys (held)
-        self.event_queue.put((key_name, is_pressed))
 
     def _drain_pressed_keys(self):
         """Update current_pressed state from event queue."""
@@ -287,31 +228,20 @@ class SO101KeyboardTeleop(Teleoperator):
 
         self.logs["read_pos_dt_s"] = time.perf_counter() - before_read_t
 
-        # Apply low-pass filter for smoother motion
-        raw = {
-            "vx": vx, "vy": vy, "vz": vz,
+        return {
+            "vx": vx,
+            "vy": vy,
+            "vz": vz,
             "wrist_flex_rate": wrist_flex_rate,
-            "yaw_rate": yaw_rate, "gripper_delta": gripper_delta,
+            "yaw_rate": yaw_rate,
+            "gripper_delta": gripper_delta,
         }
-        if self._prev_action:
-            for k in raw:
-                raw[k] = self._filter_alpha * raw[k] + (1 - self._filter_alpha) * self._prev_action.get(k, 0.0)
-        self._prev_action = raw.copy()
-
-        return raw
 
     def send_feedback(self, action: RobotAction, **kwargs) -> None:
         pass
 
     def disconnect(self) -> None:
-        if self._use_evdev and self._evdev_listener is not None:
-            try:
-                self._evdev_listener.stop()
-            except Exception as e:
-                logger.warning(f"Error stopping evdev listener: {e}")
-            finally:
-                self._evdev_listener = None
-        elif self.listener is not None:
+        if self.listener is not None:
             try:
                 self.listener.stop()
             except Exception as e:

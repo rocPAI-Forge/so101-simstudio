@@ -8,26 +8,25 @@ is unavailable or no keyboard device is found.
 import logging
 import re
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from queue import Queue
-from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 # evdev key code to logical key name mapping (subset used by keyboard teleop)
 _EVDEV_KEY_MAP = {
     # Letters (KEY_A=30 .. KEY_Z=52)
-    **{30 + i: chr(ord('a') + i) for i in range(26)},
+    **{30 + i: chr(ord("a") + i) for i in range(26)},
     # Arrow keys
-    103: "up",    # KEY_UP
+    103: "up",  # KEY_UP
     108: "down",  # KEY_DOWN
     105: "left",  # KEY_LEFT
-    106: "right", # KEY_RIGHT
+    106: "right",  # KEY_RIGHT
     # Special keys
-    1: "esc",     # KEY_ESC
+    1: "esc",  # KEY_ESC
     57: "space",  # KEY_SPACE
     28: "enter",  # KEY_ENTER
-    15: "tab",    # KEY_TAB
+    15: "tab",  # KEY_TAB
     14: "backspace",  # KEY_BACKSPACE
     # Brackets (KEY_LEFTBRACE=26, KEY_RIGHTBRACE=27)
     26: "[",
@@ -50,7 +49,7 @@ def _find_keyboard_device() -> str | None:
     blocks = devices_info.split("\n\n")
     for block in blocks:
         name_match = re.search(r'N: Name="([^"]+)"', block)
-        handler_match = re.search(r'H: Handlers=(.+)', block)
+        handler_match = re.search(r"H: Handlers=(.+)", block)
         if not name_match or not handler_match:
             continue
 
@@ -58,7 +57,7 @@ def _find_keyboard_device() -> str | None:
         handlers = handler_match.group(1)
 
         # Extract event device from handlers
-        event_match = re.search(r'event(\d+)', handlers)
+        event_match = re.search(r"event(\d+)", handlers)
         if not event_match:
             continue
 
@@ -108,8 +107,8 @@ class EvdevKeyListener:
             return False
 
         try:
-            import fcntl
-            with open(self._device_path, "rb") as f:
+
+            with open(self._device_path, "rb") as _:
                 # EVIOCGRAB = 0x4008 4561 — not needed, just test read access
                 pass
         except PermissionError:
@@ -146,6 +145,7 @@ class EvdevKeyListener:
 
                 # struct input_event { time_t sec, usec; __u16 type, code; __s32 value; }
                 import struct
+
                 _time_sec, _time_usec, ev_type, ev_code, ev_value = struct.unpack("qqHHi", data)
 
                 if ev_type != EV_KEY:
@@ -155,7 +155,7 @@ class EvdevKeyListener:
                 if ev_value == KEY_REPEAT:
                     continue
 
-                is_pressed = (ev_value == KEY_DOWN)
+                is_pressed = ev_value == KEY_DOWN
                 key_name = _EVDEV_KEY_MAP.get(ev_code)
                 if key_name is None:
                     continue

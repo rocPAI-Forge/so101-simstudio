@@ -8,15 +8,11 @@ When the SO101 keyboard teleop is active, we monkey-patch
 ``init_keyboard_listener`` to skip the TerminalKeyListener (which conflicts
 with pynput) and instead route arrow-key / ESC recording controls through
 the teleop's own ``_on_press`` callback.
-
-Supports view_mode parameter for Rerun camera feed display during recording.
 """
 
 import sys
-import time
 from pathlib import Path
 
-import rerun as rr
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -34,196 +30,57 @@ from simstudio.teleoperators.so101_leader import (  # noqa: F401
     SO101LeaderTeleopConfig,
 )
 
-
 # ---------------------------------------------------------------------------
-# 2. Detect teleop type and view_mode from YAML config, then monkey-patch
-#    init_keyboard_listener if keyboard teleop is active.
+# 2. Detect teleop type from YAML config and monkey-patch init_keyboard_listener.
+#    The patched version, when SO101 keyboard is active, returns a minimal
+#    events dict with listener=None — arrow keys / ESC are handled by the
+#    teleop's pynput listener instead.
 # ---------------------------------------------------------------------------
 
 
-def _detect_config_value(key_path: str) -> str | None:
-    """Extract a value from the --config YAML file on the command line."""
+def _detect_teleop_type() -> str | None:
+    """Extract teleop.type from the --config YAML file on the command line."""
     for i, arg in enumerate(sys.argv):
         if arg == "--config" and i + 1 < len(sys.argv):
             cfg_path = Path(sys.argv[i + 1])
             if cfg_path.exists():
                 with open(cfg_path) as f:
                     cfg = yaml.safe_load(f)
-                # Support nested keys like "teleop.type"
-                keys = key_path.split(".")
-                value = cfg
-                for k in keys:
-                    if isinstance(value, dict):
-                        value = value.get(k)
-                    else:
-                        return None
-                return value
+                return cfg.get("teleop", {}).get("type")
     return None
 
 
-def _detect_view_mode() -> str:
-    """Detect view_mode from command line arguments."""
-    # Check command line
-    for i, arg in enumerate(sys.argv):
-        if arg == "--view_mode" and i + 1 < len(sys.argv):
-            return sys.argv[i + 1]
-    return "mujoco"  # default
-
-
-_teleop_type = _detect_config_value("teleop.type")
-_view_mode = _detect_view_mode()
+_teleop_type = _detect_teleop_type()
 
 if _teleop_type == "so101_keyboard":
     import lerobot.utils.keyboard_input as _ki
-    from simstudio.teleoperators.so101_keyboard import teleop_so101_keyboard as _teleop_module
 
     _original_init = _ki.init_keyboard_listener
 
-    # Module-level shared events dict
-    _shared_events: dict[str, bool] = {
-        "exit_early": False,
-        "rerecord_episode": False,
-        "stop_recording": False,
-    }
-
-    # Reference to the keyboard teleop instance (set by _patched_on_press when it first fires)
-    _keyboard_teleop_ref: list = [None]
-
     def _patched_init_keyboard_listener():
         import logging
+
+        events = {
+            "exit_early": False,
+            "rerecord_episode": False,
+            "stop_recording": False,
+        }
         logging.info(
-            "SO101 keyboard teleop active — use arrow keys and ESC for recording control."
+            "SO101 keyboard teleop active — arrow keys and ESC handled by teleop "
+            "(n/r/q recording shortcuts disabled to avoid key conflicts)."
         )
-        # Link _shared_events to the teleop's recording_events for evdev mode
-        if _keyboard_teleop_ref[0] is not None:
-            _keyboard_teleop_ref[0].set_recording_events(_shared_events)
-            logging.info("Linked recording events to keyboard teleop (evdev mode)")
-        return None, _shared_events
+        return None, events
 
     _ki.init_keyboard_listener = _patched_init_keyboard_listener
 
-    # Monkey-patch SO101KeyboardTeleop._on_press to update shared events
-    _original_on_press = _teleop_module.SO101KeyboardTeleop._on_press
-
-    def _patched_on_press(self, key):
-        # Store reference for evdev linkage
-        _keyboard_teleop_ref[0] = self
-
-        # Call original _on_press for movement handling
-        _original_on_press(self, key)
-
-        # Also update shared events for recording control
-        from pynput import keyboard as _kb
-        if key == _kb.Key.esc:
-            _shared_events["stop_recording"] = True
-            _shared_events["exit_early"] = True
-            import logging
-            logging.info("ESC pressed - stopping recording")
-        elif key == _kb.Key.right:
-            _shared_events["exit_early"] = True
-            import logging
-            logging.info("Right arrow - saving episode")
-        elif key == _kb.Key.left:
-            _shared_events["rerecord_episode"] = True
-            _shared_events["exit_early"] = True
-            import logging
-            logging.info("Left arrow - canceling episode")
-
-    _teleop_module.SO101KeyboardTeleop._on_press = _patched_on_press
-
-    # Also patch connect() to set recording events immediately for evdev mode
-    _original_connect = _teleop_module.SO101KeyboardTeleop.connect
-
-    def _patched_connect(self, calibrate=True):
-        _original_connect(self, calibrate)
-        if self._use_evdev:
-            self.set_recording_events(_shared_events)
-            import logging
-            logging.info("evdev mode: recording events linked to keyboard teleop")
-
-    _teleop_module.SO101KeyboardTeleop.connect = _patched_connect
-
-
-def _patch_rerun_for_record():
-    """Patch robot to log camera feeds to rerun AFTER action is executed.
-
-    LeRobot's record loop calls get_observation() BEFORE send_action(),
-    causing 1-frame display delay. Fix: log cameras in send_action() after
-    physics step, so rerun shows the result of the current action.
-    """
-    import logging
-
-    import lerobot.robots as _robots
-
-    _original_make_robot = _robots.make_robot_from_config
-
-    def _patched_make_robot(cfg):
-        robot = _original_make_robot(cfg)
-        _original_send = robot.send_action
-
-        _log_cameras = ["front"]
-
-        def _send_and_log(action):
-            result = _original_send(action)
-            # Log camera AFTER action is applied — no 1-frame delay
-            rr.set_time("timeline", timestamp=time.time())
-            obs = robot.get_observation()
-            for cam_name in _log_cameras:
-                key = f"observation.camera_{cam_name}"
-                if key in obs:
-                    rr.log(key, rr.Image(obs[key]))
-            return result
-
-        robot.send_action = _send_and_log
-        return robot
-
-    _robots.make_robot_from_config = _patched_make_robot
-    logging.info("Patched robot.send_action to log cameras to rerun (no delay)")
-
 
 # ---------------------------------------------------------------------------
-# 3. Entry point — register plugins, configure view_mode, then call LeRobot's record().
+# 3. Entry point — register plugins, then call LeRobot's record().
 # ---------------------------------------------------------------------------
 def main():
-    import logging
-
-    # Convert view_mode to LeRobot's display_data/display_mode format
-    display_data = _view_mode in ("rerun", "both")
-    display_mode = "rerun" if display_data else "rerun"
-
-    # If rerun mode: monkey-patch LeRobot's rerun visualization to use
-    # the same simple approach as teleoperate.py (no static=True, no blueprint).
-    if display_data and display_mode == "rerun":
-        _patch_rerun_for_record()
-
-    # Remove view_mode from argv and add display_data/display_mode if needed
-    argv_filtered = []
-    skip_next = False
-    for _, arg in enumerate(sys.argv):
-        if skip_next:
-            skip_next = False
-            continue
-        if arg == "--view_mode":
-            skip_next = True
-            continue
-        if arg in ("--display_data", "--display_mode"):
-            skip_next = True
-            continue
-        argv_filtered.append(arg)
-
-    # Add display_data/display_mode if view_mode is not mujoco
-    if _view_mode != "mujoco":
-        argv_filtered.extend(["--display_data", str(display_data)])
-        argv_filtered.extend(["--display_mode", display_mode])
-        # Disable MuJoCo window when using rerun
-        if _view_mode == "rerun":
-            argv_filtered.extend(["--robot.render_window", "false"])
-
     # Replace argv so LeRobot's draccus parser sees its own script name.
-    argv = ["lerobot_record.py"] + argv_filtered[1:]  # skip script name
+    argv = ["lerobot_record.py"] + sys.argv[1:]
     sys.argv = argv
-
-    logging.info(f"View mode: {_view_mode} -> display_data={display_data}, display_mode={display_mode}")
 
     # Import AFTER patching so record() sees our patched init_keyboard_listener.
     from lerobot.scripts.lerobot_record import record  # noqa: E402
