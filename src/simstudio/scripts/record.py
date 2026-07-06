@@ -13,8 +13,10 @@ Supports view_mode parameter for Rerun camera feed display during recording.
 """
 
 import sys
+import time
 from pathlib import Path
 
+import rerun as rr
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -142,6 +144,42 @@ if _teleop_type == "so101_keyboard":
     _teleop_module.SO101KeyboardTeleop.connect = _patched_connect
 
 
+def _patch_rerun_for_record():
+    """Monkey-patch robot.get_observation() to log camera feeds to rerun.
+
+    Instead of using LeRobot's broken visualization pipeline (static=True),
+    we log camera images the same way teleoperate.py does: simple rr.log()
+    with rr.set_time() each frame.
+    """
+    import logging
+
+    import lerobot.robots as _robots
+
+    _original_make_robot = _robots.make_robot_from_config
+
+    def _patched_make_robot(cfg):
+        robot = _original_make_robot(cfg)
+        _original_get_obs = robot.get_observation
+
+        # Only log front camera for lower latency (top/wrist available in dataset)
+        _log_cameras = ["front"]
+
+        def _get_obs_and_log():
+            obs = _original_get_obs()
+            rr.set_time("timeline", timestamp=time.time())
+            for cam_name in _log_cameras:
+                key = f"observation.camera_{cam_name}"
+                if key in obs:
+                    rr.log(key, rr.Image(obs[key]))
+            return obs
+
+        robot.get_observation = _get_obs_and_log
+        return robot
+
+    _robots.make_robot_from_config = _patched_make_robot
+    logging.info("Patched robot.get_observation to log camera feeds to rerun")
+
+
 # ---------------------------------------------------------------------------
 # 3. Entry point — register plugins, configure view_mode, then call LeRobot's record().
 # ---------------------------------------------------------------------------
@@ -151,6 +189,11 @@ def main():
     # Convert view_mode to LeRobot's display_data/display_mode format
     display_data = _view_mode in ("rerun", "both")
     display_mode = "rerun" if display_data else "rerun"
+
+    # If rerun mode: monkey-patch LeRobot's rerun visualization to use
+    # the same simple approach as teleoperate.py (no static=True, no blueprint).
+    if display_data and display_mode == "rerun":
+        _patch_rerun_for_record()
 
     # Remove view_mode from argv and add display_data/display_mode if needed
     argv_filtered = []
