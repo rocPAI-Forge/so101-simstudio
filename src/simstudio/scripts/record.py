@@ -84,11 +84,18 @@ if _teleop_type == "so101_keyboard":
         "stop_recording": False,
     }
 
+    # Reference to the keyboard teleop instance (set by _patched_on_press when it first fires)
+    _keyboard_teleop_ref: list = [None]
+
     def _patched_init_keyboard_listener():
         import logging
         logging.info(
             "SO101 keyboard teleop active — use arrow keys and ESC for recording control."
         )
+        # Link _shared_events to the teleop's recording_events for evdev mode
+        if _keyboard_teleop_ref[0] is not None:
+            _keyboard_teleop_ref[0].set_recording_events(_shared_events)
+            logging.info("Linked recording events to keyboard teleop (evdev mode)")
         return None, _shared_events
 
     _ki.init_keyboard_listener = _patched_init_keyboard_listener
@@ -97,6 +104,9 @@ if _teleop_type == "so101_keyboard":
     _original_on_press = _teleop_module.SO101KeyboardTeleop._on_press
 
     def _patched_on_press(self, key):
+        # Store reference for evdev linkage
+        _keyboard_teleop_ref[0] = self
+
         # Call original _on_press for movement handling
         _original_on_press(self, key)
 
@@ -119,6 +129,18 @@ if _teleop_type == "so101_keyboard":
 
     _teleop_module.SO101KeyboardTeleop._on_press = _patched_on_press
 
+    # Also patch connect() to set recording events immediately for evdev mode
+    _original_connect = _teleop_module.SO101KeyboardTeleop.connect
+
+    def _patched_connect(self, calibrate=True):
+        _original_connect(self, calibrate)
+        if self._use_evdev:
+            self.set_recording_events(_shared_events)
+            import logging
+            logging.info("evdev mode: recording events linked to keyboard teleop")
+
+    _teleop_module.SO101KeyboardTeleop.connect = _patched_connect
+
 
 # ---------------------------------------------------------------------------
 # 3. Entry point — register plugins, configure view_mode, then call LeRobot's record().
@@ -133,7 +155,7 @@ def main():
     # Remove view_mode from argv and add display_data/display_mode if needed
     argv_filtered = []
     skip_next = False
-    for i, arg in enumerate(sys.argv):
+    for _, arg in enumerate(sys.argv):
         if skip_next:
             skip_next = False
             continue
