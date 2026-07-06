@@ -40,24 +40,29 @@ SO-101 SimStudio 是一个基于 MuJoCo 仿真环境的机器人遥操作平台�
 
 ## 系统要求
 
-### 最低配置
+### 当前支持
 
-- **OS**: Ubuntu 20.04+ / macOS 12+
+- **OS**: Ubuntu 24.04
+- **GPU**: AMD ROCm 7.2.x 兼容显卡
 - **Python**: 3.12+
-- **GPU**: 支持 OpenGL 3.3+ 的显卡
 - **RAM**: 8GB+
-
-### 推荐配置
-
-- **GPU**: AMD ROCm 兼容显卡（如 RX 6800 XT）
-- **RAM**: 16GB+
 - **存储**: 10GB+ 可用空间
+
+### 计划支持
+
+- **OS**: macOS 12+（Apple Silicon）
+- **GPU**: NVIDIA CUDA（需额外配置）
 
 ### 软件依赖
 
 - MuJoCo 3.x
-- PyTorch 2.x（ROCm 或 CUDA）
+- PyTorch 2.x（ROCm 后端）
 - LeRobot（作为 git submodule）
+
+### 已知限制
+
+- 当前仅在 Ubuntu 24.04 + AMD ROCm 7.2.x 环境下测试通过
+- macOS 和 CUDA 环境支持待实现
 
 ## 架构概览
 
