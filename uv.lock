@@ -3297,6 +3297,7 @@ name = "so101-simstudio"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "evdev" },
     { name = "lerobot", extra = ["dataset", "kinematics"] },
     { name = "matplotlib" },
     { name = "mujoco" },
@@ -3317,6 +3318,7 @@ smolvla = [
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.0.0" },
+    { name = "evdev", specifier = ">=1.6.0" },
     { name = "lerobot", extras = ["kinematics", "dataset"], editable = "lerobot" },
     { name = "lerobot", extras = ["smolvla"], marker = "extra == 'smolvla'", editable = "lerobot" },
     { name = "matplotlib", specifier = ">=3.10.6" },

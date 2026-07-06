@@ -9,6 +9,7 @@ dependencies = [
     "lerobot[kinematics,dataset]",
     "matplotlib>=3.10.6",
     "pynput>=1.7.7",
+    "evdev>=1.6.0",
 ]
 
 [tool.uv.sources]
