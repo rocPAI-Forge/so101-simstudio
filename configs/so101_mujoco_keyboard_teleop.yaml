@@ -1,0 +1,35 @@
+# Keyboard teleop 测试配置（仅实时控制，不录制）
+
+robot:
+  type: so101_mujoco
+  action_mode: velocity
+  xml_path: SO101/pick_scene.xml
+  cube_positions_path: configs/cube_positions.json
+  record_fps: 30
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+  lin_speed: 0.04
+  yaw_speed: 1.20
+  grip_speed: 0.7
+  ori_gain: 6.0
+  tilt_deadzone: 0.03
+  tilt_wmax: 6.0
+  lambda_pos: 0.01
+  lambda_tilt: 0.0001
+  vel_limit: 0.5
+  vel_limit_wrist: 8.0
+  smooth_dq: 0.30
+  smooth_dq_wrist: 0.08
+  wrist_gff_gain: 0.5
+  table_z: 0.0
+  clearance: 0.07
+  ee_site_name: wrist_site
+  tool_axis_site: [0.0, -1.0, 0.0]
+
+teleop:
+  type: so101_keyboard
