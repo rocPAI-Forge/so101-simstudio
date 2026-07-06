@@ -1,57 +1,129 @@
-# SO-101 MuJoCo recording with leader arm (Feetech STS3215)
-# Leader arm positions → MuJoCo robot positions (1:1 mapping)
+# =============================================================================
+# SO-101 SimStudio - Leader Arm Recording Config Template
+# =============================================================================
+# 使用方法:
+#   1. 直接使用: uv run python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml
+#   2. 复制修改: cp configs/so101_mujoco_leader.yaml configs/my_config.yaml
+#   3. 命令行覆盖: --config ... --dataset.num_episodes 5 --resume true
+# =============================================================================
 
+# -----------------------------------------------------------------------------
+# Robot Configuration
+# -----------------------------------------------------------------------------
 robot:
   type: so101_mujoco
-  xml_path: SO101/pick_scene.xml
-  cube_positions_path: configs/cube_positions.json
-  record_fps: 30
-  control_fps: 180
-  physics_fps: 360
-  camera_width: 640
-  camera_height: 480
-  camera_names: [front, top, wrist]
-  show_collision_geometry: false
-  render_window: true
-  action_mode: position
-  lin_speed: 0.04
-  yaw_speed: 1.20
-  grip_speed: 0.7
-  ori_gain: 6.0
-  tilt_deadzone: 0.03
-  tilt_wmax: 6.0
-  lambda_pos: 0.01
-  lambda_tilt: 0.0001
-  vel_limit: 0.5
-  vel_limit_wrist: 8.0
-  smooth_dq: 0.30
-  smooth_dq_wrist: 0.08
-  wrist_gff_gain: 0.5
-  table_z: 0.0
-  clearance: 0.07
-  ee_site_name: wrist_site
-  tool_axis_site: [0.0, -1.0, 0.0]
+  action_mode: position                    # velocity | position (leader arm uses position)
+  xml_path: SO101/pick_scene.xml           # MuJoCo 场景文件
+  cube_positions_path: configs/cube_positions.json  # 物体初始位置
+  
+  # Frame rates
+  record_fps: 30                           # 录制帧率
+  control_fps: 180                         # 控制帧率
+  physics_fps: 360                         # 物理仿真帧率
+  
+  # Camera
+  camera_width: 640                        # 相机宽度
+  camera_height: 480                       # 相机高度
+  camera_names: [front, top, wrist]        # 相机名称列表
+  show_collision_geometry: false            # 显示碰撞几何
+  render_window: true                      # 渲染 MuJoCo 窗口
+  
+  # Motion parameters
+  lin_speed: 0.04                          # 线性速度
+  yaw_speed: 1.20                          # 偏航速度
+  grip_speed: 0.7                          # 夹爪速度
+  ori_gain: 6.0                            # 姿态增益
+  
+  # Tilt parameters
+  tilt_deadzone: 0.03                      # 倾斜死区
+  tilt_wmax: 6.0                           # 倾斜最大角速度
+  
+  # IK parameters
+  lambda_pos: 0.01                         # 位置阻尼
+  lambda_tilt: 0.0001                      # 倾斜阻尼
+  vel_limit: 0.5                           # 速度限制
+  vel_limit_wrist: 8.0                     # 腕部速度限制
+  
+  # Smoothing
+  smooth_dq: 0.30                          # 关节平滑系数
+  smooth_dq_wrist: 0.08                    # 腕部平滑系数
+  wrist_gff_gain: 0.5                      # 腕部增益
+  
+  # Table and clearance
+  table_z: 0.0                             # 桌面高度
+  clearance: 0.07                          # 安全间距
+  
+  # End effector
+  ee_site_name: wrist_site                 # 末端执行器站点
+  tool_axis_site: [0.0, -1.0, 0.0]        # 工具轴方向
 
+# -----------------------------------------------------------------------------
+# Teleoperation Configuration
+# -----------------------------------------------------------------------------
 teleop:
-  type: so101_leader_arm
-  port: /dev/ttyACM0
-  use_degrees: false
+  type: so101_leader                       # Leader arm 遥操作
+  port: /dev/ttyACM0                       # 串口端口
+  use_degrees: false                       # 使用弧度（false）或角度（true）
 
+# -----------------------------------------------------------------------------
+# Dataset Configuration
+# -----------------------------------------------------------------------------
 dataset:
-  repo_id: alexhegit/so101_mujoco_leader_test
-  root: ./datasets/leader-test
-  single_task: "SO-101 MuJoCo leader arm manipulation"
-  fps: 30
-  episode_time_s: 120
-  reset_time_s: 1
-  num_episodes: 1
-  video: true
-  push_to_hub: false
-  private: false
-  num_image_writer_processes: 0
-  num_image_writer_threads_per_camera: 4
-  video_encoding_batch_size: 1
+  # Dataset identification
+  repo_id: alexhegit/so101_mujoco_leader_test  # HuggingFace 数据集名
+  root: ./datasets/leader-test                 # 本地保存路径
+  single_task: "SO-101 MuJoCo leader arm manipulation"  # 任务描述
+  
+  # Recording parameters
+  fps: 30                                  # 录制帧率
+  episode_time_s: 120                      # 每集时长（秒）
+  reset_time_s: 1                          # 重置时间（秒）
+  num_episodes: 1                          # 录制集数
+  
+  # Video settings
+  video: true                              # 是否录制视频
+  
+  # HuggingFace Hub
+  push_to_hub: false                       # 上传到 HuggingFace
+  private: false                           # 私有数据集
+  tags: null                               # 标签列表
+  
+  # Performance tuning
+  num_image_writer_processes: 0            # 图像写入进程数
+  num_image_writer_threads_per_camera: 4   # 每相机线程数
+  video_encoding_batch_size: 1             # 视频编码批次大小
+  streaming_encoding: false                # 流式编码
+  
+  # Encoder settings
+  encoder_queue_maxsize: 30                # 编码器队列大小
+  encoder_threads: null                    # 编码器线程数
+  
+  # RGB encoder
+  rgb_encoder:
+    vcodec: libsvtav1                      # 视频编码器
+    pix_fmt: yuv420p                       # 像素格式
+    g: 2                                   # GOP 大小
+    crf: 30                                # 质量 (0-51, 越低越好)
+    preset: 12                             # 编码速度 (0-13, 越高越慢)
+    fast_decode: 0                         # 快速解码
+    video_backend: pyav                    # 视频后端
+    extra_options: {}                      # 额外编码选项
 
-display_data: false
-play_sounds: false
-resume: false
+# -----------------------------------------------------------------------------
+# Display Settings
+# -----------------------------------------------------------------------------
+display_data: false                        # 显示所有相机
+display_mode: rerun                        # rerun | opencv
+display_ip: null                           # 远程 Rerun 服务器 IP
+display_port: null                         # 远程 Rerun 服务器端口
+display_compressed_images: false           # 显示压缩图像
+
+# -----------------------------------------------------------------------------
+# Audio Settings
+# -----------------------------------------------------------------------------
+play_sounds: false                         # 播放语音提示
+
+# -----------------------------------------------------------------------------
+# Recording Control
+# -----------------------------------------------------------------------------
+resume: false                              # 续录已有数据集
