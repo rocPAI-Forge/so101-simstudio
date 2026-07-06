@@ -4,11 +4,14 @@
 
 echo "=== Keyboard Teleop Test ==="
 echo "Controls:"
-echo "  Arrow keys: X/Y movement"
-echo "  Z/X: Z-axis up/down"
-echo "  1/2: Wrist rotation"
-echo "  Space: Gripper close/open"
-echo "  ESC: Quit"
+echo "  W/S: Y-axis (forward/backward)"
+echo "  A/D: X-axis (left/right)"
+echo "  Z/X: Z-axis (up/down)"
+echo "  I/K: Wrist flex"
+echo "  [/]: Wrist rotation"
+echo "  C: Gripper close"
+echo "  O: Gripper open"
+echo "  ESC: Quit (during recording)"
 echo ""
 
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
