@@ -73,24 +73,51 @@ _view_mode = _detect_view_mode()
 
 if _teleop_type == "so101_keyboard":
     import lerobot.utils.keyboard_input as _ki
+    from simstudio.teleoperators.so101_keyboard import teleop_so101_keyboard as _teleop_module
 
     _original_init = _ki.init_keyboard_listener
 
+    # Module-level shared events dict
+    _shared_events: dict[str, bool] = {
+        "exit_early": False,
+        "rerecord_episode": False,
+        "stop_recording": False,
+    }
+
     def _patched_init_keyboard_listener():
         import logging
-
-        events = {
-            "exit_early": False,
-            "rerecord_episode": False,
-            "stop_recording": False,
-        }
         logging.info(
-            "SO101 keyboard teleop active — arrow keys and ESC handled by teleop "
-            "(n/r/q recording shortcuts disabled to avoid key conflicts)."
+            "SO101 keyboard teleop active — use arrow keys and ESC for recording control."
         )
-        return None, events
+        return None, _shared_events
 
     _ki.init_keyboard_listener = _patched_init_keyboard_listener
+
+    # Monkey-patch SO101KeyboardTeleop._on_press to update shared events
+    _original_on_press = _teleop_module.SO101KeyboardTeleop._on_press
+
+    def _patched_on_press(self, key):
+        # Call original _on_press for movement handling
+        _original_on_press(self, key)
+
+        # Also update shared events for recording control
+        from pynput import keyboard as _kb
+        if key == _kb.Key.esc:
+            _shared_events["stop_recording"] = True
+            _shared_events["exit_early"] = True
+            import logging
+            logging.info("ESC pressed - stopping recording")
+        elif key == _kb.Key.right:
+            _shared_events["exit_early"] = True
+            import logging
+            logging.info("Right arrow - saving episode")
+        elif key == _kb.Key.left:
+            _shared_events["rerecord_episode"] = True
+            _shared_events["exit_early"] = True
+            import logging
+            logging.info("Left arrow - canceling episode")
+
+    _teleop_module.SO101KeyboardTeleop._on_press = _patched_on_press
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +149,9 @@ def main():
     if _view_mode != "mujoco":
         argv_filtered.extend(["--display_data", str(display_data)])
         argv_filtered.extend(["--display_mode", display_mode])
+        # Disable MuJoCo window when using rerun
+        if _view_mode == "rerun":
+            argv_filtered.extend(["--robot.render_window", "false"])
 
     # Replace argv so LeRobot's draccus parser sees its own script name.
     argv = ["lerobot_record.py"] + argv_filtered[1:]  # skip script name
