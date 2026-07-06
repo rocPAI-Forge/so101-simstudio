@@ -25,9 +25,9 @@ from lerobot.utils.utils import init_logging
 # 1. Register project plugins with LeRobot's ChoiceRegistry.
 # ---------------------------------------------------------------------------
 from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-from simstudio.teleoperators.so101_leader import (  # noqa: F401
-    SO101LeaderTeleopConfig,
-)
+from simstudio.teleoperators.so101_keyboard import SO101KeyboardTeleopConfig  # noqa: F401
+from simstudio.teleoperators.so101_joycon import SO101JoyConTeleopConfig  # noqa: F401
+from simstudio.teleoperators.so101_leader import SO101LeaderTeleopConfig  # noqa: F401
 
 RERUN_APPLICATION_ID = "simstudio"
 
