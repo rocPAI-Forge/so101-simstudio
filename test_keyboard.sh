@@ -11,7 +11,11 @@ echo "  I/K: Wrist flex"
 echo "  [/]: Wrist rotation"
 echo "  C: Gripper close"
 echo "  O: Gripper open"
-echo "  ESC: Quit (during recording)"
+echo ""
+echo "Recording shortcuts (record mode only):"
+echo "  Left arrow: Cancel current episode"
+echo "  Right arrow: Save episode, next one"
+echo "  ESC: Stop recording"
 echo ""
 
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
