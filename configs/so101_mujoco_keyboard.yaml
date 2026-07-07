@@ -5,6 +5,11 @@
 #   1. 直接使用: uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml
 #   2. 复制修改: cp configs/so101_mujoco_keyboard.yaml configs/my_config.yaml
 #   3. 命令行覆盖: --config ... --dataset.num_episodes 5 --resume true
+#
+# 显示模式 (二选一):
+#   --view_mode mujoco   MuJoCo 窗口 (默认, 低延迟)
+#   --view_mode rerun    LeRobot 官方 Rerun 摄像头视图
+# 两种模式均写入 LeRobot dataset v3.0。
 # =============================================================================
 
 # -----------------------------------------------------------------------------

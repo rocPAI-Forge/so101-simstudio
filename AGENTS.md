@@ -68,7 +68,7 @@ git submodule update --init --recursive
   - **Position** (leader arm): `{joint.pos: float}` — direct joint position mapping,1:1 from leader to follower.
   - MuJoCo robot's `send_action` auto-detects format via key names.
 - **Window visibility**: The MuJoCo recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, do **not** set `FOCUSED=FALSE` or `FOCUS_ON_SHOW=FALSE`, or the window may be invisible. Set `render_window: false` in the robot config to disable the GLFW window for headless/CI runs.
-- **Teleop view_mode**: Use `--view_mode rerun` (default) to show camera feeds in Rerun, `--view_mode mujoco` for MuJoCo window only, or `--view_mode both` for both.
+- **Teleop view_mode**: Use `--view_mode rerun` for LeRobot Rerun camera feeds, or `--view_mode mujoco` (default) for the MuJoCo GLFW window. Both modes record the same LeRobot v3.0 dataset. Keyboard teleop uses arrow keys / ESC for episode control; Joy-Con and leader use LeRobot n/r/q or device buttons.
 - **Rendering performance**: Camera rendering is done with MuJoCo's offscreen renderer. On CPU-only machines the record loop will be slower than 30 Hz; it still records and saves episodes, but a GPU is strongly recommended for real teleoperation.
 
 ## ROCm

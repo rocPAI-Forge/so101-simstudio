@@ -47,9 +47,18 @@ make rocm-smoke-record
 **录制数据集**：
 
 ```bash
+# MuJoCo 窗口（默认，低延迟）
 .venv-rocm/bin/python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_keyboard.yaml
+    --config configs/so101_mujoco_keyboard.yaml \
+    --view_mode mujoco
+
+# LeRobot Rerun 摄像头视图
+.venv-rocm/bin/python -m simstudio.scripts.record \
+    --config configs/so101_mujoco_keyboard.yaml \
+    --view_mode rerun
 ```
+
+两种模式均写入 LeRobot dataset v3.0。
 
 **按键映射**：
 
@@ -91,7 +100,8 @@ make joycon-sync
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_joycon.yaml
+    --config configs/so101_mujoco_joycon.yaml \
+    --view_mode mujoco   # 或 rerun
 ```
 
 **按键映射（右手）**：
@@ -130,7 +140,8 @@ make joycon-sync
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_leader.yaml
+    --config configs/so101_mujoco_leader.yaml \
+    --view_mode mujoco   # 或 rerun
 ```
 
 ## 配置参数
@@ -210,7 +221,21 @@ vim configs/my_config.yaml
 
 ### Q: MuJoCo 窗口不显示？
 
-设置 `render_window: true`，或使用 `--view_mode mujoco`。
+设置 `render_window: true`，或使用 `--view_mode mujoco`（record 脚本默认）。
+
+### Q: Rerun 画面比 MuJoCo 延迟大？
+
+正常现象。Rerun 使用 LeRobot 官方路径，显示的是动作执行前的 observation；MuJoCo 窗口在 `send_action` 之后刷新，更跟手。需要低延迟遥操作时用 `--view_mode mujoco`；需要摄像头视角监控时用 `--view_mode rerun`。数据集内容不受显示模式影响。
+
+### Q: Rerun 模式下键盘无法控制机械臂？
+
+Rerun 窗口会抢走键盘焦点，pynput 可能收不到按键。启动日志里若看到 `Using evdev keyboard listener` 则已启用焦点无关输入。否则请把用户加入 `input` 组后重新登录：
+
+```bash
+sudo usermod -aG input "$USER"
+```
+
+或保持 **终端窗口** 处于焦点状态再操作 WASD。
 
 ### Q: Joy-Con 连接不上？
 

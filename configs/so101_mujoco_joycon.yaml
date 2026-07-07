@@ -5,6 +5,8 @@
 #   1. 直接使用: uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml
 #   2. 复制修改: cp configs/so101_mujoco_joycon.yaml configs/my_config.yaml
 #   3. 命令行覆盖: --config ... --dataset.num_episodes 5 --resume true
+#
+# 显示模式: --view_mode mujoco (默认) | rerun
 # =============================================================================
 
 # -----------------------------------------------------------------------------
