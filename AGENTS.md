@@ -46,6 +46,10 @@ git submodule update --init --recursive
 | Format | `make format` |
 | Test | `make test` |
 | MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/pick_scene.xml` |
+| Smoke: keyboard record | `make smoke-keyboard-record VIEW_MODE=mujoco` |
+| Smoke: keyboard teleop | `make smoke-keyboard-teleop` |
+| Smoke: Joy-Con record | `make smoke-joycon-record SIDE=right VIEW_MODE=mujoco` |
+| Smoke: leader record | `make smoke-leader-record VIEW_MODE=mujoco` |
 | Record (keyboard) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
 | Record (Joy-Con right) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml` |
 | Record (Joy-Con left) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
@@ -70,6 +74,7 @@ git submodule update --init --recursive
 - **Window visibility**: The MuJoCo recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, do **not** set `FOCUSED=FALSE` or `FOCUS_ON_SHOW=FALSE`, or the window may be invisible. Set `render_window: false` in the robot config to disable the GLFW window for headless/CI runs.
 - **Teleop view_mode**: Use `--view_mode rerun` for LeRobot Rerun camera feeds, or `--view_mode mujoco` (default) for the MuJoCo GLFW window. Both modes record the same LeRobot v3.0 dataset. Keyboard teleop uses arrow keys / ESC for episode control; Joy-Con and leader use LeRobot n/r/q or device buttons.
 - **Rendering performance**: Camera rendering is done with MuJoCo's offscreen renderer. On CPU-only machines the record loop will be slower than 30 Hz; it still records and saves episodes, but a GPU is strongly recommended for real teleoperation.
+- **Smoke scripts**: Interactive manual tests live in `scripts/smoke/` (`make smoke-*`). Root `test_*.sh` files delegate there. Pytest unit tests stay in `tests/`.
 
 ## ROCm
 
