@@ -13,31 +13,90 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# evdev key code to logical key name mapping (subset used by keyboard teleop)
-_EVDEV_KEY_MAP = {
-    # Letters (KEY_A=30 .. KEY_Z=52)
-    **{30 + i: chr(ord("a") + i) for i in range(26)},
-    # Arrow keys
-    103: "up",  # KEY_UP
-    108: "down",  # KEY_DOWN
-    105: "left",  # KEY_LEFT
-    106: "right",  # KEY_RIGHT
-    # Special keys
-    1: "esc",  # KEY_ESC
-    57: "space",  # KEY_SPACE
-    28: "enter",  # KEY_ENTER
-    15: "tab",  # KEY_TAB
-    14: "backspace",  # KEY_BACKSPACE
-    # Brackets (KEY_LEFTBRACE=26, KEY_RIGHTBRACE=27)
-    26: "[",
-    27: "]",
-}
 
-# Event types
+def _build_evdev_key_map() -> dict[int, str]:
+    """Build Linux evdev scancode -> logical key name map for teleop."""
+    try:
+        from evdev import ecodes
+
+        key_map = {getattr(ecodes, f"KEY_{letter.upper()}"): letter for letter in "abcdefghijklmnopqrstuvwxyz"}
+        key_map.update(
+            {
+                ecodes.KEY_UP: "up",
+                ecodes.KEY_DOWN: "down",
+                ecodes.KEY_LEFT: "left",
+                ecodes.KEY_RIGHT: "right",
+                ecodes.KEY_ESC: "esc",
+                ecodes.KEY_SPACE: "space",
+                ecodes.KEY_ENTER: "enter",
+                ecodes.KEY_TAB: "tab",
+                ecodes.KEY_BACKSPACE: "backspace",
+                ecodes.KEY_LEFTBRACE: "[",
+                ecodes.KEY_RIGHTBRACE: "]",
+            }
+        )
+        return key_map
+    except ImportError:
+        # Fallback when evdev is unavailable (must match linux/input-event-codes.h).
+        return {
+            30: "a",
+            48: "b",
+            46: "c",
+            32: "d",
+            18: "e",
+            33: "f",
+            34: "g",
+            35: "h",
+            23: "i",
+            36: "j",
+            37: "k",
+            38: "l",
+            50: "m",
+            49: "n",
+            24: "o",
+            25: "p",
+            16: "q",
+            19: "r",
+            31: "s",
+            20: "t",
+            22: "u",
+            47: "v",
+            17: "w",
+            45: "x",
+            21: "y",
+            44: "z",
+            103: "up",
+            108: "down",
+            105: "left",
+            106: "right",
+            1: "esc",
+            57: "space",
+            28: "enter",
+            15: "tab",
+            14: "backspace",
+            26: "[",
+            27: "]",
+        }
+
+
+# evdev key code to logical key name mapping (subset used by keyboard teleop)
+_EVDEV_KEY_MAP = _build_evdev_key_map()
+
+# Event types (linux/input-event-codes.h)
 EV_KEY = 0x01
-KEY_DOWN = 0
-KEY_UP = 1
+# EV_KEY value: 0 = release, 1 = press, 2 = repeat (NOT 0=press!)
+KEY_RELEASE = 0
+KEY_PRESS = 1
 KEY_REPEAT = 2
+
+
+def ev_key_is_pressed(ev_value: int) -> bool | None:
+    """Map Linux EV_KEY value to pressed state. Returns None for repeat/unknown."""
+    if ev_value == KEY_PRESS:
+        return True
+    if ev_value == KEY_RELEASE:
+        return False
+    return None
 
 
 def _find_keyboard_device() -> str | None:
@@ -64,11 +123,12 @@ def _find_keyboard_device() -> str | None:
         event_num = int(event_match.group(1))
         device_path = f"/dev/input/event{event_num}"
 
-        # Priority: AT Translated keyboard > USB keyboards > others
+        # Prefer USB keyboards — users often teleop on an external keyboard while
+        # the built-in AT Translated device stays idle or receives ghost events.
         priority = 0
-        if "AT Translated" in name:
-            priority = 100  # Built-in laptop keyboard
-        elif "USB" in name and "kbd" in handlers.lower():
+        if "USB" in name and "kbd" in handlers.lower():
+            priority = 100
+        elif "AT Translated" in name:
             priority = 50
         elif "kbd" in handlers.lower():
             priority = 10
@@ -76,6 +136,10 @@ def _find_keyboard_device() -> str | None:
         if priority > best_priority:
             best_priority = priority
             best_device = device_path
+            logger.debug("evdev candidate: %s -> %s (priority=%d)", name, device_path, priority)
+
+    if best_device is not None:
+        logger.info("Selected evdev keyboard device: %s", best_device)
 
     return best_device
 
@@ -151,11 +215,10 @@ class EvdevKeyListener:
                 if ev_type != EV_KEY:
                     continue
 
-                # KEY_DOWN=0, KEY_UP=1, KEY_REPEAT=2
-                if ev_value == KEY_REPEAT:
+                is_pressed = ev_key_is_pressed(ev_value)
+                if is_pressed is None:
                     continue
 
-                is_pressed = ev_value == KEY_DOWN
                 key_name = _EVDEV_KEY_MAP.get(ev_code)
                 if key_name is None:
                     continue
