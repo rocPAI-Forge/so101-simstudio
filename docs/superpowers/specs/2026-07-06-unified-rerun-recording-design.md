@@ -1,7 +1,7 @@
 # Unified Rerun / MuJoCo Recording Design
 
 **Date:** 2026-07-06  
-**Status:** Reviewed — latency analysis added 2026-07-06; ready for implementation plan  
+**Status:** Implemented (2026-07-07)  
 **Scope:** SO-101 SimStudio recording with keyboard, Joy-Con, and leader-arm teleop
 
 ---
@@ -12,9 +12,10 @@ Add a `--view_mode` parameter to the SimStudio record wrapper so operators can c
 
 **Principles:**
 
-- Rerun integration uses LeRobot's built-in `display_data` / `display_mode=rerun` path — no custom `rr.log()` patches.
+- Rerun integration uses LeRobot's built-in `display_data` / `display_mode=rerun` path.
+- Wrapper adds a **streaming** `log_rerun_data` patch (no `static=True` on images) so live camera feeds update during record loops.
 - Display mode is orthogonal to dataset writing; `dataset.add_frame()` always runs.
-- Teleop-specific code is limited to the keyboard listener conflict fix.
+- Teleop-specific code: keyboard listener conflict fix + evdev for Rerun focus.
 - The LeRobot submodule remains unmodified.
 
 ---
@@ -41,13 +42,15 @@ Add a `--view_mode` parameter to the SimStudio record wrapper so operators can c
 
 ## 4. Background
 
-### 4.1 Current state
+### 4.1 Current state (post-implementation)
 
-- `record.py` delegates to `lerobot_record.record()` with plugin registration only.
-- A prior implementation added `view_mode`, custom Rerun patching, and evdev keyboard support; it was reverted (`76a63e5`) due to keyboard key conflicts, display jitter, and complexity.
-- Config templates set `display_data: false`; Rerun never activates.
-- Test scripts (`test_keyboard_record.sh`) pass `--view_mode`, but the flag is currently ignored.
-- Keyboard recording control (arrow keys / ESC) is broken: `_recording_events` is never linked to LeRobot's `events` dict.
+- `record.py` maps `--view_mode {mujoco,rerun}` to LeRobot display/render CLI flags; default `mujoco`.
+- Keyboard recording: shared `_recording_events` + patched `init_keyboard_listener` and `SO101KeyboardTeleop.connect`.
+- Rerun mode: streaming `log_rerun_data` patch (removes `static=True` on images); `SO101_PREFER_EVDEV=1` for focus-independent keyboard via evdev.
+- MuJoCo mode: pynput keyboard (default); evdev fallback when pynput unavailable.
+- evdev fixes: Linux letter scancodes via `evdev.ecodes`; `EV_KEY` value 1=press / 0=release.
+- Manual smoke scripts: `scripts/smoke/` with `make smoke-*` targets; root `test_*.sh` wrappers retained.
+- `teleoperate.py` does **not** support `--view_mode` (non-goal); use `render_window` in config.
 
 ### 4.2 LeRobot record loop (relevant excerpt)
 
@@ -326,14 +329,13 @@ uv run python -m simstudio.scripts.record \
 
 | File | Change |
 |------|--------|
-| `src/simstudio/scripts/record.py` | Add `_detect_view_mode()`, argv rewriting, keyboard patches |
-| `configs/so101_mujoco_keyboard.yaml` | Document `--view_mode` in header comments |
-| `configs/so101_mujoco_joycon.yaml` | Same |
-| `configs/so101_mujoco_leader.yaml` | Same |
-| `test_keyboard_record.sh` | Default `VIEW_MODE=rerun` or keep `mujoco`; verify flag works |
-| `test_joycon_record.sh` | Add optional `VIEW_MODE` arg |
-| `AGENTS.md` | Update `view_mode` docs: two modes, default `mujoco` |
-| `QUICKSTART.md` | Add rerun recording examples |
+| `src/simstudio/scripts/record.py` | `detect_view_mode()`, argv rewriting, keyboard patches, Rerun streaming patch |
+| `src/simstudio/teleoperators/so101_keyboard/` | evdev listener; pynput-first / evdev-for-rerun |
+| `configs/so101_mujoco_*.yaml` | Document `--view_mode` in header comments |
+| `scripts/smoke/*.sh` | Manual smoke test launchers |
+| `Makefile` | `smoke-*` targets |
+| `tests/test_record_view_mode.py`, `tests/test_keyboard_teleop.py` | Automated tests |
+| `AGENTS.md`, `QUICKSTART.md`, `README.md` | User docs |
 
 **No changes to:**
 
@@ -370,8 +372,10 @@ Add unit tests for `record.py` helper functions (no MuJoCo/Rerun runtime require
 
 Do **not** reintroduce:
 
-- Custom `rr.log()` in `send_action` monkey-patch
-- evdev keyboard listener (unless separately requested for Wayland)
+- Post-action `get_observation()` monkey-patch on `send_action` (doubles camera renders; record loop lag)
+- Inverted evdev `EV_KEY` values (0=release, 1=press per Linux kernel)
+- Contiguous 30..55 letter scancode table (Linux keys are non-contiguous)
+- evdev as default keyboard backend for `view_mode=mujoco` (breaks pynput teleop)
 - Low-pass filter on keyboard actions
 
 ---
@@ -383,7 +387,7 @@ Do **not** reintroduce:
 | Rerun pre-action observation (§5.7) | Live preview lags input by ≥1 record frame; feels worse than MuJoCo | Accept for v1; use `mujoco` for low-latency teleop; see §10 optional optimizations |
 | Rerun IPC + multi-camera render cost | Loop may run below 30 Hz on CPU-only; lag compounds | GPU recommended; reduce camera count/resolution; fall back to `mujoco` |
 | Keyboard: no n/r/q shortcuts | Must use arrow keys | Document in QUICKSTART |
-| pynput on pure Wayland | Keyboard teleop may not capture keys | Existing limitation; evdev is a separate future task |
+| pynput on pure Wayland | Keyboard teleop may not capture keys when Rerun has focus | Rerun sets `SO101_PREFER_EVDEV=1`; add user to `input` group or keep terminal focused |
 | Submodule upgrade | API changes to `lerobot_record` could break wrapper | Pin submodule; test on upgrade branch |
 
 ---
@@ -394,7 +398,7 @@ Do **not** reintroduce:
 
 - `view_mode=both` — MuJoCo window + Rerun simultaneously
 - Rerun in `teleoperate.py` (non-recording preview)
-- evdev keyboard backend for Wayland-native input
+- evdev keyboard backend for Rerun (`SO101_PREFER_EVDEV=1`) — **implemented**
 - Default `view_mode: rerun` in config templates once validated on ROCm hardware
 
 ### 10.2 Optional Rerun latency optimizations (opt-in, post-v1)

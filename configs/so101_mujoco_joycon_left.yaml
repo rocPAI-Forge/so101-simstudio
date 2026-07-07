@@ -1,73 +1,81 @@
-# 左手 Joy-Con 配置
-teleoperator:
-  type: so101_joycon
-  side: "left"
-  translation_scale: 2.0
-  z_scale: 1.0
-  rotation_scale: 0.5
+# =============================================================================
+# SO-101 SimStudio - Left Joy-Con Recording Config
+# =============================================================================
+# Same as so101_mujoco_joycon.yaml with teleop.side: left.
+# 显示模式: --view_mode mujoco (默认) | rerun
+# =============================================================================
 
 robot:
   type: so101_mujoco
-  gripper_action: open
-  use_tendon: false
   action_mode: velocity
-  robot_cls: so101_mujoco
-  teleop_cls: so101_joycon
-  camera_names:
-    - front
-    - top
-    - wrist
-  render_window: false
-  gripper_control_mode: velocity
+  xml_path: SO101/pick_scene.xml
+  cube_positions_path: configs/cube_positions.json
+  record_fps: 30
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+  lin_speed: 0.04
+  yaw_speed: 1.20
+  grip_speed: 0.7
+  ori_gain: 6.0
+  tilt_deadzone: 0.03
+  tilt_wmax: 6.0
+  lambda_pos: 0.01
+  lambda_tilt: 0.0001
+  vel_limit: 0.5
+  vel_limit_wrist: 8.0
+  smooth_dq: 0.30
+  smooth_dq_wrist: 0.08
+  wrist_gff_gain: 0.5
+  table_z: 0.0
+  clearance: 0.07
+  ee_site_name: wrist_site
+  tool_axis_site: [0.0, -1.0, 0.0]
 
-teleoperation:
-  fps: 30
-  teleop_device: keyboard
-  camera_backend: opencv
-  view_mode: mujoco
-
-task:
-  type: empty
-  features:
-    - name: vx
-      dtype: float32
-      shape: [1]
-    - name: vy
-      dtype: float32
-      shape: [1]
-    - name: vz
-      dtype: float32
-      shape: [1]
-    - name: wrist_flex_rate
-      dtype: float32
-      shape: [1]
-    - name: yaw_rate
-      dtype: float32
-      shape: [1]
-    - name: gripper_delta
-      dtype: float32
-      shape: [1]
+teleop:
+  type: so101_joycon
+  side: left
+  device: auto
+  translation_scale: 1.5
+  z_scale: 1.0
+  rotation_scale: 0.8
 
 dataset:
-  repo_id: "alexhegit/so101_mujoco_joycon_left_test"
-  root: "datasets/joycon-left-test"
-  episodes: 5
-  resume: false
-
-episode:
-  control_time_s: 10
-  reset_time_s: 2
-  reset_joints:
-    shoulder_pan: 0.0
-    shoulder_lift: 0.0
-    elbow_flex: 0.0
-    wrist_flex: 0.0
-    wrist_roll: 0.0
-    gripper: 0.0
-
-recording:
-  video_width: 640
-  video_height: 480
-  video_fps: 30
-  encode_backend: pyav
+  repo_id: alexhegit/so101_mujoco_joycon_left_test
+  root: ./datasets/joycon-left-test
+  single_task: "SO-101 MuJoCo Joy-Con left-hand manipulation"
+  fps: 30
+  episode_time_s: 120
+  reset_time_s: 1
+  num_episodes: 1
+  video: true
   push_to_hub: false
+  private: false
+  tags: null
+  num_image_writer_processes: 0
+  num_image_writer_threads_per_camera: 4
+  video_encoding_batch_size: 1
+  streaming_encoding: false
+  encoder_queue_maxsize: 30
+  encoder_threads: null
+  rgb_encoder:
+    vcodec: libsvtav1
+    pix_fmt: yuv420p
+    g: 2
+    crf: 30
+    preset: 12
+    fast_decode: 0
+    video_backend: pyav
+    extra_options: {}
+
+display_data: false
+display_mode: rerun
+display_ip: null
+display_port: null
+display_compressed_images: false
+play_sounds: false
+resume: false

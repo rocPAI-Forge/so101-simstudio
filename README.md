@@ -96,8 +96,19 @@ make rocm-sync
 
 # 录制数据集
 .venv-rocm/bin/python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_keyboard.yaml
+    --config configs/so101_mujoco_keyboard.yaml \
+    --view_mode mujoco   # 或 rerun
 ```
+
+**交互式 smoke 测试**（见 `scripts/smoke/README.md`）：
+
+```bash
+make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1
+make smoke-keyboard-teleop
+make smoke-joycon-record SIDE=right VIEW_MODE=rerun
+```
+
+根目录 `./test_*.sh` 为兼容包装，实际脚本在 `scripts/smoke/`。
 
 ## 项目状态
 

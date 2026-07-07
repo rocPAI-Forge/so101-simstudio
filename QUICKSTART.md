@@ -28,9 +28,12 @@ source .venv-rocm/bin/activate
 # 预览 MuJoCo 场景
 python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
 
-# 运行 smoke test
+# 运行 smoke test（无 GUI 的 pytest + 可选录制 smoke）
 make rocm-smoke-record
+make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1   # 交互式键盘录制
 ```
+
+手动 smoke 脚本在 `scripts/smoke/`；根目录 `./test_*.sh` 为兼容入口。详见 `scripts/smoke/README.md`。
 
 ## 使用方法
 
@@ -40,9 +43,10 @@ make rocm-smoke-record
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
-    --config configs/so101_mujoco_keyboard_teleop.yaml \
-    --view_mode mujoco
+    --config configs/so101_mujoco_keyboard_teleop.yaml
 ```
+
+或使用：`make smoke-keyboard-teleop`
 
 **录制数据集**：
 
@@ -132,9 +136,10 @@ make joycon-sync
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
-    --config configs/so101_mujoco_leader_teleop.yaml \
-    --view_mode mujoco
+    --config configs/so101_mujoco_leader_teleop.yaml
 ```
+
+或使用：`make smoke-leader-teleop`
 
 **录制数据集**：
 

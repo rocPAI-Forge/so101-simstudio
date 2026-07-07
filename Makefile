@@ -1,4 +1,11 @@
-.PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync
+.PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync \
+	smoke-keyboard-record smoke-keyboard-teleop smoke-joycon-record smoke-leader-record smoke-leader-teleop
+
+SMOKE := scripts/smoke
+EPISODES ?= 1
+RESUME ?= false
+VIEW_MODE ?= mujoco
+SIDE ?= right
 
 # ---------------------------------------------------------------------------
 # CUDA / CPU (default) — uses .venv
@@ -43,3 +50,22 @@ rocm-lint:
 
 joycon-sync:
 	scripts/setup-joycon.sh
+
+# ---------------------------------------------------------------------------
+# Manual smoke tests (interactive; see scripts/smoke/README.md)
+# ---------------------------------------------------------------------------
+
+smoke-keyboard-record:
+	$(SMOKE)/keyboard_record.sh $(EPISODES) $(RESUME) $(VIEW_MODE)
+
+smoke-keyboard-teleop:
+	$(SMOKE)/keyboard_teleop.sh
+
+smoke-joycon-record:
+	$(SMOKE)/joycon_record.sh $(EPISODES) $(RESUME) $(SIDE) $(VIEW_MODE)
+
+smoke-leader-record:
+	$(SMOKE)/leader_record.sh $(EPISODES) $(RESUME) $(VIEW_MODE)
+
+smoke-leader-teleop:
+	$(SMOKE)/leader_teleop.sh
