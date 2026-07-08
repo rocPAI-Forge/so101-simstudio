@@ -11,8 +11,8 @@ from lerobot.robots.config import RobotConfig
 class SO101MujocoConfig(RobotConfig):
     """Configuration for the SO-101 MuJoCo simulation robot."""
 
-    xml_path: Path = Path("SO101/pick_scene.xml")
-    cube_positions_path: Path | None = Path("configs/cube_positions.json")
+    xml_path: Path = Path("SO101/scenes/simple_pick/scene.xml")
+    cube_positions_path: Path | None = Path("configs/scenes/simple_pick/cube_positions.json")
 
     # Frequencies
     record_fps: int = 30

@@ -43,7 +43,7 @@ robot:
 ## Verify
 
 ```bash
-python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
+python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml
 ```
 
 If window appears, GLFW is working. If not, check environment variables.

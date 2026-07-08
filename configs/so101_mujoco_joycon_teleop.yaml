@@ -3,8 +3,8 @@
 robot:
   type: so101_mujoco
   action_mode: velocity
-  xml_path: SO101/pick_scene.xml
-  cube_positions_path: configs/cube_positions.json
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json
   record_fps: 30
   control_fps: 180
   physics_fps: 360

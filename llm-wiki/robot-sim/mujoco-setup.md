@@ -17,7 +17,7 @@ uv pip install "mujoco>=3.0.0,<4.0.0"
 ## Preview scene
 
 ```bash
-python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
+python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml
 ```
 
 ## Headless rendering

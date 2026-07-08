@@ -1,5 +1,5 @@
-<mujoco model="SO101_Pick_Scene">
-    <include file="so101_new_calib.xml"/>
+<mujoco model="simple_pick">
+    <include file="../../so101_new_calib.xml"/>
 
     <option timestep=".001" noslip_iterations="20" noslip_tolerance="1e-6">
       <!-- Improved contact solver for better grasping -->

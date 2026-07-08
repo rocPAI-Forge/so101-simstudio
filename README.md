@@ -29,7 +29,7 @@ SO-101 SimStudio 是一个基于 MuJoCo 仿真环境的机器人遥操作平台�
 | 录制 | ✅ | 支持多 episode、续录 |
 | 回放 | ✅ | 单集/多集回放 |
 | 验证 | ✅ | 数据质量检查 |
-| 可视化 | ✅ | Rerun 3D 可视化 |
+| 可视化 | ✅ | Rerun 录制预览（`--view_mode rerun`）+ dataset_viz |
 
 ### 仿真环境
 
@@ -120,15 +120,17 @@ make smoke-joycon-record SIDE=right VIEW_MODE=rerun
 | Leader Arm 遥操作 | ✅ Working |
 | 数据集录制/回放 | ✅ Working |
 | 数据集验证 | ✅ Working |
+| Rerun 录制预览 | ✅ Working (`--view_mode rerun`) |
 | 真实机器人 | 🔲 Planned |
 | 行为克隆训练 | 🔲 Planned |
 
 ## 版本历史
 
-- **v0.1.0** (2026-07-06): 首个正式版本，支持多种遥操作
-- **v0.0.3**: 添加 Joy-Con 支持
-- **v0.0.2**: 添加 Leader Arm 支持
-- **v0.0.1**: 初始版本
+- **v0.1.1** (2026-07-07, main): 统一 `--view_mode mujoco/rerun` 录制；Rerun evdev 键盘修复；smoke 脚本整理
+- **v0.1.0** (2026-07-06, `release-v0.1.0`): 首个正式版本，支持多种遥操作
+- **v0.0.3** (合入 v0.1.0): Joy-Con、数据集校验（无独立 tag）
+- **v0.0.2** (`release-v0.0.2`): Leader Arm 支持
+- **v0.0.1** (`release-v0.0.1`): 初始版本
 
 ## 相关文档
 
