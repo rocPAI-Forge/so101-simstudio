@@ -13,8 +13,9 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
   - `teleoperators/so101_leader/`: Real SO-101 leader arm used as teleoperator input.
   - `common/`: Shared constants and action mapping utilities.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
-- **`SO101/`**: MuJoCo scene and robot assets.
-- **`configs/`**: Recording configs.
+- **`SO101/`**: MuJoCo robot assets and scene definitions.
+  - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`).
+- **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
 - **`scripts/`**: Environment setup scripts (ROCm, etc.).
 
 ## Setup
@@ -45,7 +46,7 @@ git submodule update --init --recursive
 | Lint | `make lint` |
 | Format | `make format` |
 | Test | `make test` |
-| MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/pick_scene.xml` |
+| MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml` |
 | Smoke: keyboard record | `make smoke-keyboard-record VIEW_MODE=mujoco` |
 | Smoke: keyboard teleop | `make smoke-keyboard-teleop` |
 | Smoke: Joy-Con record | `make smoke-joycon-record SIDE=right VIEW_MODE=mujoco` |

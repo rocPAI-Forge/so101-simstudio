@@ -26,7 +26,7 @@ source .venv-rocm/bin/activate
 
 ```bash
 # 预览 MuJoCo 场景
-python -m mujoco.viewer --mjcf=SO101/pick_scene.xml
+python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml
 
 # 运行 smoke test（无 GUI 的 pytest + 可选录制 smoke）
 make rocm-smoke-record

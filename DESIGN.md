@@ -12,15 +12,17 @@ Build a clean, maintainable SO-101 teleoperation and dataset-collection project 
 
 ## Implemented
 
-- Keyboard teleoperation (velocity paradigm)
+- Keyboard teleoperation (velocity paradigm; pynput + evdev for Rerun)
+- Joy-Con teleoperation (velocity paradigm, left/right)
 - Leader arm teleoperation (position paradigm, Feetech STS3215)
-- Dataset recording and replay
-- Dataset visualization (via LeRobot's Rerun viewer)
+- Dataset recording and replay (LeRobot v3.0)
+- Record display modes: `--view_mode mujoco` (GLFW) or `rerun` (LeRobot official viewer)
+- Dataset validation and visualization (Rerun via `dataset_viz`)
 
 ## Planned
 
 - Real follower arm hardware driver
-- Joy-Con / gamepad teleoperation
+- Rerun support in `teleoperate.py` (non-recording preview)
 - Behavior cloning training
 - Policy inference + MuJoCo rollout
 

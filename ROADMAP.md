@@ -24,10 +24,12 @@
 - [x] llm-wiki 知识库
 - [x] ROADMAP 项目规划
 
-## v0.0.3 ✅ (release-v0.0.3)
+## v0.0.3 ✅ (merged into v0.1.0; no separate tag)
+
+> v0.0.3 功能在 `release-v0.1.0` 中一并发布，仓库未打 `release-v0.0.3` 标签。
 
 ### 遥操作体验
-- [x] 画中画摄像头画面（rerun 实时显示 front/top/wrist，操作者看摄像头而非仿真窗口）
+- [x] 画中画摄像头画面（早期 teleop `view_mode` 实验；录制侧统一方案见 v0.1.1）
 - [x] 录制后自动校验（帧率、动作范围、完整性）
 - [x] Joy-Con 遥操作（速度范式，支持左手/右手）
 
@@ -45,6 +47,26 @@
 ### 行为克隆（延后）
 - > **注**: 待遥操作方案优化后再进行，确保数据质量
 
+## v0.1.1 ✅ (main; tag pending)
+
+> 自 `release-v0.1.0` 起 18 commits，含 Rerun 录制统一方案与键盘 evdev 修复。建议打 `release-v0.1.1`。
+
+### 录制显示
+- [x] `--view_mode mujoco | rerun`（record 脚本；默认 mujoco）
+- [x] 两种模式均写入 LeRobot dataset v3.0
+- [x] Rerun streaming patch（去除 `static=True`，录制时摄像头实时更新）
+- [x] 设计 spec：`docs/superpowers/specs/2026-07-06-unified-rerun-recording-design.md`
+
+### 键盘输入（Rerun / Wayland）
+- [x] Rerun 模式 evdev 焦点无关输入（`SO101_PREFER_EVDEV=1`）
+- [x] MuJoCo 模式默认 pynput（与 v0.1.0 手感一致）
+- [x] 修复 Linux 字母 scancode 映射与 press/release 反转
+
+### 工程
+- [x] 手动 smoke 脚本迁至 `scripts/smoke/` + `make smoke-*`
+- [x] 修复 `so101_mujoco_joycon_left.yaml` 旧 schema
+- [x] 单元测试：`tests/test_record_view_mode.py`、`tests/test_keyboard_teleop.py`
+
 ## 项目演进
 
 ### 命名路线图
@@ -52,6 +74,7 @@
 ```
 v0.0.x: so101-mujoco-teleop
         ↓ (v0.1.0)
+        ↓ (v0.1.1 — unified record view_mode + evdev keyboard)
 当前: so101-simstudio
         │  定位: 通用仿真平台
         │  核心: 专家轨迹数据生成（遥操作、场景、录制、回放、验证）

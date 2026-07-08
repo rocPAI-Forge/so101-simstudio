@@ -1,6 +1,6 @@
 [project]
 name = "so101-simstudio"
-version = "0.1.0"
+version = "0.1.1"
 description = "SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot"
 requires-python = ">=3.12"
 dependencies = [

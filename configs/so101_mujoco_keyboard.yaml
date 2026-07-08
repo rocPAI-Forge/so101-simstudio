@@ -18,8 +18,8 @@
 robot:
   type: so101_mujoco
   action_mode: velocity                    # velocity | position
-  xml_path: SO101/pick_scene.xml           # MuJoCo 场景文件
-  cube_positions_path: configs/cube_positions.json  # 物体初始位置
+  xml_path: SO101/scenes/simple_pick/scene.xml           # MuJoCo 场景文件
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json  # 物体初始位置
   
   # Frame rates
   record_fps: 30                           # 录制帧率
@@ -75,7 +75,7 @@ dataset:
   # Dataset identification
   repo_id: alexhegit/so101_mujoco_keyboard_test  # HuggingFace 数据集名
   root: ./datasets/keyboard-test                 # 本地保存路径
-  single_task: "SO-101 MuJoCo keyboard manipulation"  # 任务描述
+  single_task: "SO-101 MuJoCo keyboard manipulation (simple_pick)"  # 任务描述
   
   # Recording parameters
   fps: 30                                  # 录制帧率
