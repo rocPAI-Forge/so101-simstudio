@@ -222,7 +222,7 @@ datasets/<name>/
 
 **Validation:** `uv run python -m simstudio.scripts.validate_dataset --root <dataset_root>`
 
-**Training:** Compatible with `lerobot_train` and pinned submodule commit `c746ca2d`.
+**Training:** Compatible with `lerobot_train` and pinned submodule tag `v0.6.0` (`30da8e68`).
 
 ### 5.7 Display timing: why Rerun feels laggier than MuJoCo
 

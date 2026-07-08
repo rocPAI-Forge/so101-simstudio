@@ -33,11 +33,12 @@ source .venv/bin/activate
 git submodule update --init --recursive
 ```
 
-**Known-good LeRobot commit**: `c746ca2d`.
+**Known-good LeRobot commit**: `30da8e68` (`v0.6.0` tag).
 
-- This project is validated against that upstream LeRobot commit.
-- Do not assume the latest LeRobot release tag is compatible.
+- This project is validated against that upstream LeRobot release.
+- Do not assume the latest LeRobot main branch is compatible.
 - Upgrade the submodule only in a dedicated branch, then re-run record/replay smoke tests before merging.
+- LeRobot 0.6.0 pulls **torch ≥ 2.7**; on Linux CUDA, ensure `triton` installs completely after `uv sync` (reinstall with `uv pip install --reinstall triton` if imports fail).
 
 ## Commands
 
