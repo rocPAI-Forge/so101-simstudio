@@ -39,7 +39,7 @@ dataset:
   single_task: "SO-101 MuJoCo keyboard smoke test"
   fps: 30
   episode_time_s: 2
-  reset_time_s: 1
+  reset_time_s: 3
   num_episodes: 1
   video: false
   push_to_hub: false

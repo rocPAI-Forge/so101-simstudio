@@ -103,3 +103,37 @@ def test_evdev_recording_keys_update_shared_events():
     teleop._on_evdev_key("left", True)
     assert events["rerecord_episode"] is True
     assert events["exit_early"] is True
+
+
+def test_evdev_n_r_q_recording_keys():
+    teleop = SO101KeyboardTeleop(SO101KeyboardTeleopConfig())
+    events = {"exit_early": False, "rerecord_episode": False, "stop_recording": False}
+    teleop.set_recording_events(events)
+
+    teleop._on_evdev_key("n", True)
+    assert events["exit_early"] is True
+
+    events["exit_early"] = False
+    teleop._on_evdev_key("r", True)
+    assert events["rerecord_episode"] is True
+    assert events["exit_early"] is True
+
+    events["exit_early"] = False
+    events["rerecord_episode"] = False
+    teleop._on_evdev_key("q", True)
+    assert events["stop_recording"] is True
+    assert events["exit_early"] is True
+
+
+def test_evdev_recording_keys_link_shared_events_without_connect():
+    import simstudio.teleoperators.so101_keyboard.teleop_so101_keyboard as teleop_module
+
+    teleop = SO101KeyboardTeleop(SO101KeyboardTeleopConfig())
+    events = {"exit_early": False, "rerecord_episode": False, "stop_recording": False}
+    previous = teleop_module._shared_recording_events
+    teleop_module._shared_recording_events = events
+    try:
+        teleop._on_evdev_key("right", True)
+        assert events["exit_early"] is True
+    finally:
+        teleop_module._shared_recording_events = previous

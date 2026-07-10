@@ -50,7 +50,7 @@ dataset:
   single_task: "SO-101 MuJoCo Joy-Con left-hand manipulation"
   fps: 30
   episode_time_s: 120
-  reset_time_s: 1
+  reset_time_s: 3
   num_episodes: 1
   video: true
   push_to_hub: false

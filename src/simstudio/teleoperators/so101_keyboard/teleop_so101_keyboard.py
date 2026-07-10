@@ -1,8 +1,10 @@
 """SO-101 keyboard teleoperator.
 
 Outputs normalized velocity commands for SO-101 end-effector control.
-Prefers pynput (same as before). Uses evdev only when ``SO101_PREFER_EVDEV=1``
-(Rerun record sets this) or when pynput is unavailable.
+
+During **record** (``--view_mode mujoco`` or ``rerun``), SimStudio prefers evdev
+when available so movement and episode controls work the same regardless of which
+window has focus. Teleoperate-only sessions keep pynput-first behavior.
 """
 
 import logging
@@ -18,6 +20,19 @@ from lerobot.utils.decorators import check_if_already_connected
 from simstudio.teleoperators.so101_keyboard.config import SO101KeyboardTeleopConfig
 
 logger = logging.getLogger(__name__)
+
+# Set by simstudio.scripts.record when keyboard recording patch is active.
+_shared_recording_events: dict[str, bool] | None = None
+# Last connect() backend: "evdev", "pynput", or None (record.py reads this).
+_keyboard_input_backend: str | None = None
+# False while save_episode / gaps between record_loop iterations (evdev still runs).
+_recording_keys_enabled: bool = False
+
+
+def set_recording_keys_enabled(enabled: bool) -> None:
+    """Enable/disable recording hotkeys outside active ``record_loop`` iterations."""
+    global _recording_keys_enabled
+    _recording_keys_enabled = enabled
 
 EVDEV_AVAILABLE = False
 try:
@@ -50,10 +65,10 @@ class SO101KeyboardTeleop(Teleoperator):
       [/] : wrist roll left/right
       O/C : gripper open/close
 
-    Recording control keys (press once):
-      Right arrow : save current episode, move to next
-      Left arrow  : cancel current episode, rerecord
-      ESC         : stop recording entirely
+    Recording control keys (press once; same in mujoco and rerun record modes):
+      Right arrow / N : save current episode, move to next
+      Left arrow  / R : cancel current episode, rerecord
+      ESC         / Q : stop recording entirely
     """
 
     name = "so101_keyboard"
@@ -109,7 +124,10 @@ class SO101KeyboardTeleop(Teleoperator):
 
     @check_if_already_connected
     def connect(self, calibrate: bool = True) -> None:
+        global _keyboard_input_backend
+
         self._use_evdev = False
+        _keyboard_input_backend = None
         prefer_evdev = os.environ.get("SO101_PREFER_EVDEV") == "1"
 
         def _try_evdev() -> bool:
@@ -159,6 +177,11 @@ class SO101KeyboardTeleop(Teleoperator):
             logger.warning(
                 "Neither pynput nor evdev available. Keyboard teleoperator will produce no actions."
             )
+            _keyboard_input_backend = None
+        elif self._use_evdev:
+            _keyboard_input_backend = "evdev"
+        else:
+            _keyboard_input_backend = "pynput"
 
     def calibrate(self) -> None:
         pass
@@ -168,22 +191,16 @@ class SO101KeyboardTeleop(Teleoperator):
 
     def _handle_recording_key(self, key_name: str, is_pressed: bool) -> bool:
         """Apply recording-control keys. Returns True if the event was consumed."""
-        if not is_pressed or self._recording_events is None:
+        if not is_pressed or not _recording_keys_enabled:
+            return False
+        if self._recording_events is None and _shared_recording_events is not None:
+            self.set_recording_events(_shared_recording_events)
+        if self._recording_events is None:
             return False
 
-        if key_name == "esc":
-            print("Escape key pressed. Stopping data recording...")
-            self._recording_events["stop_recording"] = True
-            self._recording_events["exit_early"] = True
-            return True
-        if key_name == "right":
-            print("Right arrow pressed. Saving current episode...")
-            self._recording_events["exit_early"] = True
-            return True
-        if key_name == "left":
-            print("Left arrow pressed. Canceling current episode...")
-            self._recording_events["rerecord_episode"] = True
-            self._recording_events["exit_early"] = True
+        from simstudio.common.recording_controls import apply_keyboard_recording_key
+
+        if apply_keyboard_recording_key(key_name, self._recording_events):
             return True
         return False
 
@@ -205,7 +222,10 @@ class SO101KeyboardTeleop(Teleoperator):
 
         key_char = getattr(key, "char", None)
         if key_char is not None:
-            self.event_queue.put((key_char.lower(), True))
+            char = key_char.lower()
+            if self._handle_recording_key(char, True):
+                return
+            self.event_queue.put((char, True))
         else:
             self.event_queue.put((str(key), True))
 
@@ -227,6 +247,9 @@ class SO101KeyboardTeleop(Teleoperator):
 
     def get_action(self) -> RobotAction:
         """Return normalized velocity commands from currently pressed keys."""
+        if self._recording_events is None and _shared_recording_events is not None:
+            self.set_recording_events(_shared_recording_events)
+
         before_read_t = time.perf_counter()
 
         if not self.is_connected:
@@ -294,6 +317,8 @@ class SO101KeyboardTeleop(Teleoperator):
         pass
 
     def disconnect(self) -> None:
+        global _keyboard_input_backend
+
         if self._use_evdev and self._evdev_listener is not None:
             try:
                 self._evdev_listener.stop()
@@ -310,3 +335,4 @@ class SO101KeyboardTeleop(Teleoperator):
                 self.listener = None
         self.current_pressed.clear()
         self._use_evdev = False
+        _keyboard_input_backend = None

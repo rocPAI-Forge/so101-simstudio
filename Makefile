@@ -1,8 +1,9 @@
 .PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync \
-	smoke-keyboard-record smoke-keyboard-teleop smoke-joycon-record smoke-leader-record smoke-leader-teleop
+	smoke-keyboard-record smoke-keyboard-replay smoke-keyboard-teleop smoke-joycon-record smoke-leader-record smoke-leader-teleop
 
 SMOKE := scripts/smoke
-EPISODES ?= 1
+EPISODES ?= 3
+EPISODE ?= 0
 RESUME ?= false
 VIEW_MODE ?= mujoco
 SIDE ?= right
@@ -57,6 +58,9 @@ joycon-sync:
 
 smoke-keyboard-record:
 	$(SMOKE)/keyboard_record.sh $(EPISODES) $(RESUME) $(VIEW_MODE)
+
+smoke-keyboard-replay:
+	$(SMOKE)/keyboard_replay.sh $(EPISODE)
 
 smoke-keyboard-teleop:
 	$(SMOKE)/keyboard_teleop.sh

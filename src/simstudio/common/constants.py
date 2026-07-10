@@ -16,3 +16,12 @@ DEFAULT_HOME_POSITION = {
 
 # Normalized teleop velocity command keys
 TELEOP_VELOCITY_KEYS = ["vx", "vy", "vz", "wrist_flex_rate", "yaw_rate", "gripper_delta"]
+
+# Keyboard recording controls (identical in --view_mode mujoco and rerun).
+KEYBOARD_RECORDING_SAVE_KEYS = ("right", "n")
+KEYBOARD_RECORDING_CANCEL_KEYS = ("left", "r")
+KEYBOARD_RECORDING_STOP_KEYS = ("esc", "q")
+
+KEYBOARD_RECORDING_CONTROLS_HELP = (
+    "Left/Right/Esc (or R/N/Q): cancel episode / save & next / stop recording"
+)

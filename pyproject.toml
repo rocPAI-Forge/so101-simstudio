@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "mujoco>=3.0.0,<4.0.0",
     "scipy>=1.10.0",
-    "lerobot[kinematics,dataset]",
+    "lerobot[kinematics,dataset,viz,deepdiff-dep]",
     "matplotlib>=3.10.6",
     "pynput>=1.7.7",
     "evdev>=1.6.0",

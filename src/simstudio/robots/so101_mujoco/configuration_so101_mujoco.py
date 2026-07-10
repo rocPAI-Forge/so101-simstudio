@@ -61,3 +61,7 @@ class SO101MujocoConfig(RobotConfig):
 
     # Action mode: "velocity" (keyboard) or "position" (leader arm)
     action_mode: str = "velocity"
+
+    # Episode reset: "auto" resets arm + block before each recorded episode (sim);
+    # "manual" leaves state unchanged (LeRobot real-robot style).
+    reset_mode: str = "auto"
