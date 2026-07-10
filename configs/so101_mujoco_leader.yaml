@@ -79,7 +79,7 @@ dataset:
   # Recording parameters
   fps: 30                                  # 录制帧率
   episode_time_s: 120                      # 每集时长（秒）
-  reset_time_s: 1                          # 重置时间（秒）
+  reset_time_s: 3                          # 重置时间（秒）；sim 自动 reset 后可手动微调
   num_episodes: 1                          # 录制集数
   
   # Video settings

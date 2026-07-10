@@ -31,7 +31,8 @@ robot:
   camera_height: 480                       # 相机高度
   camera_names: [front, top, wrist]        # 相机名称列表
   show_collision_geometry: false            # 显示碰撞几何
-  render_window: true                      # 渲染 MuJoCo 窗口
+  render_window: true
+  reset_mode: auto                         # auto: 每集录制前复位机械臂与 cube                      # 渲染 MuJoCo 窗口
   
   # Motion parameters
   lin_speed: 0.04                          # 线性速度
@@ -80,8 +81,8 @@ dataset:
   # Recording parameters
   fps: 30                                  # 录制帧率
   episode_time_s: 120                      # 每集时长（秒）
-  reset_time_s: 1                          # 重置时间（秒）
-  num_episodes: 1                          # 录制集数
+  reset_time_s: 3                          # 重置时间（秒）；sim 自动 reset 后可手动微调
+  num_episodes: 3                          # 录制集数（按 →/N 保存后会继续下一集，直到录满）
   
   # Video settings
   video: true                              # 是否录制视频

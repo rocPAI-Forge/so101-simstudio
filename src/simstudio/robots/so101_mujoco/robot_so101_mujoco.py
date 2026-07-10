@@ -617,6 +617,21 @@ class SO101MujocoRobot(Robot):
         logger.info(f"Block reset to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°")
         return (x, y, z, yaw_deg)
 
+    def reset_episode(self, episode_index: int) -> None:
+        """Reset arm and block for a new recorded episode."""
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected")
+
+        self.reset_to_home_position()
+        self.reset_block_position(episode_index)
+
+        settle_steps = max(1, int(0.5 / self.physics_dt))
+        for _ in range(settle_steps):
+            mj.mj_step(self.model, self.data)
+
+        self._render_glfw()
+        logger.info(f"Episode {episode_index} sim reset complete")
+
     def get_block_position(self) -> tuple[float, float, float] | None:
         """Get current block position for episode metadata."""
         if not self.is_connected:

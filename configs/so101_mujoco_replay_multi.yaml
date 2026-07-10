@@ -17,6 +17,7 @@ dataset:
   repo_id: alexhegit/so101_mujoco_keyboard_test
   root: ./datasets/keyboard-test
   fps: 30
-  episodes: all  # or [0, 1, 2] for specific episodes
+  # Episode selection for replay_multi: --dataset.episodes all | 0 | 0,1,2
+  # (defaults to all when omitted)
 
 play_sounds: false

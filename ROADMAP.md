@@ -67,6 +67,11 @@
 - [x] 修复 `so101_mujoco_joycon_left.yaml` 旧 schema
 - [x] 单元测试：`tests/test_record_view_mode.py`、`tests/test_keyboard_teleop.py`
 
+### 场景与录制
+- [x] 默认场景迁移至 `SO101/scenes/simple_pick/`
+- [x] Multi-episode 自动 reset（`reset_mode: auto`，机械臂 home + cube 位姿）
+- [x] 单元测试：`tests/test_episode_reset.py`
+
 ## 项目演进
 
 ### 命名路线图

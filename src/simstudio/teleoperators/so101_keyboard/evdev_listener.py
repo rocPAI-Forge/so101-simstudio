@@ -99,12 +99,10 @@ def ev_key_is_pressed(ev_value: int) -> bool | None:
     return None
 
 
-def _find_keyboard_device() -> str | None:
-    """Find the best keyboard device from /proc/bus/input/devices."""
+def _find_keyboard_devices() -> list[str]:
+    """Return keyboard event device paths, highest-priority first."""
+    candidates: list[tuple[int, str]] = []
     devices_info = Path("/proc/bus/input/devices").read_text()
-    best_device = None
-    best_priority = -1
-
     blocks = devices_info.split("\n\n")
     for block in blocks:
         name_match = re.search(r'N: Name="([^"]+)"', block)
@@ -114,34 +112,36 @@ def _find_keyboard_device() -> str | None:
 
         name = name_match.group(1)
         handlers = handler_match.group(1)
-
-        # Extract event device from handlers
         event_match = re.search(r"event(\d+)", handlers)
         if not event_match:
             continue
 
-        event_num = int(event_match.group(1))
-        device_path = f"/dev/input/event{event_num}"
+        if "kbd" not in handlers.lower():
+            continue
 
-        # Prefer USB keyboards — users often teleop on an external keyboard while
-        # the built-in AT Translated device stays idle or receives ghost events.
+        device_path = f"/dev/input/event{int(event_match.group(1))}"
         priority = 0
         if "USB" in name and "kbd" in handlers.lower():
             priority = 100
         elif "AT Translated" in name:
             priority = 50
-        elif "kbd" in handlers.lower():
+        else:
             priority = 10
 
-        if priority > best_priority:
-            best_priority = priority
-            best_device = device_path
-            logger.debug("evdev candidate: %s -> %s (priority=%d)", name, device_path, priority)
+        candidates.append((priority, device_path))
+        logger.debug("evdev candidate: %s -> %s (priority=%d)", name, device_path, priority)
 
-    if best_device is not None:
-        logger.info("Selected evdev keyboard device: %s", best_device)
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    devices = [path for _, path in candidates]
+    if devices:
+        logger.info("Selected evdev keyboard devices: %s", ", ".join(devices))
+    return devices
 
-    return best_device
+
+def _find_keyboard_device() -> str | None:
+    """Return the highest-priority keyboard device, if any."""
+    devices = _find_keyboard_devices()
+    return devices[0] if devices else None
 
 
 class EvdevKeyListener:
@@ -157,57 +157,61 @@ class EvdevKeyListener:
     def __init__(self, on_key: Callable[[str, bool], None]):
         self._on_key = on_key
         self._running = False
-        self._thread: threading.Thread | None = None
-        self._device_path: str | None = None
+        self._threads: list[threading.Thread] = []
+        self._device_paths: list[str] = []
 
     def start(self) -> bool:
         """Start listening for keyboard events.
 
-        Returns True if a keyboard device was found and listening started.
+        Returns True if at least one keyboard device was found and listening started.
         """
-        self._device_path = _find_keyboard_device()
-        if self._device_path is None:
+        self._device_paths = _find_keyboard_devices()
+        if not self._device_paths:
             logger.warning("No keyboard device found in /proc/bus/input/devices")
             return False
 
-        try:
+        accessible: list[str] = []
+        for device_path in self._device_paths:
+            try:
+                with open(device_path, "rb"):
+                    pass
+                accessible.append(device_path)
+            except PermissionError:
+                logger.warning(
+                    "Permission denied reading %s. Add user to 'input' group: "
+                    "sudo usermod -aG input $USER",
+                    device_path,
+                )
+            except Exception as e:
+                logger.warning("Cannot access %s: %s", device_path, e)
 
-            with open(self._device_path, "rb") as _:
-                # EVIOCGRAB = 0x4008 4561 — not needed, just test read access
-                pass
-        except PermissionError:
-            logger.warning(
-                f"Permission denied reading {self._device_path}. "
-                "Add user to 'input' group: sudo usermod -aG input $USER"
-            )
-            return False
-        except Exception as e:
-            logger.warning(f"Cannot access {self._device_path}: {e}")
+        if not accessible:
             return False
 
+        self._device_paths = accessible
         self._running = True
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
-        logger.info(f"evdev keyboard listener started on {self._device_path}")
+        for device_path in self._device_paths:
+            thread = threading.Thread(target=self._run_device, args=(device_path,), daemon=True)
+            thread.start()
+            self._threads.append(thread)
+        logger.info("evdev keyboard listener started on %s", ", ".join(self._device_paths))
         return True
 
     def stop(self) -> None:
         self._running = False
-        thread = self._thread
-        if thread is not None:
+        for thread in self._threads:
             thread.join(timeout=1.0)
-            self._thread = None
+        self._threads.clear()
+        self._device_paths.clear()
 
-    def _run(self) -> None:
-        """Read events from the keyboard device in a loop."""
-        with open(self._device_path, "rb") as f:
+    def _run_device(self, device_path: str) -> None:
+        """Read events from one keyboard device in a loop."""
+        with open(device_path, "rb") as f:
             while self._running:
-                # Read one input_event (24 bytes on 64-bit Linux)
                 data = f.read(24)
                 if data is None or len(data) < 24:
                     continue
 
-                # struct input_event { time_t sec, usec; __u16 type, code; __s32 value; }
                 import struct
 
                 _time_sec, _time_usec, ev_type, ev_code, ev_value = struct.unpack("qqHHi", data)
