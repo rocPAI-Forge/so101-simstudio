@@ -47,9 +47,9 @@
 ### 行为克隆（延后）
 - > **注**: 待遥操作方案优化后再进行，确保数据质量
 
-## v0.1.1 ✅ (main; tag pending)
+## v0.1.1 ✅ (release-v0.1.1)
 
-> 自 `release-v0.1.0` 起 18 commits，含 Rerun 录制统一方案与键盘 evdev 修复。建议打 `release-v0.1.1`。
+> 自 `release-v0.1.0` 起 26 commits，含 Rerun 录制统一方案、键盘 evdev 修复，以及 leader 臂遥操作/录制可靠化与多集复位策略。
 
 ### 录制显示
 - [x] `--view_mode mujoco | rerun`（record 脚本；默认 mujoco）
@@ -61,6 +61,12 @@
 - [x] Rerun 模式 evdev 焦点无关输入（`SO101_PREFER_EVDEV=1`）
 - [x] MuJoCo 模式默认 pynput（与 v0.1.0 手感一致）
 - [x] 修复 Linux 字母 scancode 映射与 press/release 反转
+
+### Leader 臂遥操作 / 录制
+- [x] leader teleop/record 在 mujoco 与 rerun 下稳定同步（统一 teleop 配置类型与校准目录）
+- [x] 夹爪初始/复位映射改用安全值（`home_gripper=-0.1`），避免顶硬限位自激
+- [x] 录制控制 evdev 焦点无关（leader/Joy-Con 不再依赖终端焦点，N/→/R/←/Q/Esc 即时响应）
+- [x] 多集复位细化：`reset_arm: home|follow`、`reset_cube: fixed|random|none` + 可抓取区随机范围
 
 ### 工程
 - [x] 手动 smoke 脚本迁至 `scripts/smoke/` + `make smoke-*`
