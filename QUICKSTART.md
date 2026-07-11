@@ -132,7 +132,23 @@ make joycon-sync
 
 ### 3. Leader Arm 遥操作
 
-**实时控制**：
+用真实 SO-101 leader 臂（Feetech STS3215）驱动仿真 follower，关节位置 1:1 映射。
+
+**连接与端口**：
+
+leader 臂通过 USB 连接，默认端口 `/dev/ttyACM0`。端口不同可用 `--teleop.port` 覆盖（如 `--teleop.port /dev/ttyACM1`）。
+
+**首次使用需校准**：
+
+首次运行 teleoperate/record 会进入校准流程，按终端提示把每个关节（含夹爪）**缓慢转到两端极限**，程序据此记录行程范围并设定中位。校准结果统一保存在：
+
+```
+~/.cache/huggingface/lerobot/calibration/teleoperators/so101_leader/None.json
+```
+
+之后再运行时会提示：**直接回车复用现有校准**，或输入 `c` 回车**重新校准**。若出现夹爪/关节方向异常、抖动或不同步，重做一次完整校准通常即可解决。
+
+**实时控制（不录制）**：
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
@@ -148,6 +164,21 @@ make joycon-sync
     --config configs/so101_mujoco_leader.yaml \
     --view_mode mujoco   # 或 rerun
 ```
+
+或使用：`make smoke-leader-record VIEW_MODE=mujoco`
+
+**录制控制**（leader / Joy-Con 使用 LeRobot 默认按键，需保持**终端窗口**处于焦点）：
+
+| 按键 | 功能 |
+|------|------|
+| N / Right arrow | 保存 episode，进入下一个 |
+| R / Left arrow | 取消当前 episode，重录 |
+| Q / ESC | 停止录制 |
+
+**夹爪与帧率说明**：
+
+- 夹爪跟随真实 leader：松手张开 → 仿真张开，捏合 → 仿真闭合。完全闭合端映射到安全位置（非关节硬限位），避免仿真夹爪顶限位后被物理求解器弹开。
+- leader 配置默认 `record_fps: 20`（与 `dataset.fps` 一致）：real leader 每帧要串口读取 6 个舵机，20Hz 能让仿真与真实时间同步、消除"慢放"滞后；硬件更强可尝试上调。（keyboard/Joy-Con 无此开销，默认 30Hz。）
 
 ## 配置参数
 
@@ -253,6 +284,13 @@ sudo usermod -aG input "$USER"
 - 使用 GPU 加速渲染
 - 降低 `camera_width` 和 `camera_height`
 - 减少 `camera_names` 数量
+- 若日志频繁出现 `Record loop is running slower than target FPS`，说明目标帧率超过硬件能力，仿真会"慢放"滞后；把 `--robot.record_fps` 与 `--dataset.fps` 一起降到能稳定达到的值（leader 默认已用 20Hz）。
+
+### Q: Leader 仿真臂/夹爪与真实臂不同步，或夹爪自己张开？
+
+1. **先做一次完整校准**：把每个关节（含夹爪）缓慢转到两端极限。方向翻转、抖动、夹爪开合相反等多由校准行程不全引起。
+2. **确认帧率**：leader 默认 `record_fps: 20`；若上调后达不到，log 会刷 `running slower`，仿真随之滞后。
+3. **夹爪完全闭合时仿真停在接近闭合的安全位**（非硬限位），这是刻意为之，避免夹爪顶限位后被弹开，属正常现象。
 
 ### Q: 如何上传数据集到 HuggingFace？
 
