@@ -185,15 +185,15 @@ When `view_mode=mujoco`:
 
 3. **Patch `SO101KeyboardTeleop.connect`** to call `self.set_recording_events(_recording_events)` after the original connect. This works regardless of call order because the dict exists before `teleop.connect()` runs (LeRobot calls connect before init_keyboard_listener).
 
-4. **Recording key mapping** (existing teleop behavior, unchanged):
+4. **Recording key mapping** (unified across `mujoco` and `rerun`; keys defined in `common/constants.py`):
 
    | Key | Event |
    |-----|-------|
-   | Right arrow | `exit_early = True` (save episode) |
-   | Left arrow | `rerecord_episode = True`, `exit_early = True` |
-   | ESC | `stop_recording = True`, `exit_early = True` |
+   | Right arrow / N | `exit_early = True` (save episode, next) |
+   | Left arrow / R | `rerecord_episode = True`, `exit_early = True` |
+   | ESC / Q | `stop_recording = True`, `exit_early = True` |
 
-5. **Disabled shortcuts:** LeRobot's `n`/`r`/`q` terminal shortcuts are not available during keyboard recording (documented).
+5. **Unified shortcuts:** the arrow keys and LeRobot's `n`/`r`/`q` letters both drive the same shared events, so keyboard recording control is identical to Joy-Con/leader semantics.
 
 **Joy-Con and leader arm:** Use LeRobot's default `init_keyboard_listener()` for `n`/`r`/`q`/ESC recording control. No teleop-specific patches.
 

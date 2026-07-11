@@ -76,13 +76,13 @@ make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1   # 交互式键盘录制
 | C | 夹爪关闭 |
 | O | 夹爪打开 |
 
-**录制控制**（录制模式下）：
+**录制控制**（录制模式下，`mujoco` 与 `rerun` 完全一致）：
 
 | 按键 | 功能 |
 |------|------|
-| Left arrow | 取消当前 episode |
-| Right arrow | 保存 episode，下一个 |
-| ESC | 停止录制 |
+| Left arrow / R | 取消当前 episode，重录 |
+| Right arrow / N | 保存 episode，进入下一个 |
+| ESC / Q | 停止录制 |
 
 ### 2. Joy-Con 遥操作
 
