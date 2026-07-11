@@ -3,7 +3,7 @@
 ## v0.0.1 ✅ (release-v0.0.1)
 - [x] MuJoCo SO-101 仿真场景
 - [x] 键盘遥操作（Z轴 Z/X 键）
-- [x] 录制控制（Left/Right/ESC）
+- [x] 录制控制（Left/R、Right/N、ESC/Q，mujoco 与 rerun 一致）
 - [x] LeRobot 数据集录制
 - [x] 单集/多集 Replay
 - [x] ROCm 环境搭建
