@@ -15,11 +15,12 @@
 robot:
   type: so101_mujoco
   action_mode: position                    # velocity | position (leader arm uses position)
+  home_gripper: -0.1                        # 夹爪初始/复位值(rad)；接近完全闭合(下界-0.17453)但留余量，避免顶硬限位自激
   xml_path: SO101/scenes/simple_pick/scene.xml           # MuJoCo 场景文件
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json  # 物体初始位置
   
   # Frame rates
-  record_fps: 30                           # 录制帧率
+  record_fps: 20                           # 录制帧率(20Hz：硬件可稳定达到，避免掉帧导致 sim 慢放/滞后)
   control_fps: 180                         # 控制帧率
   physics_fps: 360                         # 物理仿真帧率
   
@@ -63,7 +64,7 @@ robot:
 # Teleoperation Configuration
 # -----------------------------------------------------------------------------
 teleop:
-  type: so101_leader                       # Leader arm 遥操作
+  type: so101_leader_arm                    # Leader arm 遥操作（项目类 SO101LeaderTeleop，含夹爪安全映射）
   port: /dev/ttyACM0                       # 串口端口
   use_degrees: false                       # 使用弧度（false）或角度（true）
 
@@ -77,7 +78,7 @@ dataset:
   single_task: "SO-101 MuJoCo leader arm manipulation (simple_pick)"  # 任务描述
   
   # Recording parameters
-  fps: 30                                  # 录制帧率
+  fps: 20                                  # 录制帧率(须与 robot.record_fps 一致)
   episode_time_s: 120                      # 每集时长（秒）
   reset_time_s: 3                          # 重置时间（秒）；sim 自动 reset 后可手动微调
   num_episodes: 1                          # 录制集数

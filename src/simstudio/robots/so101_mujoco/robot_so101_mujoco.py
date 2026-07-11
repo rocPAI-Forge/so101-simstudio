@@ -232,7 +232,7 @@ class SO101MujocoRobot(Robot):
         q_home[self.dof_ids["elbow_flex"]] = 0.6
         q_home[self.dof_ids["wrist_flex"]] = 1.2
         q_home[self.dof_ids["wrist_roll"]] = 0.0
-        q_home[self.dof_ids["gripper"]] = 0.8
+        q_home[self.dof_ids["gripper"]] = self.config.home_gripper
 
         self.data.qpos[:] = q_home
         self.data.qvel[:] = 0.0
@@ -549,7 +549,7 @@ class SO101MujocoRobot(Robot):
         self.data.qpos[self.dof_ids["elbow_flex"]] = 0.6
         self.data.qpos[self.dof_ids["wrist_flex"]] = 1.2
         self.data.qpos[self.dof_ids["wrist_roll"]] = 0.0
-        self.data.qpos[self.dof_ids["gripper"]] = 0.8
+        self.data.qpos[self.dof_ids["gripper"]] = self.config.home_gripper
 
         for joint_name in self.JOINT_NAMES:
             self.data.qvel[self.dof_ids[joint_name]] = 0.0

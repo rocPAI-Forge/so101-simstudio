@@ -62,6 +62,11 @@ class SO101MujocoConfig(RobotConfig):
     # Action mode: "velocity" (keyboard) or "position" (leader arm)
     action_mode: str = "velocity"
 
+    # Gripper joint value (rad) used at home/reset. MuJoCo gripper ctrlrange is
+    # roughly (-0.17, 1.75): lower bound = fully closed, upper = fully open.
+    # Leader arm starts fully closed, so leader configs set this to the closed bound.
+    home_gripper: float = 0.8
+
     # Episode reset: "auto" resets arm + block before each recorded episode (sim);
     # "manual" leaves state unchanged (LeRobot real-robot style).
     reset_mode: str = "auto"

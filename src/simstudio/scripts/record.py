@@ -23,17 +23,47 @@ from typing import Any
 
 import yaml
 
+
+def _preselect_mujoco_gl(argv: list[str]) -> None:
+    """Pick the MuJoCo GL backend BEFORE mujoco is imported (it reads MUJOCO_GL at import).
+
+    - ``--view_mode rerun`` (and any headless/no-window run): use EGL for fast GPU
+      offscreen rendering. Software GL caps the record loop around ~15 Hz; EGL sustains 30 Hz.
+    - ``--view_mode mujoco``: keep the default GLFW on-screen context. EGL cannot coexist
+      with the GLFW window (causes ``GLX X_GLXMakeCurrent BadAccess``), so if the user
+      forced ``MUJOCO_GL=egl`` here, override it back to glfw with a warning.
+    """
+    view_mode = "mujoco"
+    for i, arg in enumerate(argv):
+        if arg == "--view_mode" and i + 1 < len(argv):
+            view_mode = argv[i + 1]
+        elif arg.startswith("--view_mode="):
+            view_mode = arg.split("=", 1)[1]
+
+    current = os.environ.get("MUJOCO_GL", "")
+    if view_mode == "rerun":
+        if current == "":
+            os.environ["MUJOCO_GL"] = "egl"
+    elif current.lower() == "egl":
+        logging.getLogger(__name__).warning(
+            "MUJOCO_GL=egl conflicts with the GLFW window in --view_mode mujoco; overriding to glfw."
+        )
+        os.environ["MUJOCO_GL"] = "glfw"
+
+
+_preselect_mujoco_gl(sys.argv[1:])
+
 # ---------------------------------------------------------------------------
 # Register project plugins with LeRobot's ChoiceRegistry before lerobot_record.
 # ---------------------------------------------------------------------------
-from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401
-from simstudio.robots.so101_real_follower import SO101RealFollowerConfig  # noqa: F401
-from simstudio.common.constants import KEYBOARD_RECORDING_CONTROLS_HELP
-from simstudio.teleoperators.so101_joycon import SO101JoyConTeleopConfig  # noqa: F401
-from simstudio.teleoperators.so101_keyboard import (  # noqa: F401
+from simstudio.common.constants import KEYBOARD_RECORDING_CONTROLS_HELP  # noqa: E402
+from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401,E402
+from simstudio.robots.so101_real_follower import SO101RealFollowerConfig  # noqa: F401,E402
+from simstudio.teleoperators.so101_joycon import SO101JoyConTeleopConfig  # noqa: F401,E402
+from simstudio.teleoperators.so101_keyboard import (  # noqa: F401,E402
     SO101KeyboardTeleopConfig,
 )
-from simstudio.teleoperators.so101_leader import (  # noqa: F401
+from simstudio.teleoperators.so101_leader import (  # noqa: F401,E402
     SO101LeaderTeleopConfig,
 )
 
@@ -269,6 +299,49 @@ def _maybe_auto_reset_episode(robot: Any, dataset: Any) -> None:
     robot.reset_episode(episode_index)
 
 
+# Per-stage timing probe for the record loop (enable with SO101_PROFILE=1).
+# Used to locate the FPS bottleneck (rendering vs physics vs dataset write vs serial IO).
+_prof_stats: dict[str, list[float]] = {}
+
+
+def _install_loop_profiling(robot: Any, dataset: Any, teleop: Any) -> None:
+    import time as _t
+
+    def _wrap(obj: Any, name: str) -> None:
+        if obj is None:
+            return
+        orig = getattr(obj, name, None)
+        if orig is None or getattr(orig, "_so101_prof", False):
+            return
+
+        def wrapped(*a: Any, **k: Any):
+            t0 = _t.perf_counter()
+            try:
+                return orig(*a, **k)
+            finally:
+                s = _prof_stats.setdefault(name, [0.0, 0.0])
+                s[0] += 1
+                s[1] += _t.perf_counter() - t0
+
+        wrapped._so101_prof = True  # type: ignore[attr-defined]
+        setattr(obj, name, wrapped)
+
+    _wrap(robot, "get_observation")
+    _wrap(robot, "send_action")
+    _wrap(dataset, "add_frame")
+    _wrap(teleop, "get_action")
+
+
+def _log_prof_stats() -> None:
+    if not _prof_stats:
+        return
+    parts = []
+    for label, (n, tot) in sorted(_prof_stats.items(), key=lambda x: -x[1][1]):
+        if n:
+            parts.append(f"{label}={tot / n * 1e3:.1f}ms x{int(n)}")
+    logger.info("SO101_PROFILE per-frame avg: %s", " | ".join(parts))
+
+
 def _patch_episode_auto_reset() -> None:
     """Hook LeRobot record_loop to auto-reset MuJoCo sim before each episode."""
     import lerobot.scripts.lerobot_record as lr
@@ -288,7 +361,12 @@ def _patch_episode_auto_reset() -> None:
         if robot is None and args:
             robot = args[0]
         dataset = kwargs.get("dataset")
+        teleop = kwargs.get("teleop")
         _maybe_auto_reset_episode(robot, dataset)
+        _profile = os.environ.get("SO101_PROFILE") == "1"
+        if _profile:
+            _install_loop_profiling(robot, dataset, teleop)
+            _prof_stats.clear()
         # Enable recording hotkeys only while actively looping; keeping them off during
         # the blocking video encode in save_episode prevents a stray key from setting
         # stop_recording between episodes.
@@ -297,6 +375,8 @@ def _patch_episode_auto_reset() -> None:
             return _original_record_loop(*args, **kwargs)
         finally:
             set_recording_keys_enabled(False)
+            if _profile:
+                _log_prof_stats()
 
     _patched_record_loop._so101_episode_reset_patched = True
     lr.record_loop = _patched_record_loop
@@ -393,8 +473,8 @@ def main() -> None:
 
     # Import AFTER patching so record() sees our patched init_keyboard_listener.
     import lerobot.scripts.lerobot_record as lr
-    from lerobot.scripts.lerobot_record import record  # noqa: E402
     import lerobot.utils.keyboard_input as ki
+    from lerobot.scripts.lerobot_record import record  # noqa: E402
 
     if getattr(_patch_keyboard_recording, "_so101_patched", False):
         lr.init_keyboard_listener = ki.init_keyboard_listener
