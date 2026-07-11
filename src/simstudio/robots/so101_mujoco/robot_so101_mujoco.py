@@ -567,11 +567,13 @@ class SO101MujocoRobot(Robot):
             f"Robot reset to home position - EE at: [{ee_pos[0]:.3f}, {ee_pos[1]:.3f}, {ee_pos[2]:.3f}]"
         )
 
-    def reset_block_position(self, episode_index: int) -> tuple[float, float, float, float] | None:
-        """Set block position from predefined positions only."""
-        if not self.is_connected:
-            raise DeviceNotConnectedError(f"{self} is not connected")
+    def _set_block_pose(
+        self, x: float, y: float, z: float, yaw_deg: float
+    ) -> tuple[float, float, float, float] | None:
+        """Write a block pose into qpos, zero its velocity and refresh solver state.
 
+        Returns the applied pose, or None if the scene has no block body.
+        """
         block_body_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_BODY, "block")
         if block_body_id < 0:
             logger.warning("Block body not found in model - skipping reset")
@@ -579,6 +581,25 @@ class SO101MujocoRobot(Robot):
 
         block_jnt_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_JOINT, "block")
         block_qpos_adr = self.model.jnt_qposadr[block_jnt_id]
+
+        self.data.qpos[block_qpos_adr : block_qpos_adr + 3] = [x, y, z]
+
+        yaw_rad = np.deg2rad(yaw_deg)
+        quat = np.array([np.cos(yaw_rad / 2), 0, 0, np.sin(yaw_rad / 2)])
+        self.data.qpos[block_qpos_adr + 3 : block_qpos_adr + 7] = quat
+
+        block_qvel_adr = self.model.jnt_dofadr[block_jnt_id]
+        self.data.qvel[block_qvel_adr : block_qvel_adr + 6] = 0.0
+
+        mj.mj_forward(self.model, self.data)
+
+        logger.info(f"Block reset to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°")
+        return (x, y, z, yaw_deg)
+
+    def reset_block_position(self, episode_index: int) -> tuple[float, float, float, float] | None:
+        """Set block position from predefined per-episode positions."""
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected")
 
         if not self.cube_positions:
             raise ValueError(
@@ -602,28 +623,64 @@ class SO101MujocoRobot(Robot):
             f"Using predefined position for episode {episode_index}: "
             f"[{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°"
         )
+        return self._set_block_pose(x, y, z, yaw_deg)
 
-        self.data.qpos[block_qpos_adr : block_qpos_adr + 3] = [x, y, z]
-
-        yaw_rad = np.deg2rad(yaw_deg)
-        quat = np.array([np.cos(yaw_rad / 2), 0, 0, np.sin(yaw_rad / 2)])
-        self.data.qpos[block_qpos_adr + 3 : block_qpos_adr + 7] = quat
-
-        block_qvel_adr = self.model.jnt_dofadr[block_jnt_id]
-        self.data.qvel[block_qvel_adr : block_qvel_adr + 6] = 0.0
-
-        mj.mj_forward(self.model, self.data)
-
-        logger.info(f"Block reset to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°")
-        return (x, y, z, yaw_deg)
-
-    def reset_episode(self, episode_index: int) -> None:
-        """Reset arm and block for a new recorded episode."""
+    def reset_block_position_random(self) -> tuple[float, float, float, float] | None:
+        """Sample a block pose uniformly within the configured graspable bounds."""
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected")
 
-        self.reset_to_home_position()
-        self.reset_block_position(episode_index)
+        xr = self.config.cube_random_x_range
+        yr = self.config.cube_random_y_range
+        yawr = self.config.cube_random_yaw_range
+        x = float(np.random.uniform(xr[0], xr[1]))
+        y = float(np.random.uniform(yr[0], yr[1]))
+        z = float(self.config.cube_random_z)
+        yaw_deg = float(np.random.uniform(yawr[0], yawr[1]))
+
+        logger.info(f"Random cube position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg:.1f}°")
+        return self._set_block_pose(x, y, z, yaw_deg)
+
+    def _reset_arm_follow(self) -> None:
+        """Keep the arm where it is (no teleport) for passive-leader recording.
+
+        Zeroes residual joint velocity and holds the current pose via ctrl so the
+        arm stays put until the leader teleop takes over on the next frame. This
+        avoids the large first-frame jump that a fixed-home teleport would cause
+        when the real leader is left wherever the operator's hand ended up.
+        """
+        for joint_name in self.JOINT_NAMES:
+            self.data.qvel[self.dof_ids[joint_name]] = 0.0
+            self.data.ctrl[self.act_ids[joint_name]] = self.data.qpos[self.dof_ids[joint_name]]
+        self.q_des = self.data.qpos.copy()
+        self.dq_filt = np.zeros(self.model.nv)
+        mj.mj_forward(self.model, self.data)
+
+    def reset_episode(self, episode_index: int) -> None:
+        """Reset arm and/or block for a new recorded episode per config switches.
+
+        reset_arm:  "home" teleports to fixed home; "follow" leaves the arm in place
+                    (for the passive real leader arm).
+        reset_cube: "fixed" uses cube_positions.json; "random" samples within bounds;
+                    "none" leaves the cube untouched.
+        """
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected")
+
+        reset_arm = getattr(self.config, "reset_arm", "home")
+        reset_cube = getattr(self.config, "reset_cube", "fixed")
+
+        if reset_arm == "follow":
+            self._reset_arm_follow()
+        else:
+            self.reset_to_home_position()
+
+        if reset_cube == "random":
+            self.reset_block_position_random()
+        elif reset_cube == "none":
+            logger.info("Cube reset skipped (reset_cube=none)")
+        else:
+            self.reset_block_position(episode_index)
 
         settle_steps = max(1, int(0.5 / self.physics_dt))
         for _ in range(settle_steps):

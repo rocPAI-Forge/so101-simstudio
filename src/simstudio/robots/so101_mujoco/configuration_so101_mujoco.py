@@ -70,3 +70,22 @@ class SO101MujocoConfig(RobotConfig):
     # Episode reset: "auto" resets arm + block before each recorded episode (sim);
     # "manual" leaves state unchanged (LeRobot real-robot style).
     reset_mode: str = "auto"
+
+    # Fine-grained reset behaviour, applied only when reset_mode == "auto".
+    #   reset_arm:  "home"   -> teleport arm to the fixed home pose (keyboard/replay).
+    #               "follow" -> do NOT teleport; keep the arm where it is and let the
+    #                           teleop take over next frame. Use this for the passive
+    #                           real leader arm, otherwise the position mapping yanks the
+    #                           sim arm from home to the leader's pose on the first frame.
+    #   reset_cube: "fixed"  -> per-episode predefined position from cube_positions.json.
+    #               "random" -> sample uniformly within the graspable bounds below.
+    #               "none"   -> leave the cube untouched.
+    reset_arm: str = "home"
+    reset_cube: str = "fixed"
+
+    # Random cube placement bounds (metres / degrees), used when reset_cube == "random".
+    # Defaults cover the graspable rectangle observed in cube_positions.json.
+    cube_random_x_range: list[float] = field(default_factory=lambda: [0.03, 0.11])
+    cube_random_y_range: list[float] = field(default_factory=lambda: [0.03, 0.10])
+    cube_random_z: float = 0.0125
+    cube_random_yaw_range: list[float] = field(default_factory=lambda: [0.0, 0.0])

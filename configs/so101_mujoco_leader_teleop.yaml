@@ -15,6 +15,8 @@ robot:
   render_window: true
   action_mode: position
   home_gripper: -0.1                        # 夹爪初始/复位值(rad)；接近完全闭合(下界-0.17453)但留余量，避免顶硬限位自激
+  # 说明：episode 复位(reset_arm: follow / reset_cube)仅在录制时生效，见 so101_mujoco_leader.yaml；
+  #       teleoperate 为连续实时控制，没有 episode 复位概念，故此处不设。
   lin_speed: 0.04
   yaw_speed: 1.20
   grip_speed: 0.7
