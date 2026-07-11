@@ -195,6 +195,33 @@ leader 臂通过 USB 连接，默认端口 `/dev/ttyACM0`。端口不同可用 `
 | `so101_mujoco_leader.yaml` | Leader arm 录制配置 |
 | `so101_mujoco_leader_teleop.yaml` | Leader arm 实时控制配置 |
 
+### 多 episode 录制的复位策略
+
+多 episode 录制时，每一集开始前的复位行为由 `robot.reset_mode` 及两个细分开关控制（仅 `reset_mode: auto` 时生效）：
+
+| 开关 | 取值 | 含义 |
+|------|------|------|
+| `reset_arm` | `home` | 机械臂**瞬移**到固定 home 姿态（keyboard/回放默认） |
+| | `follow` | **不瞬移**，机械臂停在原处，下一帧由 teleop 接管（**leader 默认**） |
+| `reset_cube` | `fixed` | 用 `cube_positions.json` 的预定义位置（可复现） |
+| | `random` | 在可抓取矩形区内随机放置（更利于泛化，**leader 默认**） |
+| | `none` | 不动 cube |
+
+**为什么 leader 用 `reset_arm: follow`**：真实 leader 是被动臂、不会自己回 home。若强制瞬移 sim arm 到 home，而你的手停在别处，新一集第一帧位置映射会把 sim arm 从 home 猛拉到 leader 位置，产生跳变并污染轨迹开头。`follow` 让 sim arm 起始就等于 leader 当前姿态，零跳变。配合 `dataset.reset_time_s` 的准备窗口（sim 实时跟随但不记录），把 leader 移到期望起始姿态后再按 `N` 开始记录即可。
+
+**随机放置范围**（`reset_cube: random` 时生效，见 `so101_mujoco_leader.yaml`）：
+
+```yaml
+robot:
+  reset_cube: random
+  cube_random_x_range: [0.03, 0.11]     # 米
+  cube_random_y_range: [0.03, 0.10]     # 米
+  cube_random_z: 0.0125
+  cube_random_yaw_range: [0.0, 0.0]     # 度，需随机朝向可改为如 [-45.0, 45.0]
+```
+
+keyboard 保持默认 `reset_arm: home` + `reset_cube: fixed`（行为不变）。
+
 ### 常用参数覆盖
 
 ```bash

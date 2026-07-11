@@ -16,6 +16,13 @@ robot:
   type: so101_mujoco
   action_mode: position                    # velocity | position (leader arm uses position)
   home_gripper: -0.1                        # 夹爪初始/复位值(rad)；接近完全闭合(下界-0.17453)但留余量，避免顶硬限位自激
+  reset_arm: follow                        # follow: 新 episode 不瞬移，跟随真实 leader 当前姿态(避免第一帧跳变) | home: 瞬移到固定 home
+  reset_cube: random                       # random: 可抓取区随机放置 | fixed: 用 cube_positions.json 预定义 | none: 不动
+  # 随机放置范围(reset_cube=random 时生效)，默认覆盖可抓取矩形
+  cube_random_x_range: [0.03, 0.11]
+  cube_random_y_range: [0.03, 0.10]
+  cube_random_z: 0.0125
+  cube_random_yaw_range: [0.0, 0.0]        # 需要随机朝向可改为如 [-45.0, 45.0]
   xml_path: SO101/scenes/simple_pick/scene.xml           # MuJoCo 场景文件
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json  # 物体初始位置
   
