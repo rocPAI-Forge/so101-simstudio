@@ -85,6 +85,9 @@ _record_session: dict[str, int | None] = {
     "saved_this_session": 0,
 }
 
+# Kept alive so the evdev recording-control listener (leader/Joy-Con) isn't GC'd.
+_evdev_recording_listener = None
+
 
 def _detect_teleop_type(argv: list[str] | None = None) -> str | None:
     """Extract teleop.type from the --config YAML file on the command line."""
@@ -195,6 +198,54 @@ def _patch_keyboard_recording() -> None:
     _teleop_module.SO101KeyboardTeleop.connect = _patched_connect
     _teleop_module._shared_recording_events = _recording_events
     _patch_keyboard_recording._so101_patched = True
+
+
+def _install_evdev_recording_controls() -> bool:
+    """Drive LeRobot recording controls from a focus-independent evdev listener.
+
+    For non-keyboard teleop (leader arm / Joy-Con) LeRobot falls back to a terminal
+    key listener that only registers keys while the terminal window is focused. That
+    is impractical when operating a physical leader arm and watching the sim window,
+    so the N/Right/R/Left/Q/Esc controls feel unresponsive. Here we reuse the same
+    evdev backend as keyboard teleop, which reads ``/dev/input/event*`` regardless of
+    window focus, and feed its key presses into the shared recording ``events`` dict.
+
+    Returns True when the evdev listener started (else we leave LeRobot's terminal
+    fallback in place).
+    """
+    global _evdev_recording_listener
+    import lerobot.utils.keyboard_input as _ki
+
+    from simstudio.common.recording_controls import apply_keyboard_recording_key
+    from simstudio.teleoperators.so101_keyboard.evdev_listener import EvdevKeyListener
+
+    def _on_key(key_name: str, is_pressed: bool) -> None:
+        if is_pressed:
+            apply_keyboard_recording_key(key_name, _recording_events)
+
+    listener = EvdevKeyListener(_on_key)
+    if not listener.start():
+        logging.warning(
+            "Focus-independent evdev recording controls unavailable (no device or "
+            "permission); falling back to terminal input — keep the terminal focused. "
+            "For focus-independent keys add your user to the 'input' group: "
+            "sudo usermod -aG input $USER"
+        )
+        return False
+
+    _evdev_recording_listener = listener
+
+    def _patched_init_keyboard_listener():
+        logging.info(
+            "SO101 recording controls via evdev, focus-independent (%s).",
+            KEYBOARD_RECORDING_CONTROLS_HELP,
+        )
+        return listener, _recording_events
+
+    _patched_init_keyboard_listener._so101_impl = True
+    _ki.init_keyboard_listener = _patched_init_keyboard_listener
+    _install_evdev_recording_controls._so101_patched = True
+    return True
 
 
 def _patch_rerun_streaming() -> None:
@@ -462,6 +513,10 @@ def main() -> None:
 
     if _detect_teleop_type(raw_argv) == "so101_keyboard":
         _patch_keyboard_recording()
+    else:
+        # leader arm / Joy-Con: use focus-independent evdev controls instead of the
+        # terminal fallback so N/Right/R/Left/Q/Esc work without terminal focus.
+        _install_evdev_recording_controls()
 
     _init_record_session_from_argv(raw_argv)
     _recording_events["stop_recording"] = False
@@ -476,7 +531,9 @@ def main() -> None:
     import lerobot.utils.keyboard_input as ki
     from lerobot.scripts.lerobot_record import record  # noqa: E402
 
-    if getattr(_patch_keyboard_recording, "_so101_patched", False):
+    if getattr(_patch_keyboard_recording, "_so101_patched", False) or getattr(
+        _install_evdev_recording_controls, "_so101_patched", False
+    ):
         lr.init_keyboard_listener = ki.init_keyboard_listener
 
     record()
