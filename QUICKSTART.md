@@ -167,13 +167,16 @@ leader 臂通过 USB 连接，默认端口 `/dev/ttyACM0`。端口不同可用 `
 
 或使用：`make smoke-leader-record VIEW_MODE=mujoco`
 
-**录制控制**（leader / Joy-Con 使用 LeRobot 默认按键，需保持**终端窗口**处于焦点）：
+**录制控制**（leader / Joy-Con 与 keyboard 一致，走 **evdev 焦点无关**输入，无需保持终端焦点，可专注 leader 臂与仿真窗口）：
 
 | 按键 | 功能 |
 |------|------|
 | N / Right arrow | 保存 episode，进入下一个 |
 | R / Left arrow | 取消当前 episode，重录 |
 | Q / ESC | 停止录制 |
+
+> 启动日志出现 `SO101 recording controls via evdev, focus-independent (...)` 即为焦点无关模式。
+> 若改为出现 `... evdev recording controls unavailable ...` 或 `Using terminal keyboard input — keep this terminal focused`，说明缺少 evdev 权限（按键需终端焦点、响应迟钝）；把用户加入 `input` 组并**重新登录**即可：`sudo usermod -aG input $USER`。
 
 **夹爪与帧率说明**：
 

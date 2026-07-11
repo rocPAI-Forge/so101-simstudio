@@ -126,7 +126,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=rerun
 
 ## 版本历史
 
-- **v0.1.1** (2026-07-07, main): 统一 `--view_mode mujoco/rerun` 录制；Rerun evdev 键盘修复；smoke 脚本整理
+- **v0.1.1** (2026-07-11, `release-v0.1.1`): 统一 `--view_mode mujoco/rerun` 录制；Rerun evdev 键盘修复；leader 臂 teleop/record 可靠化；leader/Joy-Con evdev 焦点无关录制控制；多集复位细化（`reset_arm` / `reset_cube` + 随机 cube）；smoke 脚本整理
 - **v0.1.0** (2026-07-06, `release-v0.1.0`): 首个正式版本，支持多种遥操作
 - **v0.0.3** (合入 v0.1.0): Joy-Con、数据集校验（无独立 tag）
 - **v0.0.2** (`release-v0.0.2`): Leader Arm 支持
