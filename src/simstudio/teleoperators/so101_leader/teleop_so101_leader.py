@@ -4,18 +4,29 @@ Wraps LeRobot's SOLeader implementation for Feetech STS3215 motors.
 Reads normalized positions and scales to MuJoCo radian targets.
 """
 
+import os
+
 from lerobot.teleoperators.so_leader.so_leader import SOLeader
 
 from simstudio.teleoperators.so101_leader.config import SO101LeaderTeleopConfig
 
-# MuJoCo joint ranges (from so101_new_calib.xml ctrlrange)
+# Set SO101_GRIPPER_DEBUG=1 to print raw + scaled gripper values every frame.
+_GRIPPER_DEBUG = os.environ.get("SO101_GRIPPER_DEBUG") == "1"
+
+# MuJoCo joint ranges (from so101_new_calib.xml ctrlrange).
+# NOTE: the gripper lower bound is deliberately kept above the hard ctrlrange
+# floor (-0.17453). Driving the sim gripper all the way to the hard limit makes
+# the two jaw geoms self-collide; the soft position servo (kp=17.8) cannot hold
+# against the contact force and the solver flings the gripper wide open. Mapping
+# "fully closed" to -0.1 stays visually closed without hitting that instability.
+_GRIPPER_CLOSED_SAFE = -0.1
 _MUJOCO_JOINT_RANGE = {
     "shoulder_pan": (-1.91986, 1.91986),
     "shoulder_lift": (-1.74533, 1.74533),
     "elbow_flex": (-1.69, 1.69),
     "wrist_flex": (-1.65806, 1.65806),
     "wrist_roll": (-2.74385, 2.84121),
-    "gripper": (-0.17453, 1.74533),
+    "gripper": (_GRIPPER_CLOSED_SAFE, 1.74533),
 }
 
 # Leader arm normalized ranges (from FeetechMotorsBus norm modes)
@@ -35,7 +46,12 @@ class SO101LeaderTeleop(SOLeader):
     MuJoCo robot's send_action (position mode).
     """
 
-    name = "so101_leader_arm"
+    # NOTE: `name` only controls the calibration directory
+    # (HF_LEROBOT_CALIBRATION/teleoperators/<name>/). It is intentionally
+    # different from the registered config `type` ("so101_leader_arm"): the
+    # type must avoid clashing with LeRobot's built-in "so101_leader", while the
+    # calibration dir is safe as "so101_leader" (built-in leader uses "so_leader").
+    name = "so101_leader"
     config_class = SO101LeaderTeleopConfig
 
     def __init__(self, config: SO101LeaderTeleopConfig):
@@ -51,4 +67,12 @@ class SO101LeaderTeleop(SOLeader):
             mj_lo, mj_hi = _MUJOCO_JOINT_RANGE[joint]
             t = (val - lo) / (hi - lo)
             scaled[key] = mj_lo + t * (mj_hi - mj_lo)
+        if _GRIPPER_DEBUG:
+            g_raw = raw.get("gripper.pos")
+            g_scaled = scaled.get("gripper.pos")
+            if g_raw is not None:
+                print(
+                    f"[gripper] raw_norm={g_raw:8.3f}  scaled_rad={g_scaled:8.4f}",
+                    flush=True,
+                )
         return scaled

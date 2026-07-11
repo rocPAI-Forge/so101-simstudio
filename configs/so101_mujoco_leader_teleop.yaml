@@ -5,7 +5,7 @@ robot:
   type: so101_mujoco
   xml_path: SO101/scenes/simple_pick/scene.xml
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json
-  record_fps: 30
+  record_fps: 20                           # 20Hz：硬件可稳定达到，避免掉帧导致 sim 慢放/滞后
   control_fps: 180
   physics_fps: 360
   camera_width: 640
@@ -14,6 +14,7 @@ robot:
   show_collision_geometry: false
   render_window: true
   action_mode: position
+  home_gripper: -0.1                        # 夹爪初始/复位值(rad)；接近完全闭合(下界-0.17453)但留余量，避免顶硬限位自激
   lin_speed: 0.04
   yaw_speed: 1.20
   grip_speed: 0.7
@@ -37,4 +38,4 @@ teleop:
   port: /dev/ttyACM0
   use_degrees: false
 
-fps: 30
+fps: 20
