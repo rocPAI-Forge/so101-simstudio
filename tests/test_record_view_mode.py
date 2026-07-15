@@ -243,8 +243,8 @@ def test_keyboard_recording_skips_duplicate_listener():
 def test_keyboard_recording_uses_shared_events_dict():
     import lerobot.scripts.lerobot_record as lr
 
-    from simstudio.scripts import record as record_mod
     from simstudio.common.recording_controls import apply_keyboard_recording_key
+    from simstudio.scripts import record as record_mod
 
     record_mod._patch_keyboard_recording._so101_patched = False
     record_mod._patch_keyboard_recording()
