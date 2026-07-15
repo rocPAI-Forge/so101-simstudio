@@ -220,6 +220,12 @@ class SO101MujocoRobot(Robot):
 
         self.robot_qpos_indices = np.array([self.dof_ids[name] for name in self.JOINT_NAMES])
 
+        # Joint id (not dof index) for the base pivot, used by the cylindrical
+        # velocity transform to read the true shoulder_pan world anchor.
+        self._shoulder_pan_jid = mj.mj_name2id(
+            self.model, mj.mjtObj.mjOBJ_JOINT, "shoulder_pan"
+        )
+
         self.ee_site_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_SITE, self.config.ee_site_name)
         if self.ee_site_id < 0:
             raise RuntimeError(f"Site '{self.config.ee_site_name}' not found in model")
@@ -498,7 +504,28 @@ class SO101MujocoRobot(Robot):
             self.dof_ids["elbow_flex"],
         ]
         J3 = Jp[:, arm_cols]
-        v_des = np.array([vx, vy, vz])
+        vx_w, vy_w = vx, vy
+        if self.config.horizontal_control_mode == "cylindrical":
+            # vx = radial reach (outward+), vy = tangential base swing.
+            # Radial must be measured from the TRUE base pivot (shoulder_pan world
+            # anchor); otherwise the commanded reach direction leaves the arm's
+            # reach plane and the IK has to rotate the base to follow it, so pure
+            # "forward" would inconsistently extend or swing.
+            base = self.data.xanchor[self._shoulder_pan_jid]
+            base_x = self.config.base_xy[0] or base[0]
+            base_y = self.config.base_xy[1] or base[1]
+            ee = self.data.site_xpos[self.ee_site_id]
+            rx = ee[0] - base_x
+            ry = ee[1] - base_y
+            r = float(np.hypot(rx, ry))
+            if r > 1e-6:
+                ux, uy = rx / r, ry / r  # radial (outward) unit
+            else:
+                ux, uy = 1.0, 0.0
+            tx, ty = -uy, ux  # tangential (CCW) unit
+            vx_w = ux * vx + tx * vy
+            vy_w = uy * vx + ty * vy
+        v_des = np.array([vx_w, vy_w, vz])
         A = J3 @ J3.T + (self.config.lambda_pos**2) * np.eye(3)
         dq3 = J3.T @ np.linalg.solve(A, v_des)
         dq = np.zeros(self.model.nv)
