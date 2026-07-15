@@ -1,6 +1,9 @@
 """Tests for keyboard recording control helpers."""
 
-from simstudio.common.recording_controls import apply_keyboard_recording_key
+from simstudio.common.recording_controls import (
+    apply_keyboard_recording_key,
+    reset_recording_debounce,
+)
 
 
 def test_save_key_clears_spurious_stop_recording():
@@ -29,7 +32,6 @@ def test_esc_stops_session():
 
 
 def test_recording_keys_ignored_outside_record_loop():
-    from simstudio.common.recording_controls import apply_keyboard_recording_key
     from simstudio.teleoperators.so101_keyboard.teleop_so101_keyboard import (
         SO101KeyboardTeleop,
         SO101KeyboardTeleopConfig,
@@ -46,6 +48,33 @@ def test_recording_keys_ignored_outside_record_loop():
 
     set_recording_keys_enabled(True)
     teleop._on_evdev_key("n", True)
+    assert events["exit_early"] is True
+
+
+def test_rapid_save_presses_are_debounced():
+    """A burst of save presses collapses to a single exit_early (no eaten episodes)."""
+    events = {"exit_early": False, "rerecord_episode": False, "stop_recording": False}
+
+    assert apply_keyboard_recording_key("right", events) is True
+    assert events["exit_early"] is True
+
+    # Simulate the outer loop consuming the first save, then two more rapid presses.
+    events["exit_early"] = False
+    assert apply_keyboard_recording_key("right", events) is True
+    assert apply_keyboard_recording_key("right", events) is True
+    # Debounced: the extra presses must not re-arm exit_early on the next episode.
+    assert events["exit_early"] is False
+
+
+def test_debounce_reset_allows_next_press():
+    events = {"exit_early": False, "rerecord_episode": False, "stop_recording": False}
+
+    assert apply_keyboard_recording_key("n", events) is True
+    assert events["exit_early"] is True
+
+    events["exit_early"] = False
+    reset_recording_debounce()  # e.g. enough time passed / new episode
+    assert apply_keyboard_recording_key("n", events) is True
     assert events["exit_early"] is True
 
 
