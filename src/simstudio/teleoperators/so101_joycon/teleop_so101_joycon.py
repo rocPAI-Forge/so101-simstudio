@@ -77,15 +77,16 @@ class SO101JoyConTeleop(Teleoperator):
         self._prev_time = time.time()
         print(f"✓ Connected to {side} Joy-Con")
         if side == "right":
-            print("  摇杆: 左右=X轴, 前后=Y轴, R键=上升, 摇杆按下=下降")
-            print("  倾斜手柄: 腕部旋转")
-            print("  ZR按住=夹爪关闭, 松开=夹爪打开")
-            print("  A=下一episode, Y=重录, Plus=停止")
+            print("  Stick: left/right=X axis, forward/back=Y axis; R=up, stick press=down")
+            print("  Tilt controller: wrist rotation")
+            print("  Hold ZR=close gripper, release=open gripper")
         else:
-            print("  摇杆: 左右=X轴, 前后=Y轴, L键=上升, 摇杆按下=下降")
-            print("  倾斜手柄: 腕部旋转")
-            print("  ZL按住=夹爪关闭, 松开=夹爪打开")
-            print("  左方向键=下一episode, 上方向键=重录, Minus=停止")
+            print("  Stick: left/right=X axis, forward/back=Y axis; L=up, stick press=down")
+            print("  Tilt controller: wrist rotation")
+            print("  Hold ZL=close gripper, release=open gripper")
+        # Recording (episode) controls are handled by the keyboard via the project's
+        # focus-independent evdev listener — NOT by Joy-Con buttons. See record.py.
+        print("  Recording controls (keyboard, focus-independent): N/Right save & next, R/Left re-record, Q/ESC stop")
 
     def calibrate(self) -> None:
         pass
@@ -97,8 +98,10 @@ class SO101JoyConTeleop(Teleoperator):
         if not self._connected or self._jc is None:
             raise RuntimeError("Joy-Con not connected")
 
-        # Get position and orientation from joycon-robotics
-        posture, gripper_state, button_control = self._jc.get_control()
+        # Get position and orientation from joycon-robotics.
+        # button_control is intentionally ignored: recording (episode) controls run
+        # through the keyboard evdev listener (see record.py), not Joy-Con buttons.
+        posture, gripper_state, _button_control = self._jc.get_control()
         # posture = [x, y, z, roll, pitch, yaw]
         x, y, z, roll, pitch, yaw = posture
 
@@ -140,12 +143,6 @@ class SO101JoyConTeleop(Teleoperator):
             # ZL button: bit 7 of report[3]
             grip_pressed = bool((report[3] >> 7) & 1) if report[0] == 0x30 else False
         gripper_delta = -1.0 if grip_pressed else 1.0
-
-        # Button control mapping from joycon-robotics
-        # button_control: 1=next episode, -1=restart, 0=none
-        # These are mapped to LeRobot events in the calling code
-        # Right Joy-Con: A=next, Y=restart, Plus=stop
-        # Left Joy-Con: Left=next, Up=restart, Minus=stop
 
         return {
             "vx": vx,
