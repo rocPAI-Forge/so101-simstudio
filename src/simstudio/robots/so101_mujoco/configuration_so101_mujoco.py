@@ -62,6 +62,17 @@ class SO101MujocoConfig(RobotConfig):
     # Action mode: "velocity" (keyboard) or "position" (leader arm)
     action_mode: str = "velocity"
 
+    # Horizontal velocity interpretation for velocity teleop:
+    #   "world"       -> vx/vy are world-frame X/Y (keyboard default).
+    #   "cylindrical" -> vx = radial reach (extend/retract away from the base),
+    #                    vy = tangential swing (base shoulder_pan arc). This is more
+    #                    intuitive for a stick: forward/back extends, left/right swings.
+    horizontal_control_mode: str = "world"
+    # World XY of the base (shoulder_pan) pivot, used for the cylindrical transform.
+    # Leave at [0.0, 0.0] to auto-read the true shoulder_pan anchor each step;
+    # set a non-zero override only if you need to shift the pivot manually.
+    base_xy: list[float] = field(default_factory=lambda: [0.0, 0.0])
+
     # Gripper joint value (rad) used at home/reset. MuJoCo gripper ctrlrange is
     # roughly (-0.17, 1.75): lower bound = fully closed, upper = fully open.
     # Leader arm starts fully closed, so leader configs set this to the closed bound.

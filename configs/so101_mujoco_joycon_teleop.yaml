@@ -3,6 +3,7 @@
 robot:
   type: so101_mujoco
   action_mode: velocity
+  horizontal_control_mode: cylindrical
   xml_path: SO101/scenes/simple_pick/scene.xml
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json
   record_fps: 30
@@ -38,3 +39,4 @@ teleop:
   translation_scale: 1.5
   z_scale: 1.0
   rotation_scale: 0.8
+  gripper_toggle: true                     # true=按一下夹住/再按松开(默认); false=长按夹住、松开张开
