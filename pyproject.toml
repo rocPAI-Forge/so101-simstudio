@@ -40,7 +40,7 @@ include = [
 [tool.ruff]
 target-version = "py312"
 line-length = 110
-extend-exclude = ["lerobot"]
+extend-exclude = ["lerobot", "third_party"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
