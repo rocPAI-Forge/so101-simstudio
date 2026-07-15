@@ -517,6 +517,11 @@ def main() -> None:
         # leader arm / Joy-Con: use focus-independent evdev controls instead of the
         # terminal fallback so N/Right/R/Left/Q/Esc work without terminal focus.
         _install_evdev_recording_controls()
+        if _detect_teleop_type(raw_argv) == "so101_joycon":
+            # Also let Joy-Con buttons drive episode controls (one-handed).
+            import simstudio.teleoperators.so101_joycon.teleop_so101_joycon as _jc_mod
+
+            _jc_mod._shared_recording_events = _recording_events
 
     _init_record_session_from_argv(raw_argv)
     _recording_events["stop_recording"] = False

@@ -71,6 +71,11 @@ teleop:
   z_scale: 1.0                             # Z轴缩放
   rotation_scale: 0.8                      # 旋转缩放
   gripper_toggle: true                     # true=按一下夹住/再按松开(默认); false=长按夹住、松开张开
+  # 单手录制控制(右手柄 A/Y/+;与键盘 N/R/Q 并存)
+  enable_button_recording: true            # 手柄按键控制录制
+  next_episode_button: a                   # A = 保存并进入下一集
+  restart_episode_button: y                # Y = 取消当前并重录
+  stop_button: plus                        # + = 结束整个录制
 
 # -----------------------------------------------------------------------------
 # Dataset Configuration

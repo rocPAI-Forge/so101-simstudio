@@ -40,3 +40,7 @@ teleop:
   z_scale: 1.0
   rotation_scale: 0.8
   gripper_toggle: true                     # true=按一下夹住/再按松开(默认); false=长按夹住、松开张开
+  enable_button_recording: true            # 手柄按键控制录制(A=下一集, Y=重录, +=停止)
+  next_episode_button: a
+  restart_episode_button: y
+  stop_button: plus
