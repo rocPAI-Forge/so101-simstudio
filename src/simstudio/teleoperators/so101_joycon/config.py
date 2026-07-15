@@ -49,6 +49,12 @@ class SO101JoyConTeleopConfig(TeleoperatorConfig):
 
     # Button mapping (right Joy-Con defaults)
     gripper_button: str = "zr"  # ZR (right) or ZL (left) - auto-detected based on side
-    next_episode_button: str = "a"  # Right: A, Left: Left arrow
-    restart_episode_button: str = "y"  # Right: Y, Left: Up arrow
-    stop_button: str = "plus"  # Right: Plus, Left: Minus
+
+    # One-handed recording controls driven by Joy-Con buttons (coexist with the
+    # keyboard evdev controls). Set enable_button_recording: false to disable.
+    # Button names: a/b/x/y, plus, minus, home, capture, up/down/left/right.
+    # Right Joy-Con has A/Y/Plus; left Joy-Con uses the d-pad + Minus instead.
+    enable_button_recording: bool = True
+    next_episode_button: str = "a"  # save current episode & go to next (keyboard N/Right)
+    restart_episode_button: str = "y"  # cancel current episode & re-record (keyboard R/Left)
+    stop_button: str = "plus"  # stop the whole recording session (keyboard Q/Esc)

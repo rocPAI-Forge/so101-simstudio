@@ -31,6 +31,26 @@ logger = logging.getLogger(__name__)
 # Set SO101_JOYCON_DEBUG=1 to log raw stick values + computed velocities.
 _DEBUG = os.environ.get("SO101_JOYCON_DEBUG") == "1"
 
+# Shared LeRobot recording-events dict, linked by simstudio.scripts.record so
+# Joy-Con buttons can drive episode controls (save/cancel/stop) one-handed.
+_shared_recording_events: dict[str, bool] | None = None
+
+# Config button name -> joycon HID getter method name.
+_BUTTON_GETTERS = {
+    "a": "get_button_a",
+    "b": "get_button_b",
+    "x": "get_button_x",
+    "y": "get_button_y",
+    "plus": "get_button_plus",
+    "minus": "get_button_minus",
+    "home": "get_button_home",
+    "capture": "get_button_capture",
+    "up": "get_button_up",
+    "down": "get_button_down",
+    "left": "get_button_left",
+    "right": "get_button_right",
+}
+
 
 class SO101JoyConTeleop(Teleoperator):
     """Joy-Con teleoperator using joycon-robotics library's position control."""
@@ -50,6 +70,13 @@ class SO101JoyConTeleop(Teleoperator):
         # Gripper toggle state (used when config.gripper_toggle is True).
         self._gripper_closed = False
         self._grip_prev_pressed = False
+        # Recording-control button state.
+        self._recording_events: dict[str, bool] | None = None
+        self._rec_btn_prev: dict[str, bool] = {}
+
+    def set_recording_events(self, events: dict[str, bool]) -> None:
+        """Link the shared LeRobot recording-events dict for button controls."""
+        self._recording_events = events
 
     @property
     def action_features(self) -> dict:
@@ -106,9 +133,13 @@ class SO101JoyConTeleop(Teleoperator):
             print(f"  {grip_btn}: press to toggle gripper close/open (no need to hold)")
         else:
             print(f"  Hold {grip_btn}=close gripper, release=open gripper")
-        # Recording (episode) controls are handled by the keyboard via the project's
-        # focus-independent evdev listener — NOT by Joy-Con buttons. See record.py.
-        print("  Recording controls (keyboard, focus-independent): N/Right save & next, R/Left re-record, Q/ESC stop")
+        if self.config.enable_button_recording:
+            nb = self.config.next_episode_button.upper()
+            rb = self.config.restart_episode_button.upper()
+            sb = self.config.stop_button.upper()
+            print(f"  Recording (one-handed): {nb}=save & next, {rb}=re-record, {sb}=stop")
+        # Keyboard controls stay available in parallel (focus-independent evdev).
+        print("  Recording (keyboard, focus-independent): N/Right save & next, R/Left re-record, Q/ESC stop")
 
     def calibrate(self) -> None:
         pass
@@ -137,6 +168,36 @@ class SO101JoyConTeleop(Teleoperator):
             return 0.0
         rmax = self.config.rotation_max
         return max(-rmax, min(rmax, rate))
+
+    def _read_button(self, name: str) -> bool:
+        getter = _BUTTON_GETTERS.get(name.lower())
+        if getter is None:
+            return False
+        fn = getattr(self._jc.joycon, getter, None)
+        return bool(fn()) if callable(fn) else False
+
+    def _handle_recording_buttons(self) -> None:
+        """Drive LeRobot episode controls from Joy-Con buttons (rising-edge)."""
+        if not self.config.enable_button_recording:
+            return
+        events = self._recording_events
+        if events is None and _shared_recording_events is not None:
+            events = self._recording_events = _shared_recording_events
+        if events is None:
+            return
+
+        from simstudio.common.recording_controls import apply_keyboard_recording_key
+
+        # (button name, canonical recording key): save & next / cancel & rerecord / stop
+        for btn, key in (
+            (self.config.next_episode_button, "n"),
+            (self.config.restart_episode_button, "r"),
+            (self.config.stop_button, "q"),
+        ):
+            pressed = self._read_button(btn)
+            if pressed and not self._rec_btn_prev.get(btn, False):
+                apply_keyboard_recording_key(key, events)
+            self._rec_btn_prev[btn] = pressed
 
     def get_action(self) -> RobotAction:
         if not self._connected or self._jc is None:
@@ -211,6 +272,9 @@ class SO101JoyConTeleop(Teleoperator):
             gripper_delta = -1.0 if self._gripper_closed else 1.0
         else:
             gripper_delta = -1.0 if grip_pressed else 1.0
+
+        # --- One-handed episode controls via Joy-Con buttons ---
+        self._handle_recording_buttons()
 
         if _DEBUG and (current_time - self._last_debug_t) > 0.2:
             self._last_debug_t = current_time
