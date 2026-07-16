@@ -1,144 +1,131 @@
 # SO-101 SimStudio
 
-SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
+SO-101 simulation studio for expert trajectory generation with MuJoCo and LeRobot.
 
-## 项目定位
+## Overview
 
-SO-101 SimStudio 是一个基于 MuJoCo 仿真环境的机器人遥操作平台，用于生成高质量的专家轨迹数据集，支持行为克隆训练。
+SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting high-quality expert demonstration datasets for behavior cloning.
 
-**核心能力**：
-- 多种遥操作方式（Keyboard、Joy-Con、Leader Arm）
-- 高保真 MuJoCo 物理仿真
-- 标准化数据集格式（LeRobot）
-- 可扩展的模块化架构
+**Core capabilities:**
+- Multiple teleop backends (keyboard, Joy-Con, leader arm)
+- High-fidelity MuJoCo physics simulation
+- LeRobot v3.0 dataset format
+- Modular, extensible architecture
 
-## 功能特性
+## Features
 
-### 遥操作支持
+### Teleoperation
 
-| 方式 | 状态 | 说明 |
-|------|------|------|
-| Keyboard | ✅ | WASD + 方向键控制 |
-| Joy-Con | ✅ | 支持左手/右手 |
-| Leader Arm | ✅ | Feetech STS3215 实物臂 |
+| Method | Status | Notes |
+|--------|--------|-------|
+| Keyboard | ✅ | World-frame velocity (WASD + keys) |
+| Joy-Con | ✅ | Cylindrical reach/swing, left or right |
+| Leader arm | ✅ | Feetech STS3215, 1:1 position mapping |
 
-### 数据集功能
+### Dataset pipeline
 
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| 录制 | ✅ | 支持多 episode、续录 |
-| 回放 | ✅ | 单集/多集回放 |
-| 验证 | ✅ | 数据质量检查 |
-| 可视化 | ✅ | Rerun 录制预览（`--view_mode rerun`）+ dataset_viz |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Record | ✅ | Multi-episode, resume |
+| Replay | ✅ | Single or all episodes |
+| Validate | ✅ | Quality checks |
+| Visualize | ✅ | Rerun preview + `dataset_viz` |
 
-### 仿真环境
+### Simulation
 
-- **机器人**: SO-101 6自由度机械臂
-- **场景**: 桌面抓取任务
-- **相机**: 前视/俯视/腕部 三视角
-- **物理**: MuJoCo 高保真仿真
+- **Robot**: SO-101 6-DOF arm
+- **Scene**: Table pick task (`simple_pick`)
+- **Cameras**: front / top / wrist
+- **Physics**: MuJoCo
 
-## 系统要求
+## Requirements
 
-### 当前支持
+### Tested environment
 
 - **OS**: Ubuntu 24.04
-- **GPU**: AMD ROCm 7.2.x 兼容显卡
+- **GPU**: AMD ROCm 7.2.x (recommended)
 - **Python**: 3.12+
-- **RAM**: 8GB+
-- **存储**: 10GB+ 可用空间
+- **RAM**: 8 GB+
+- **Storage**: 10 GB+
 
-### 计划支持
-
-- **OS**: macOS 12+（Apple Silicon）
-- **GPU**: NVIDIA CUDA（需额外配置）
-
-### 软件依赖
+### Dependencies
 
 - MuJoCo 3.x
-- PyTorch 2.x（ROCm 后端）
-- LeRobot（作为 git submodule）
+- PyTorch 2.x (ROCm backend on AMD)
+- LeRobot (git submodule, pinned to v0.6.0)
 
-### 已知限制
+### Known limits
 
-- 当前仅在 Ubuntu 24.04 + AMD ROCm 7.2.x 环境下测试通过
-- macOS 和 CUDA 环境支持待实现
+- Primary validation on Ubuntu 24.04 + ROCm 7.2.x
+- macOS / NVIDIA CUDA support not yet documented
 
-## 架构概览
+## Layout
 
 ```
 so101-simstudio/
-├── src/simstudio/           # 核心代码
-│   ├── robots/              # 机器人实现
-│   │   ├── so101_mujoco/    # MuJoCo 仿真机器人
-│   │   └── so101_real_follower/  # 真实机器人（预留）
-│   ├── teleoperators/       # 遥操作实现
-│   │   ├── so101_keyboard/  # 键盘控制
-│   │   ├── so101_joycon/    # Joy-Con 控制
-│   │   └── so101_leader/    # Leader arm 控制
-│   ├── scripts/             # 入口脚本
-│   └── common/              # 共享工具
-├── configs/                 # 配置文件
-├── SO101/                   # MuJoCo 场景资产
+├── src/simstudio/           # Core package
+│   ├── robots/              # Robot implementations
+│   ├── teleoperators/       # Keyboard, Joy-Con, leader
+│   ├── scripts/             # record, replay, teleoperate, …
+│   └── common/              # Shared utilities
+├── configs/                 # YAML configs
+├── SO101/                   # MuJoCo assets
+├── scripts/smoke/           # Parameterized manual smoke tests
+├── scripts/quicktest/       # Fixed 2-episode collaboration runs
 ├── lerobot/                 # LeRobot submodule
-└── third_party/             # 第三方依赖
+└── third_party/             # joycon-robotics, etc.
 ```
 
-## 快速开始
+## Quick start
 
-详见 [QUICKSTART.md](QUICKSTART.md)
+See [QUICKSTART.md](QUICKSTART.md).
 
 ```bash
-# 安装
-git clone --recursive https://github.com/alexhegit/so101-mujoco-teleop.git
-cd so101-mujoco-teleop
+git clone --recursive https://github.com/alexhegit/so101-simstudio.git
+cd so101-simstudio
 make rocm-sync
 
-# 录制数据集
 .venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml \
-    --view_mode mujoco   # 或 rerun
+    --view_mode mujoco   # or rerun
 ```
 
-**交互式 smoke 测试**（见 `scripts/smoke/README.md`）：
+**Manual tests:**
 
 ```bash
 make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1
-make smoke-keyboard-teleop
-make smoke-joycon-record SIDE=right VIEW_MODE=rerun
+make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
+./scripts/quicktest/keyboard.cmd    # fixed 2-episode run → test.log
 ```
 
-根目录 `./test_*.sh` 为兼容包装，实际脚本在 `scripts/smoke/`。
+## Status
 
-## 项目状态
+| Component | Status |
+|-----------|--------|
+| MuJoCo sim robot | ✅ |
+| Keyboard teleop | ✅ |
+| Joy-Con teleop (cylindrical + one-handed recording) | ✅ |
+| Leader arm teleop | ✅ |
+| Record / replay / validate | ✅ |
+| Rerun record preview | ✅ |
+| Real follower hardware | 🔲 Planned |
+| Behavior cloning training | 🔲 Planned |
 
-| 组件 | 状态 |
-|------|------|
-| MuJoCo 仿真机器人 | ✅ Working |
-| Keyboard 遥操作 | ✅ Working |
-| Joy-Con 遥操作 | ✅ Working |
-| Leader Arm 遥操作 | ✅ Working |
-| 数据集录制/回放 | ✅ Working |
-| 数据集验证 | ✅ Working |
-| Rerun 录制预览 | ✅ Working (`--view_mode rerun`) |
-| 真实机器人 | 🔲 Planned |
-| 行为克隆训练 | 🔲 Planned |
+## Version history
 
-## 版本历史
+- **v0.1.2** (unreleased): Joy-Con cylindrical reach/swing control; decoupled stick input; gripper toggle; one-handed A/Y/+ recording buttons; `scripts/quicktest/`; root test script cleanup
+- **v0.1.1** (`release-v0.1.1`): Unified `--view_mode mujoco/rerun`; evdev recording controls; leader reliability; `reset_arm` / `reset_cube`; smoke scripts in `scripts/smoke/`
+- **v0.1.0** (`release-v0.1.0`): First stable release; keyboard, Joy-Con, leader
+- **v0.0.2** (`release-v0.0.2`): Leader arm support
+- **v0.0.1** (`release-v0.0.1`): Initial release
 
-- **v0.1.1** (2026-07-11, `release-v0.1.1`): 统一 `--view_mode mujoco/rerun` 录制；Rerun evdev 键盘修复；leader 臂 teleop/record 可靠化；leader/Joy-Con evdev 焦点无关录制控制；多集复位细化（`reset_arm` / `reset_cube` + 随机 cube）；smoke 脚本整理
-- **v0.1.0** (2026-07-06, `release-v0.1.0`): 首个正式版本，支持多种遥操作
-- **v0.0.3** (合入 v0.1.0): Joy-Con、数据集校验（无独立 tag）
-- **v0.0.2** (`release-v0.0.2`): Leader Arm 支持
-- **v0.0.1** (`release-v0.0.1`): 初始版本
+## Documentation
 
-## 相关文档
+- [Quick start](QUICKSTART.md)
+- [Architecture](DESIGN.md)
+- [Roadmap](ROADMAP.md)
+- [Agent / dev guide](AGENTS.md)
 
-- [快速开始](QUICKSTART.md)
-- [项目架构](DESIGN.md)
-- [项目路线图](ROADMAP.md)
-- [开发指南](AGENTS.md)
-
-## 许可证
+## License
 
 Apache-2.0

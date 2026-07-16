@@ -1,12 +1,12 @@
 # =============================================================================
-# SO-101 SimStudio - Joy-Con Recording Config Template
+# SO-101 SimStudio - Joy-Con Recording Config Template (right)
 # =============================================================================
-# 使用方法:
-#   1. 直接使用: uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml
-#   2. 复制修改: cp configs/so101_mujoco_joycon.yaml configs/my_config.yaml
-#   3. 命令行覆盖: --config ... --dataset.num_episodes 5 --resume true
+# Usage:
+#   1. Run: uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml
+#   2. Copy: cp configs/so101_mujoco_joycon.yaml configs/my_config.yaml
+#   3. Override: --config ... --dataset.num_episodes 5 --resume true
 #
-# 显示模式: --view_mode mujoco (默认) | rerun
+# View mode: --view_mode mujoco (default) | rerun
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -15,127 +15,127 @@
 robot:
   type: so101_mujoco
   action_mode: velocity                    # velocity | position
-  horizontal_control_mode: cylindrical     # 摇杆前后=伸缩(径向), 左右=底座摆动(切向)
-  xml_path: SO101/scenes/simple_pick/scene.xml           # MuJoCo 场景文件
-  cube_positions_path: configs/scenes/simple_pick/cube_positions.json  # 物体初始位置
+  horizontal_control_mode: cylindrical     # stick forward/back=reach, left/right=base swing
+  xml_path: SO101/scenes/simple_pick/scene.xml           # MuJoCo scene XML
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json  # Cube initial positions JSON
   
   # Frame rates
-  record_fps: 30                           # 录制帧率
-  control_fps: 180                         # 控制帧率
-  physics_fps: 360                         # 物理仿真帧率
+  record_fps: 30                           # Record FPS
+  control_fps: 180                         # Control loop FPS
+  physics_fps: 360                         # Physics timestep FPS
   
   # Camera
-  camera_width: 640                        # 相机宽度
-  camera_height: 480                       # 相机高度
-  camera_names: [front, top, wrist]        # 相机名称列表
-  show_collision_geometry: false            # 显示碰撞几何
-  render_window: true                      # 渲染 MuJoCo 窗口
+  camera_width: 640                        # Camera width
+  camera_height: 480                       # Camera height
+  camera_names: [front, top, wrist]        # Camera names
+  show_collision_geometry: false            # Show collision meshes in viewer
+  render_window: true                      # Render GLFW window
   
   # Motion parameters
-  lin_speed: 0.04                          # 线性速度
-  yaw_speed: 1.20                          # 偏航速度
-  grip_speed: 0.7                          # 夹爪速度
-  ori_gain: 6.0                            # 姿态增益
+  lin_speed: 0.04                          # Linear speed
+  yaw_speed: 1.20                          # Yaw speed
+  grip_speed: 0.7                          # Gripper speed
+  ori_gain: 6.0                            # Orientation gain
   
   # Tilt parameters
-  tilt_deadzone: 0.03                      # 倾斜死区
-  tilt_wmax: 6.0                           # 倾斜最大角速度
+  tilt_deadzone: 0.03                      # Tilt deadzone
+  tilt_wmax: 6.0                           # Max tilt angular rate
   
   # IK parameters
-  lambda_pos: 0.01                         # 位置阻尼
-  lambda_tilt: 0.0001                      # 倾斜阻尼
-  vel_limit: 0.5                           # 速度限制
-  vel_limit_wrist: 8.0                     # 腕部速度限制
+  lambda_pos: 0.01                         # Position IK damping
+  lambda_tilt: 0.0001                      # Tilt IK damping
+  vel_limit: 0.5                           # Joint velocity limit
+  vel_limit_wrist: 8.0                     # Wrist velocity limit
   
   # Smoothing
-  smooth_dq: 0.30                          # 关节平滑系数
-  smooth_dq_wrist: 0.08                    # 腕部平滑系数
-  wrist_gff_gain: 0.5                      # 腕部增益
+  smooth_dq: 0.30                          # Joint velocity smoothing
+  smooth_dq_wrist: 0.08                    # Wrist velocity smoothing
+  wrist_gff_gain: 0.5                      # Wrist gravity-comp gain
   
   # Table and clearance
-  table_z: 0.0                             # 桌面高度
-  clearance: 0.07                          # 安全间距
+  table_z: 0.0                             # Table Z height
+  clearance: 0.07                          # EE clearance above table
   
   # End effector
-  ee_site_name: wrist_site                 # 末端执行器站点
-  tool_axis_site: [0.0, -1.0, 0.0]        # 工具轴方向
+  ee_site_name: wrist_site                 # End-effector site name
+  tool_axis_site: [0.0, -1.0, 0.0]        # Tool axis in site frame
 
 # -----------------------------------------------------------------------------
 # Teleoperation Configuration
 # -----------------------------------------------------------------------------
 teleop:
-  type: so101_joycon                       # Joy-Con 遥操作
+  type: so101_joycon                       # Joy-Con teleop
   side: right                              # left | right
   device: auto                             # auto | left | right
-  translation_scale: 1.5                   # 平移缩放
-  z_scale: 1.0                             # Z轴缩放
-  rotation_scale: 0.8                      # 旋转缩放
-  gripper_toggle: true                     # true=按一下夹住/再按松开(默认); false=长按夹住、松开张开
-  # 单手录制控制(右手柄 A/Y/+;与键盘 N/R/Q 并存)
-  enable_button_recording: true            # 手柄按键控制录制
-  next_episode_button: a                   # A = 保存并进入下一集
-  restart_episode_button: y                # Y = 取消当前并重录
-  stop_button: plus                        # + = 结束整个录制
+  translation_scale: 1.5                   # XY reach/swing speed scale
+  z_scale: 1.0                             # Z speed scale
+  rotation_scale: 0.8                      # IMU tilt rotation scale
+  gripper_toggle: true                     # true=toggle ZR/ZL; false=hold to close
+  # One-handed recording (right: A/Y/+; keyboard N/R/Q still works)
+  enable_button_recording: true            # Joy-Con buttons drive episode controls
+  next_episode_button: a                   # A = save & next episode
+  restart_episode_button: y                # Y = cancel & re-record
+  stop_button: plus                        # + = stop session
 
 # -----------------------------------------------------------------------------
 # Dataset Configuration
 # -----------------------------------------------------------------------------
 dataset:
   # Dataset identification
-  repo_id: alexhegit/so101_mujoco_joycon_test  # HuggingFace 数据集名
-  root: ./datasets/joycon-test                 # 本地保存路径
-  single_task: "SO-101 MuJoCo Joy-Con manipulation (simple_pick)"  # 任务描述
+  repo_id: alexhegit/so101_mujoco_joycon_test  # HuggingFace dataset repo id
+  root: ./datasets/joycon-test                 # Local dataset root
+  single_task: "SO-101 MuJoCo Joy-Con manipulation (simple_pick)"  # Task label in dataset
   
   # Recording parameters
-  fps: 30                                  # 录制帧率
-  episode_time_s: 120                      # 每集时长（秒）
-  reset_time_s: 3                          # 重置时间（秒）；sim 自动 reset 后可手动微调
-  num_episodes: 1                          # 录制集数
+  fps: 30                                  # Record FPS
+  episode_time_s: 120                      # Max seconds per episode
+  reset_time_s: 3                          # Seconds between episodes (manual reposition window)
+  num_episodes: 1                          # Target episode count
   
   # Video settings
-  video: true                              # 是否录制视频
+  video: true                              # Encode episode videos
   
   # HuggingFace Hub
-  push_to_hub: false                       # 上传到 HuggingFace
-  private: false                           # 私有数据集
-  tags: null                               # 标签列表
+  push_to_hub: false                       # Push dataset to Hub on save
+  private: false                           # Private Hub repo
+  tags: null                               # Hub tags
   
   # Performance tuning
-  num_image_writer_processes: 0            # 图像写入进程数
-  num_image_writer_threads_per_camera: 4   # 每相机线程数
-  video_encoding_batch_size: 1             # 视频编码批次大小
-  streaming_encoding: false                # 流式编码
+  num_image_writer_processes: 0            # Image writer processes (0 = threads only)
+  num_image_writer_threads_per_camera: 4   # Image writer threads per camera
+  video_encoding_batch_size: 1             # Video encode batch size
+  streaming_encoding: false                # Stream encode while recording
   
   # Encoder settings
-  encoder_queue_maxsize: 30                # 编码器队列大小
-  encoder_threads: null                    # 编码器线程数
+  encoder_queue_maxsize: 30                # Encoder queue max size
+  encoder_threads: null                    # Encoder thread count
   
   # RGB encoder
   rgb_encoder:
-    vcodec: libsvtav1                      # 视频编码器
-    pix_fmt: yuv420p                       # 像素格式
-    g: 2                                   # GOP 大小
-    crf: 30                                # 质量 (0-51, 越低越好)
-    preset: 12                             # 编码速度 (0-13, 越高越慢)
-    fast_decode: 0                         # 快速解码
-    video_backend: pyav                    # 视频后端
-    extra_options: {}                      # 额外编码选项
+    vcodec: libsvtav1                      # Video codec
+    pix_fmt: yuv420p                       # Pixel format
+    g: 2                                   # GOP size
+    crf: 30                                # CRF quality (lower = better)
+    preset: 12                             # Encoder preset (higher = slower)
+    fast_decode: 0                         # Fast decode tuning
+    video_backend: pyav                    # Video backend
+    extra_options: {}                      # Extra encoder options
 
 # -----------------------------------------------------------------------------
 # Display Settings
 # -----------------------------------------------------------------------------
-display_data: false                        # 显示所有相机
+display_data: false                        # Stream all cameras to display
 display_mode: rerun                        # rerun | opencv
-display_ip: null                           # 远程 Rerun 服务器 IP
-display_port: null                         # 远程 Rerun 服务器端口
-display_compressed_images: false           # 显示压缩图像
+display_ip: null                           # Remote Rerun server IP
+display_port: null                         # Remote Rerun server port
+display_compressed_images: false           # Show compressed images in Rerun
 
 # -----------------------------------------------------------------------------
 # Audio Settings
 # -----------------------------------------------------------------------------
-play_sounds: false                         # 播放语音提示
+play_sounds: false                         # Play LeRobot UI sounds
 
 # -----------------------------------------------------------------------------
 # Recording Control
 # -----------------------------------------------------------------------------
-resume: false                              # 续录已有数据集
+resume: false                              # Resume existing dataset on disk

@@ -1,98 +1,95 @@
 # Quick Start Guide
 
-SO-101 SimStudio 快速上手指南。
+Get SO-101 SimStudio running and recording demonstrations.
 
-## 环境要求
+## Requirements
 
 - Python 3.12+
-- ROCm GPU（推荐）或 CUDA GPU
+- ROCm GPU (recommended) or CUDA
 - MuJoCo 3.x
 
-## 安装
+## Install
 
 ```bash
-# 克隆仓库
-git clone --recursive https://github.com/alexhegit/so101-mujoco-teleop.git
-cd so101-mujoco-teleop
-
-# 安装依赖（ROCm 版本）
+git clone --recursive https://github.com/alexhegit/so101-simstudio.git
+cd so101-simstudio
 make rocm-sync
-
-# 激活环境
 source .venv-rocm/bin/activate
 ```
 
-## 快速验证
+## Smoke check
 
 ```bash
-# 预览 MuJoCo 场景
+# Preview MuJoCo scene
 python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml
 
-# 运行 smoke test（无 GUI 的 pytest + 可选录制 smoke）
+# Pytest + optional ROCm record smoke
 make rocm-smoke-record
-make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1   # 交互式键盘录制
+make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1
 ```
 
-手动 smoke 脚本在 `scripts/smoke/`；根目录 `./test_*.sh` 为兼容入口。详见 `scripts/smoke/README.md`。
+**Manual tests:** `make smoke-*` or `scripts/smoke/`. **Fixed collaboration runs:** `scripts/quicktest/*.cmd` (output `test.log`).
 
-## 使用方法
+## Recording controls (all teleops)
 
-### 1. Keyboard 遥操作
+Focus-independent **keyboard** controls (evdev) work in every record session:
 
-**实时控制（不录制）**：
+| Key | Action |
+|-----|--------|
+| Right arrow / N | Save episode, go to next |
+| Left arrow / R | Cancel episode, re-record |
+| ESC / Q | Stop entire session |
+
+Startup log should show: `SO101 recording controls via evdev, focus-independent`.
+
+If evdev is unavailable, add your user to the `input` group and re-login: `sudo usermod -aG input $USER`.
+
+---
+
+## 1. Keyboard teleop
+
+**Live control (no recording):**
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
     --config configs/so101_mujoco_keyboard_teleop.yaml
+# or: make smoke-keyboard-teleop
 ```
 
-或使用：`make smoke-keyboard-teleop`
-
-**录制数据集**：
+**Record:**
 
 ```bash
-# MuJoCo 窗口（默认，低延迟）
 .venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml \
-    --view_mode mujoco
-
-# LeRobot Rerun 摄像头视图
-.venv-rocm/bin/python -m simstudio.scripts.record \
-    --config configs/so101_mujoco_keyboard.yaml \
-    --view_mode rerun
+    --view_mode mujoco   # or rerun
 ```
 
-两种模式均写入 LeRobot dataset v3.0。
+Both view modes write LeRobot dataset v3.0.
 
-**按键映射**：
+**Movement (hold keys):**
 
-| 按键 | 功能 |
-|------|------|
-| W/S | Y轴（前后） |
-| A/D | X轴（左右） |
-| Z/X | Z轴（上下） |
-| I/K | 腕部弯曲 |
-| [/] | 腕部旋转 |
-| C | 夹爪关闭 |
-| O | 夹爪打开 |
+| Key | Action |
+|-----|--------|
+| W / S | +Y / −Y |
+| A / D | −X / +X |
+| Z / X | +Z / −Z |
+| I / K | Wrist flex up / down |
+| [ / ] | Wrist roll left / right |
+| O / C | Gripper open / close |
 
-**录制控制**（录制模式下，`mujoco` 与 `rerun` 完全一致）：
+Robot uses **world-frame** velocity (`horizontal_control_mode: world`, default).
 
-| 按键 | 功能 |
-|------|------|
-| Left arrow / R | 取消当前 episode，重录 |
-| Right arrow / N | 保存 episode，进入下一个 |
-| ESC / Q | 停止录制 |
+---
 
-### 2. Joy-Con 遥操作
+## 2. Joy-Con teleop
 
-**安装 Joy-Con 支持**：
+**Install Joy-Con support:**
 
 ```bash
 make joycon-sync
 ```
 
-**实时控制**：
+**Live control:**
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
@@ -100,239 +97,162 @@ make joycon-sync
     --view_mode mujoco
 ```
 
-**录制数据集**：
+**Record (right Joy-Con):**
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_joycon.yaml \
-    --view_mode mujoco   # 或 rerun
+    --view_mode mujoco
+# left: configs/so101_mujoco_joycon_left.yaml
 ```
 
-**按键映射（右手）**：
+**Movement (right Joy-Con)** — cylindrical arm-centric control (`horizontal_control_mode: cylindrical`):
 
-| 按键 | 功能 |
-|------|------|
-| 摇杆 | XY 移动 |
-| R | Z轴上升 |
-| 摇杆按下 | Z轴下降 |
-| 倾斜 | 腕部旋转 |
-| ZR 按住 | 夹爪关闭 |
-| Plus | 停止 |
+| Input | Action |
+|-------|--------|
+| Stick forward / back | Reach out / retract (radial) |
+| Stick left / right | Base swing (shoulder_pan arc) |
+| R | Move up (+Z) |
+| Stick press | Move down (−Z) |
+| Tilt controller | Wrist flex (roll) / wrist roll (yaw) |
+| ZR | Toggle gripper close/open (`gripper_toggle: true`, default) |
 
-**按键映射（左手）**：
+**One-handed recording (right Joy-Con)** — in addition to keyboard:
 
-| 按键 | 功能 |
-|------|------|
-| 摇杆 | XY 移动 |
-| L | Z轴上升 |
-| 摇杆按下 | Z轴下降 |
-| 倾斜 | 腕部旋转 |
-| ZL 按住 | 夹爪关闭 |
-| Minus | 停止 |
+| Button | Action |
+|--------|--------|
+| A | Save episode, next |
+| Y | Cancel episode, re-record |
+| + (Plus) | Stop session |
 
-### 3. Leader Arm 遥操作
+**Left Joy-Con** (no A/Y/+): d-pad **Down** = save & next, **Up** = re-record, **Minus** = stop.
 
-用真实 SO-101 leader 臂（Feetech STS3215）驱动仿真 follower，关节位置 1:1 映射。
+Flip a direction in YAML: `invert_x` (reach), `invert_y` (swing), `invert_z` (up/down). Hold-to-close gripper: `gripper_toggle: false`.
 
-**连接与端口**：
+---
 
-leader 臂通过 USB 连接，默认端口 `/dev/ttyACM0`。端口不同可用 `--teleop.port` 覆盖（如 `--teleop.port /dev/ttyACM1`）。
+## 3. Leader arm teleop
 
-**首次使用需校准**：
+Real SO-101 leader arm (Feetech STS3215) drives the sim follower with 1:1 joint positions.
 
-首次运行 teleoperate/record 会进入校准流程，按终端提示把每个关节（含夹爪）**缓慢转到两端极限**，程序据此记录行程范围并设定中位。校准结果统一保存在：
+**USB port:** default `/dev/ttyACM0`; override with `--teleop.port /dev/ttyACM1`.
 
-```
-~/.cache/huggingface/lerobot/calibration/teleoperators/so101_leader/None.json
-```
+**Calibration (first run):** Move each joint (including gripper) slowly through its full range when prompted. Cache: `~/.cache/huggingface/lerobot/calibration/teleoperators/so101_leader/None.json`. Press Enter to reuse, or `c` to recalibrate.
 
-之后再运行时会提示：**直接回车复用现有校准**，或输入 `c` 回车**重新校准**。若出现夹爪/关节方向异常、抖动或不同步，重做一次完整校准通常即可解决。
-
-**实时控制（不录制）**：
+**Live control:**
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
     --config configs/so101_mujoco_leader_teleop.yaml
+# or: make smoke-leader-teleop
 ```
 
-或使用：`make smoke-leader-teleop`
-
-**录制数据集**：
+**Record:**
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_leader.yaml \
-    --view_mode mujoco   # 或 rerun
+    --view_mode mujoco
 ```
 
-或使用：`make smoke-leader-record VIEW_MODE=mujoco`
+**Notes:**
+- Default `record_fps: 20` (matches `dataset.fps`) for stable real-time sync with serial reads.
+- Gripper maps to a safe near-closed value (`home_gripper: -0.1`), not the hard limit.
+- Recording uses keyboard only (no Joy-Con-style buttons on leader).
 
-**录制控制**（leader / Joy-Con 与 keyboard 一致，走 **evdev 焦点无关**输入，无需保持终端焦点，可专注 leader 臂与仿真窗口）：
+---
 
-| 按键 | 功能 |
-|------|------|
-| N / Right arrow | 保存 episode，进入下一个 |
-| R / Left arrow | 取消当前 episode，重录 |
-| Q / ESC | 停止录制 |
+## Multi-episode reset (sim)
 
-> 启动日志出现 `SO101 recording controls via evdev, focus-independent (...)` 即为焦点无关模式。
-> 若改为出现 `... evdev recording controls unavailable ...` 或 `Using terminal keyboard input — keep this terminal focused`，说明缺少 evdev 权限（按键需终端焦点、响应迟钝）；把用户加入 `input` 组并**重新登录**即可：`sudo usermod -aG input $USER`。
+When `robot.reset_mode: auto` (default), each new episode resets arm and cube independently:
 
-**夹爪与帧率说明**：
+| Field | Values | Meaning |
+|-------|--------|---------|
+| `reset_arm` | `home` | Teleport arm to fixed home (keyboard default) |
+| | `follow` | Keep arm pose; teleop takes over next frame (leader default) |
+| `reset_cube` | `fixed` | Predefined pose from `cube_positions.json` |
+| | `random` | Sample in graspable bounds (leader default) |
+| | `none` | Leave cube unchanged |
 
-- 夹爪跟随真实 leader：松手张开 → 仿真张开，捏合 → 仿真闭合。完全闭合端映射到安全位置（非关节硬限位），避免仿真夹爪顶限位后被物理求解器弹开。
-- leader 配置默认 `record_fps: 20`（与 `dataset.fps` 一致）：real leader 每帧要串口读取 6 个舵机，20Hz 能让仿真与真实时间同步、消除"慢放"滞后；硬件更强可尝试上调。（keyboard/Joy-Con 无此开销，默认 30Hz。）
+**Why leader uses `follow`:** The passive leader stays where you left it. Teleporting the sim to home while your hand is elsewhere causes a large first-frame jump when position mapping resumes.
 
-## 配置参数
-
-### 配置文件
-
-所有配置文件位于 `configs/` 目录：
-
-| 文件 | 用途 |
-|------|------|
-| `so101_mujoco_keyboard.yaml` | Keyboard 录制配置 |
-| `so101_mujoco_keyboard_teleop.yaml` | Keyboard 实时控制配置 |
-| `so101_mujoco_joycon.yaml` | Joy-Con 录制配置 |
-| `so101_mujoco_joycon_teleop.yaml` | Joy-Con 实时控制配置 |
-| `so101_mujoco_leader.yaml` | Leader arm 录制配置 |
-| `so101_mujoco_leader_teleop.yaml` | Leader arm 实时控制配置 |
-
-### 多 episode 录制的复位策略
-
-多 episode 录制时，每一集开始前的复位行为由 `robot.reset_mode` 及两个细分开关控制（仅 `reset_mode: auto` 时生效）：
-
-| 开关 | 取值 | 含义 |
-|------|------|------|
-| `reset_arm` | `home` | 机械臂**瞬移**到固定 home 姿态（keyboard/回放默认） |
-| | `follow` | **不瞬移**，机械臂停在原处，下一帧由 teleop 接管（**leader 默认**） |
-| `reset_cube` | `fixed` | 用 `cube_positions.json` 的预定义位置（可复现） |
-| | `random` | 在可抓取矩形区内随机放置（更利于泛化，**leader 默认**） |
-| | `none` | 不动 cube |
-
-**为什么 leader 用 `reset_arm: follow`**：真实 leader 是被动臂、不会自己回 home。若强制瞬移 sim arm 到 home，而你的手停在别处，新一集第一帧位置映射会把 sim arm 从 home 猛拉到 leader 位置，产生跳变并污染轨迹开头。`follow` 让 sim arm 起始就等于 leader 当前姿态，零跳变。配合 `dataset.reset_time_s` 的准备窗口（sim 实时跟随但不记录），把 leader 移到期望起始姿态后再按 `N` 开始记录即可。
-
-**随机放置范围**（`reset_cube: random` 时生效，见 `so101_mujoco_leader.yaml`）：
+Random cube bounds (leader config):
 
 ```yaml
 robot:
   reset_cube: random
-  cube_random_x_range: [0.03, 0.11]     # 米
-  cube_random_y_range: [0.03, 0.10]     # 米
+  cube_random_x_range: [0.03, 0.11]
+  cube_random_y_range: [0.03, 0.10]
   cube_random_z: 0.0125
-  cube_random_yaw_range: [0.0, 0.0]     # 度，需随机朝向可改为如 [-45.0, 45.0]
+  cube_random_yaw_range: [0.0, 0.0]
 ```
 
-keyboard 保持默认 `reset_arm: home` + `reset_cube: fixed`（行为不变）。
+---
 
-### 常用参数覆盖
+## Config files
+
+| File | Purpose |
+|------|---------|
+| `so101_mujoco_keyboard.yaml` | Keyboard record |
+| `so101_mujoco_keyboard_teleop.yaml` | Keyboard live teleop |
+| `so101_mujoco_joycon.yaml` | Joy-Con record (right) |
+| `so101_mujoco_joycon_left.yaml` | Joy-Con record (left) |
+| `so101_mujoco_joycon_teleop.yaml` | Joy-Con live teleop |
+| `so101_mujoco_leader.yaml` | Leader record |
+| `so101_mujoco_leader_teleop.yaml` | Leader live teleop |
+
+**CLI overrides:**
 
 ```bash
-# 修改录制集数
 --dataset.num_episodes 5
-
-# 修改保存路径
 --dataset.root ./my-datasets
-
-# 续录已有数据集
 --resume true
-
-# 修改 Joy-Con 手柄
 --teleop.side left
 ```
 
-### 自定义配置
+---
+
+## Dataset tools
 
 ```bash
-# 复制配置模板
-cp configs/so101_mujoco_keyboard.yaml configs/my_config.yaml
-
-# 编辑配置
-vim configs/my_config.yaml
-
-# 使用自定义配置
-.venv-rocm/bin/python -m simstudio.scripts.record \
-    --config configs/my_config.yaml
-```
-
-## 数据集管理
-
-### 查看数据集
-
-```bash
-# 可视化数据集
+# Visualize
 .venv-rocm/bin/python -m simstudio.scripts.dataset_viz \
     --repo-id alexhegit/so101_mujoco_keyboard_test \
-    --root ./datasets/keyboard-test \
-    --episode 0
+    --root ./datasets/keyboard-test --episode 0
 
-# 验证数据集
+# Validate
 .venv-rocm/bin/python -m simstudio.scripts.validate_dataset \
     --root ./datasets/keyboard-test
-```
 
-### 回放数据集
-
-```bash
-# 回放单个 episode
+# Replay
 .venv-rocm/bin/python -m simstudio.scripts.replay \
     --config configs/so101_mujoco_replay.yaml
-
-# 回放所有 episodes
-.venv-rocm/bin/python -m simstudio.scripts.replay_multi \
-    --config configs/so101_mujoco_replay_multi.yaml
 ```
 
-## 常见问题
+---
 
-### Q: MuJoCo 窗口不显示？
+## FAQ
 
-设置 `render_window: true`，或使用 `--view_mode mujoco`（record 脚本默认）。
+**MuJoCo window not visible?** Set `render_window: true` in robot config; on Ubuntu 24.04 / GNOME do not disable GLFW focus hints.
 
-### Q: Rerun 画面比 MuJoCo 延迟大？
+**Rerun feels laggy?** Expected — Rerun shows pre-action observations. Use `--view_mode mujoco` for low-latency teleop.
 
-正常现象。Rerun 使用 LeRobot 官方路径，显示的是动作执行前的 observation；MuJoCo 窗口在 `send_action` 之后刷新，更跟手。需要低延迟遥操作时用 `--view_mode mujoco`；需要摄像头视角监控时用 `--view_mode rerun`。数据集内容不受显示模式影响。
+**Joy-Con won't connect?** Run `make joycon-sync`, pair via Bluetooth, check `/dev/hidraw*` permissions.
 
-### Q: Rerun 模式下键盘无法控制机械臂？
+**Record loop slower than target FPS?** Lower `record_fps` and `dataset.fps` together. Leader defaults to 20 Hz for this reason.
 
-Rerun 窗口会抢走键盘焦点，pynput 可能收不到按键。启动日志里若看到 `Using evdev keyboard listener` 则已启用焦点无关输入。否则请把用户加入 `input` 组后重新登录：
+**Leader gripper desync?** Recalibrate fully. Ensure FPS is achievable; watch for `running slower than target FPS` warnings.
 
-```bash
-sudo usermod -aG input "$USER"
-```
+**Upload to HuggingFace:**
 
-或保持 **终端窗口** 处于焦点状态再操作 WASD。
-
-### Q: Joy-Con 连接不上？
-
-1. 运行 `make joycon-sync` 安装驱动
-2. 确保 Joy-Con 已配对（蓝牙设置）
-3. 检查设备权限：`ls -la /dev/hidraw*`
-
-### Q: 录制速度慢？
-
-- 使用 GPU 加速渲染
-- 降低 `camera_width` 和 `camera_height`
-- 减少 `camera_names` 数量
-- 若日志频繁出现 `Record loop is running slower than target FPS`，说明目标帧率超过硬件能力，仿真会"慢放"滞后；把 `--robot.record_fps` 与 `--dataset.fps` 一起降到能稳定达到的值（leader 默认已用 20Hz）。
-
-### Q: Leader 仿真臂/夹爪与真实臂不同步，或夹爪自己张开？
-
-1. **先做一次完整校准**：把每个关节（含夹爪）缓慢转到两端极限。方向翻转、抖动、夹爪开合相反等多由校准行程不全引起。
-2. **确认帧率**：leader 默认 `record_fps: 20`；若上调后达不到，log 会刷 `running slower`，仿真随之滞后。
-3. **夹爪完全闭合时仿真停在接近闭合的安全位**（非硬限位），这是刻意为之，避免夹爪顶限位后被弹开，属正常现象。
-
-### Q: 如何上传数据集到 HuggingFace？
-
-在配置中设置：
 ```yaml
 dataset:
   push_to_hub: true
   repo_id: your-username/your-dataset
 ```
 
-## 更多信息
+## More
 
-- [项目架构](DESIGN.md)
-- [项目路线图](ROADMAP.md)
-- [AGENTS 开发指南](AGENTS.md)
+- [Architecture](DESIGN.md)
+- [Roadmap](ROADMAP.md)
+- [AGENTS.md](AGENTS.md)

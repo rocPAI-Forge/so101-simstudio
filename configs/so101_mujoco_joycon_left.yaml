@@ -2,7 +2,7 @@
 # SO-101 SimStudio - Left Joy-Con Recording Config
 # =============================================================================
 # Same as so101_mujoco_joycon.yaml with teleop.side: left.
-# 显示模式: --view_mode mujoco (默认) | rerun
+# View mode: --view_mode mujoco (default) | rerun
 # =============================================================================
 
 robot:
@@ -44,12 +44,12 @@ teleop:
   translation_scale: 1.5
   z_scale: 1.0
   rotation_scale: 0.8
-  gripper_toggle: true                     # true=按一下夹住/再按松开(默认); false=长按夹住、松开张开
-  # 单手录制控制(左手柄无 A/Y/+,用方向键 + Minus)
-  enable_button_recording: true            # 手柄按键控制录制(与键盘并存)
-  next_episode_button: down                # 方向键↓ = 保存并进入下一集
-  restart_episode_button: up               # 方向键↑ = 取消当前并重录
-  stop_button: minus                       # − = 结束整个录制
+  gripper_toggle: true                     # true=toggle ZR/ZL; false=hold to close
+  # Left Joy-Con: d-pad + Minus (no A/Y/+)
+  enable_button_recording: true            # Joy-Con buttons (coexist with keyboard evdev)
+  next_episode_button: down                # d-pad Down = save & next
+  restart_episode_button: up               # d-pad Up = cancel & re-record
+  stop_button: minus                       # Minus = stop session
 
 dataset:
   repo_id: alexhegit/so101_mujoco_joycon_left_test

@@ -1,111 +1,102 @@
 # ROADMAP
 
-## v0.0.1 ✅ (release-v0.0.1)
-- [x] MuJoCo SO-101 仿真场景
-- [x] 键盘遥操作（Z轴 Z/X 键）
-- [x] 录制控制（Left/R、Right/N、ESC/Q，mujoco 与 rerun 一致）
-- [x] LeRobot 数据集录制
-- [x] 单集/多集 Replay
-- [x] ROCm 环境搭建
+## v0.0.1 ✅ (`release-v0.0.1`)
+
+- [x] MuJoCo SO-101 scene
+- [x] Keyboard teleop (Z/X for Z axis)
+- [x] Recording controls (Left/R, Right/N, ESC/Q)
+- [x] LeRobot dataset recording
+- [x] Single / multi-episode replay
+- [x] ROCm environment setup
 - [x] Headless smoke test
-- [x] 零 submodule 修改
-- [x] 插件注册 wrapper 机制
+- [x] Zero submodule modifications
+- [x] Plugin registration wrappers
 
-## v0.0.2 ✅ (release-v0.0.2)
+## v0.0.2 ✅ (`release-v0.0.2`)
 
-### 硬件在环
-- [x] Leader arm 遥操作（Feetech STS3215，位置直通）
-- [x] Leader arm 校准流程（复用 LeRobot SOLeader）
+### Hardware-in-the-loop
 
-### 工程
-- [x] 双控制范式（velocity / position）
-- [x] 自动缩放（归一化值 → MuJoCo 弧度）
-- [x] teleoperate 脚本
-- [x] llm-wiki 知识库
-- [x] ROADMAP 项目规划
+- [x] Leader arm teleop (Feetech STS3215, direct position)
+- [x] Leader calibration (LeRobot SOLeader)
+
+### Engineering
+
+- [x] Dual control paradigms (velocity / position)
+- [x] Auto-scaling (normalized → MuJoCo radians)
+- [x] `teleoperate` script
+- [x] `llm-wiki` knowledge base
 
 ## v0.0.3 ✅ (merged into v0.1.0; no separate tag)
 
-> v0.0.3 功能在 `release-v0.1.0` 中一并发布，仓库未打 `release-v0.0.3` 标签。
+- [x] Post-record validation
+- [x] Joy-Con teleop (velocity paradigm, left/right)
 
-### 遥操作体验
-- [x] 画中画摄像头画面（早期 teleop `view_mode` 实验；录制侧统一方案见 v0.1.1）
-- [x] 录制后自动校验（帧率、动作范围、完整性）
-- [x] Joy-Con 遥操作（速度范式，支持左手/右手）
+## v0.1.0 ✅ (`release-v0.1.0`)
 
-## v0.1.0 ✅ (release-v0.1.0)
+- [x] Rename to **so101-simstudio** (Python package: `simstudio`)
+- [x] Keyboard, Joy-Con, leader arm teleop
+- [x] Record / replay / validate pipeline
 
-### 项目重命名
-- [x] 重命名为 so101-simstudio（Python包: simstudio）
-- [x] 更新所有文档和命令引用
+## v0.1.1 ✅ (`release-v0.1.1`)
 
-### 功能完整
-- [x] 多种遥操作：键盘、Joy-Con（左/右手）、Leader arm
-- [x] 数据集录制/回放/验证
-- [x] 所有测试通过
+### Recording display
 
-### 行为克隆（延后）
-- > **注**: 待遥操作方案优化后再进行，确保数据质量
+- [x] `--view_mode mujoco | rerun` on record script
+- [x] Both modes write LeRobot dataset v3.0
+- [x] Rerun streaming patch (live camera updates)
 
-## v0.1.1 ✅ (release-v0.1.1)
+### Input
 
-> 自 `release-v0.1.0` 起 26 commits，含 Rerun 录制统一方案、键盘 evdev 修复，以及 leader 臂遥操作/录制可靠化与多集复位策略。
+- [x] Evdev focus-independent keyboard (Rerun / Wayland)
+- [x] Leader / Joy-Con evdev recording controls (N/R/Q)
 
-### 录制显示
-- [x] `--view_mode mujoco | rerun`（record 脚本；默认 mujoco）
-- [x] 两种模式均写入 LeRobot dataset v3.0
-- [x] Rerun streaming patch（去除 `static=True`，录制时摄像头实时更新）
-- [x] 设计 spec：`docs/superpowers/specs/2026-07-06-unified-rerun-recording-design.md`
+### Leader arm
 
-### 键盘输入（Rerun / Wayland）
-- [x] Rerun 模式 evdev 焦点无关输入（`SO101_PREFER_EVDEV=1`）
-- [x] MuJoCo 模式默认 pynput（与 v0.1.0 手感一致）
-- [x] 修复 Linux 字母 scancode 映射与 press/release 反转
+- [x] Stable teleop/record sync; safe gripper mapping
+- [x] `reset_arm: home|follow`, `reset_cube: fixed|random|none`
 
-### Leader 臂遥操作 / 录制
-- [x] leader teleop/record 在 mujoco 与 rerun 下稳定同步（统一 teleop 配置类型与校准目录）
-- [x] 夹爪初始/复位映射改用安全值（`home_gripper=-0.1`），避免顶硬限位自激
-- [x] 录制控制 evdev 焦点无关（leader/Joy-Con 不再依赖终端焦点，N/→/R/←/Q/Esc 即时响应）
-- [x] 多集复位细化：`reset_arm: home|follow`、`reset_cube: fixed|random|none` + 可抓取区随机范围
+### Engineering
 
-### 工程
-- [x] 手动 smoke 脚本迁至 `scripts/smoke/` + `make smoke-*`
-- [x] 修复 `so101_mujoco_joycon_left.yaml` 旧 schema
-- [x] 单元测试：`tests/test_record_view_mode.py`、`tests/test_keyboard_teleop.py`
+- [x] Smoke scripts → `scripts/smoke/` + `make smoke-*`
+- [x] Tests: `test_record_view_mode`, `test_keyboard_teleop`, `test_episode_reset`
 
-### 场景与录制
-- [x] 默认场景迁移至 `SO101/scenes/simple_pick/`
-- [x] Multi-episode 自动 reset（`reset_mode: auto`，机械臂 home + cube 位姿）
-- [x] 单元测试：`tests/test_episode_reset.py`
+## v0.1.2 🚧 (unreleased)
 
-## 项目演进
+### Joy-Con teleop overhaul
 
-### 命名路线图
+- [x] Direct HID stick/button reading (decoupled from joycon-robotics position integration)
+- [x] Cylindrical control: stick forward/back = reach, left/right = base swing
+- [x] True `shoulder_pan` anchor for radial direction (fixes inconsistent extend vs swing)
+- [x] IMU rotation deadzone / clamp / settle window
+- [x] Gripper toggle mode (`gripper_toggle: true`, press ZR/ZL to latch)
+- [x] One-handed recording: A/Y/+ (right), d-pad/Minus (left); coexists with keyboard evdev
+
+### Project hygiene
+
+- [x] Remove redundant root `test_*.sh` delegators
+- [x] Add `scripts/quicktest/*.cmd` for fixed collaboration runs
+- [x] Documentation sync (English)
+
+## Evolution
 
 ```
 v0.0.x: so101-mujoco-teleop
-        ↓ (v0.1.0)
-        ↓ (v0.1.1 — unified record view_mode + evdev keyboard)
-当前: so101-simstudio
-        │  定位: 通用仿真平台
-        │  核心: 专家轨迹数据生成（遥操作、场景、录制、回放、验证）
-        │  扩展: 场景生成、域随机化、RL训练、策略评估
-        └─ 模块化架构，按需扩展功能
+        ↓ v0.1.0
+        ↓ v0.1.1 (unified view_mode + evdev)
+        ↓ v0.1.2 (Joy-Con cylindrical + one-handed recording)
+Current: so101-simstudio
+        Expert trajectory generation (teleop, scenes, record, replay, validate)
+        Future: domain randomization, policy rollout, real follower
 ```
 
-### 演进原则
+## Future work
 
-- **so101-simstudio** 聚焦「通用仿真平台」，专家轨迹数据生成是核心能力
-- 模块化设计：核心功能优先，扩展功能按需添加
-- 保持工具专一性，避免过度工程化
+### Automated data pipeline
 
-## 远期任务
+- [ ] Dataset annotation (VLM language labels)
+- [ ] Behavior cloning training
+- [ ] Policy rollout in MuJoCo
 
-### 自动化数据生成流水线
-- [ ] 数据集标注（lerobot_annotate，VLM 自动生成语言标签）
-- [ ] 行为克隆训练（lerobot_train）
-- [ ] Policy 推理 + MuJoCo rollout（自动生产轨迹）
-- > **流程**: 录制少量种子数据 → 标注 → 训练策略 → 策略自动 rollout → 生成大规模数据集
+### Real hardware
 
-### 真机硬件
-- [ ] Real follower 驱动（stub → 真实 SO-101 从臂实现）
+- [ ] Real SO-101 follower driver (stub → production)

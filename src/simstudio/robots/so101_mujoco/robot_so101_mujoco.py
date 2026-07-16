@@ -620,7 +620,7 @@ class SO101MujocoRobot(Robot):
 
         mj.mj_forward(self.model, self.data)
 
-        logger.info(f"Block reset to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°")
+        logger.info(f"Block reset to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg} deg")
         return (x, y, z, yaw_deg)
 
     def reset_block_position(self, episode_index: int) -> tuple[float, float, float, float] | None:
@@ -648,7 +648,7 @@ class SO101MujocoRobot(Robot):
 
         logger.info(
             f"Using predefined position for episode {episode_index}: "
-            f"[{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°"
+            f"[{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg} deg"
         )
         return self._set_block_pose(x, y, z, yaw_deg)
 
@@ -665,7 +665,7 @@ class SO101MujocoRobot(Robot):
         z = float(self.config.cube_random_z)
         yaw_deg = float(np.random.uniform(yawr[0], yawr[1]))
 
-        logger.info(f"Random cube position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg:.1f}°")
+        logger.info(f"Random cube position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg:.1f} deg")
         return self._set_block_pose(x, y, z, yaw_deg)
 
     def _reset_arm_follow(self) -> None:
@@ -750,7 +750,7 @@ class SO101MujocoRobot(Robot):
         self.data.qvel[block_qvel_adr : block_qvel_adr + 6] = 0.0
 
         mj.mj_forward(self.model, self.data)
-        logger.info(f"Block set to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg}°")
+        logger.info(f"Block set to position: [{x:.3f}, {y:.3f}, {z:.3f}], yaw: {yaw_deg} deg")
 
     def disconnect(self) -> None:
         """Close MuJoCo model and renderer."""

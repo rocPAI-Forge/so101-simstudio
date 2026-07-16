@@ -21,8 +21,8 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 ## Setup
 
 ```bash
-git clone --recursive https://github.com/alexhegit/so101-mujoco-teleop.git
-cd so101-mujoco-teleop
+git clone --recursive https://github.com/alexhegit/so101-simstudio.git
+cd so101-simstudio
 uv sync
 source .venv/bin/activate
 ```
@@ -56,6 +56,7 @@ git submodule update --init --recursive
 | Record (keyboard) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
 | Record (Joy-Con right) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml` |
 | Record (Joy-Con left) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
+| Quick-test record | `./scripts/quicktest/keyboard.cmd` / `joycon.cmd` / `leader.cmd` |
 | Teleoperate (leader arm) | `uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
 | Record (leader arm) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml` |
 | Short functional test | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
@@ -71,14 +72,15 @@ git submodule update --init --recursive
 - **Python**: 3.12+ required by latest LeRobot.
 - **LeRobot integration**: Robots and teleoperators are packaged as third-party plugins (`lerobot_robot_*` / `lerobot_teleoperator_*`) so the submodule stays unmodified. Because they share the project distribution, project wrapper scripts import their config classes explicitly before calling LeRobot entry points.
 - **Action semantics**: Two control paradigms supported:
-  - **Velocity** (keyboard): `{vx, vy, vz, wrist_flex_rate, yaw_rate, gripper_delta}` — MuJoCo robot uses Jacobian IK to convert to joint positions internally.
-  - **Position** (leader arm): `{joint.pos: float}` — direct joint position mapping,1:1 from leader to follower.
+  - **Velocity** (keyboard, Joy-Con): `{vx, vy, vz, wrist_flex_rate, yaw_rate, gripper_delta}` — MuJoCo robot uses Jacobian IK internally.
+  - **Position** (leader arm): `{joint.pos: float}` — direct joint position mapping, 1:1 from leader to follower.
   - MuJoCo robot's `send_action` auto-detects format via key names.
+- **Joy-Con velocity mapping**: Stick is read directly from HID (not joycon-robotics position integration). With `robot.horizontal_control_mode: cylindrical` (Joy-Con configs): stick forward/back → reach in/out, left/right → base swing; radial uses the true `shoulder_pan` world anchor. Gripper: `gripper_toggle: true` (press ZR/ZL to latch) or `false` (hold to close). One-handed recording via `enable_button_recording` + `next_episode_button` / `restart_episode_button` / `stop_button` (right: A/Y/+; left: d-pad Down/Up, Minus).
 - **Window visibility**: The MuJoCo recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, do **not** set `FOCUSED=FALSE` or `FOCUS_ON_SHOW=FALSE`, or the window may be invisible. Set `render_window: false` in the robot config to disable the GLFW window for headless/CI runs.
 - **Teleop view_mode**: Use `--view_mode rerun` for LeRobot Rerun camera feeds, or `--view_mode mujoco` (default) for the MuJoCo GLFW window. Both modes record the same LeRobot v3.0 dataset. Recording controls are identical for keyboard, Joy-Con and leader in both modes and run through the project's focus-independent evdev backend (no terminal focus needed): Left/R cancel & rerecord, Right/N save & next, ESC/Q stop. The startup log prints `SO101 recording controls via evdev, focus-independent`; if evdev is unavailable (user not in the `input` group) it falls back to LeRobot's terminal listener, which needs the terminal focused.
 - **Episode reset (sim)**: `robot.reset_mode: auto` (default) resets before each recorded episode; `manual` leaves state unchanged (real-hardware style). Under `auto`, `robot.reset_arm` (`home` teleport vs `follow` = stay put, for the passive leader arm) and `robot.reset_cube` (`fixed` predefined / `random` within `cube_random_*` bounds / `none`) control arm and cube independently. Keyboard/replay default to `home`+`fixed`; leader configs default to `follow`+`random`. `dataset.reset_time_s` still allows a short teleop window between episodes.
 - **Rendering performance**: Camera rendering is done with MuJoCo's offscreen renderer. On CPU-only machines the record loop will be slower than 30 Hz; it still records and saves episodes, but a GPU is strongly recommended for real teleoperation.
-- **Smoke scripts**: Interactive manual tests live in `scripts/smoke/` (`make smoke-*`). Root `test_*.sh` files delegate there. Pytest unit tests stay in `tests/`.
+- **Smoke scripts**: Interactive manual tests live in `scripts/smoke/` (`make smoke-*`). Fixed collaboration quick-tests live in `scripts/quicktest/` (`*.cmd`, tee `test.log`). Pytest unit tests stay in `tests/`.
 
 ## ROCm
 
