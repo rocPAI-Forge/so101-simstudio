@@ -95,6 +95,14 @@ Current: so101-simstudio @ v0.1.2
 
 ## Future work
 
+### Platform support
+
+- [ ] **NVIDIA CUDA (Linux)** — documented install path, PyTorch CUDA wheels, smoke tests
+- [ ] **macOS / Apple Silicon (MPS)** — documented install path, GLFW / input quirks, smoke tests
+
+Current focus remains **Ubuntu 24.04 + AMD ROCm** as the reference environment for
+simulation, recording, and validation.
+
 ### Automated data pipeline
 
 - [ ] Dataset annotation (VLM language labels)

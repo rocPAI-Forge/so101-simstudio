@@ -6,7 +6,11 @@ update-check: 2026-07
 
 # ROCm Environment Setup
 
-For AMD GPUs only. If you have NVIDIA GPU, use CUDA instead.
+> **SO-101 SimStudio:** The supported release target is **Ubuntu 24.04 + AMD ROCm**
+> (`make rocm-sync`). macOS and NVIDIA CUDA are not supported yet; see project
+> [ROADMAP.md](../../ROADMAP.md).
+
+For AMD GPUs only. If you have NVIDIA GPU, use CUDA instead (not yet supported by SimStudio).
 
 ## Quick start
 

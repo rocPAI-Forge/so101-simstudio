@@ -4,9 +4,13 @@ Get SO-101 SimStudio running and recording demonstrations.
 
 ## Requirements
 
-- Python 3.12+
-- ROCm GPU (recommended) or CUDA
-- MuJoCo 3.x
+- **OS:** Ubuntu 24.04 (supported platform for this release)
+- **GPU:** AMD GPU with **ROCm 7.2.x** (required for the supported setup)
+- **Python:** 3.12+
+- **MuJoCo:** 3.x (installed via project deps)
+
+**Not supported yet (planned):** macOS (including Apple Silicon / MPS) and NVIDIA CUDA on Linux.
+SimStudio is a **ROCm-first** simulation tool; use `make rocm-sync` below. See [ROADMAP.md](ROADMAP.md).
 
 ## Install
 
@@ -30,6 +34,11 @@ make joycon-sync
 ```
 
 This editable-installs joycon-robotics into the venv and runs `git apply patches/joycon-robotics.patch` (serial compatibility + English connect messages). Re-run after resetting the submodule or if Joy-Con connect fails. Pair the controller over Bluetooth first.
+
+**License note:** `make joycon-sync` installs only the **MIT-licensed Python package**
+from the submodule. The same repository also contains optional **GPL-2.0 / GPL-3.0**
+Linux kernel drivers and daemons (`joycond`, `dkms-hid-nintendo`) that are **not**
+installed by SimStudio by default. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Smoke check
 
@@ -57,6 +66,15 @@ Focus-independent **keyboard** controls (evdev) work in every record session:
 Startup log should show: `SO101 recording controls via evdev, focus-independent`.
 
 If evdev is unavailable, add your user to the `input` group and re-login: `sudo usermod -aG input $USER`.
+
+## Recording GUI (`--view_mode`)
+
+| Mode | Flag | Description |
+|------|------|-------------|
+| **MuJoCo** | `--view_mode mujoco` (default) | GLFW 3D simulation window — lowest latency for teleop |
+| **Rerun** | `--view_mode rerun` | Multi-camera Rerun viewer — useful on Wayland; same dataset output |
+
+Both modes produce identical LeRobot v3.0 recordings. Post-recording: `dataset_viz` (Rerun) or replay scripts.
 
 ---
 

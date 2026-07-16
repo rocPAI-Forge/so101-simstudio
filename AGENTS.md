@@ -111,3 +111,5 @@ Project-agnostic development knowledge lives in `llm-wiki/`:
 | GLFW window | `llm-wiki/platform-quirks/glfw-window.md` |
 | MuJoCo | `llm-wiki/robot-sim/mujoco-setup.md` |
 | LeRobot plugins | `llm-wiki/robot-sim/lerobot-plugin.md` |
+| Third-party licenses | `THIRD_PARTY_NOTICES.md`, `NOTICE`, `SO101/ATTRIBUTION.md` |
+| Acknowledgements | `ACKNOWLEDGEMENTS.md` |
