@@ -16,7 +16,8 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
   - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
-- **`scripts/`**: Environment setup scripts (ROCm, etc.).
+- **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
+- **`third_party/joycon-robotics/`**: Upstream [box2ai-robotics/joycon-robotics](https://github.com/box2ai-robotics/joycon-robotics) git submodule (pinned to upstream `master`). **Do not commit project-specific edits inside the submodule.** SO-101 fixes (serial compatibility, English connect messages) live in `patches/joycon-robotics.patch` and are applied locally by `make joycon-sync` / `scripts/setup-joycon.sh`.
 
 ## Setup
 
@@ -27,11 +28,19 @@ uv sync
 source .venv/bin/activate
 ```
 
-**Critical**: `lerobot/` is a git submodule. If missing, run:
+**Critical**: `lerobot/` and `third_party/joycon-robotics/` are git submodules. If missing, run:
 
 ```bash
 git submodule update --init --recursive
 ```
+
+**Joy-Con (optional):** The joycon-robotics submodule stays at the pinned upstream commit; project changes are **not** committed inside it. After `uv sync` (or `make rocm-sync`), install Joy-Con support and apply the local patch:
+
+```bash
+make joycon-sync
+```
+
+This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches/joycon-robotics.patch` (serial compatibility + English connect messages). Re-run after a fresh submodule checkout or if Joy-Con connect fails. Pair the controller over Bluetooth before recording.
 
 **Known-good LeRobot commit**: `30da8e68` (`v0.6.0` tag).
 

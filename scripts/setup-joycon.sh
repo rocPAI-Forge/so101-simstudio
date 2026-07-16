@@ -17,8 +17,11 @@ cd "$SUBMODULE_DIR"
 if git apply --check "$PATCH_FILE" 2>/dev/null; then
     git apply "$PATCH_FILE"
     echo "Patch applied"
+elif git apply --reverse --check "$PATCH_FILE" 2>/dev/null; then
+    echo "Patch already applied"
 else
-    echo "Warning: patch already applied or no longer applicable"
+    echo "Error: patch does not apply; reset submodule to the pinned upstream commit and retry" >&2
+    exit 1
 fi
 
 echo "=== Done ==="

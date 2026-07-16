@@ -17,6 +17,20 @@ make rocm-sync
 source .venv-rocm/bin/activate
 ```
 
+If submodules are missing after clone:
+
+```bash
+git submodule update --init --recursive
+```
+
+**Joy-Con (optional):** Submodule `third_party/joycon-robotics` is pinned to upstream box2ai-robotics; project-specific fixes ship as `patches/joycon-robotics.patch` and are applied **locally at install time** (not committed inside the submodule):
+
+```bash
+make joycon-sync
+```
+
+This editable-installs joycon-robotics into the venv and runs `git apply patches/joycon-robotics.patch` (serial compatibility + English connect messages). Re-run after resetting the submodule or if Joy-Con connect fails. Pair the controller over Bluetooth first.
+
 ## Smoke check
 
 ```bash
@@ -83,13 +97,7 @@ Robot uses **world-frame** velocity (`horizontal_control_mode: world`, default).
 
 ## 2. Joy-Con teleop
 
-**Install Joy-Con support:**
-
-```bash
-make joycon-sync
-```
-
-**Live control:**
+Requires `make joycon-sync` (see **Install** above) so the submodule patch is applied and the package is installed in your venv.
 
 ```bash
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
