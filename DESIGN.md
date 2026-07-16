@@ -13,7 +13,7 @@ Build a clean, maintainable SO-101 teleoperation and dataset-collection project 
 ## Implemented
 
 - Keyboard teleoperation (velocity paradigm; pynput + evdev for Rerun)
-- Joy-Con teleoperation (velocity paradigm, left/right)
+- Joy-Con teleoperation (cylindrical velocity: reach/swing; gripper toggle; one-handed recording buttons)
 - Leader arm teleoperation (position paradigm, Feetech STS3215)
 - Dataset recording and replay (LeRobot v3.0)
 - Record display modes: `--view_mode mujoco` (GLFW) or `rerun` (LeRobot official viewer)
@@ -113,7 +113,7 @@ so101-simstudio/
 │       │   └── so101_real_follower/  # Real follower arm (stub)
 │       ├── teleoperators/
 │       │   ├── so101_keyboard/       # Keyboard teleop (working)
-│       │   ├── so101_joycon/         # Joy-Con teleop (stub)
+│       │   ├── so101_joycon/         # Joy-Con teleop (working)
 │       │   └── so101_leader/         # Leader arm teleop (working)
 │       ├── common/                   # Shared constants and action mapping
 │       └── scripts/
@@ -125,8 +125,13 @@ so101-simstudio/
 ├── SO101/                            # MuJoCo assets
 ├── configs/                          # Recording/teleop configs
 ├── llm-wiki/                         # Reusable development knowledge
+├── third_party/joycon-robotics/      # Upstream submodule; patched at install via make joycon-sync
+├── patches/joycon-robotics.patch     # Local patch (serial compat, English messages)
 ├── scripts/
-│   └── setup-rocm.sh                 # ROCm environment setup
+│   ├── setup-rocm.sh                 # ROCm environment setup
+│   ├── setup-joycon.sh               # Joy-Con editable install + patch apply
+│   ├── smoke/                        # Parameterized manual smoke tests
+│   └── quicktest/                    # Fixed collaboration record launchers
 ├── ROADMAP.md                        # Development roadmap
 ├── DESIGN.md
 ├── README.md
@@ -197,9 +202,4 @@ Code to port/adapt:
 
 ## Next Steps
 
-1. Implement `so101_mujoco` robot package.
-2. Implement `so101_keyboard` teleop package.
-3. Wire both via LeRobot plugin discovery.
-4. Add recording config and verify end-to-end recording.
-5. Add Joy-Con / leader stubs.
-6. Add ROCm setup script and verify.
+See [ROADMAP.md](ROADMAP.md) for release history and planned work (training pipeline, real follower driver, policy rollout).

@@ -55,12 +55,16 @@
 - [x] Stable teleop/record sync; safe gripper mapping
 - [x] `reset_arm: home|follow`, `reset_cube: fixed|random|none`
 
+### Input (recording)
+
+- [x] Recording control debounce (prevents key bursts from skipping episodes)
+
 ### Engineering
 
 - [x] Smoke scripts → `scripts/smoke/` + `make smoke-*`
 - [x] Tests: `test_record_view_mode`, `test_keyboard_teleop`, `test_episode_reset`
 
-## v0.1.2 🚧 (unreleased)
+## v0.1.2 ✅ (`release-v0.1.2`)
 
 ### Joy-Con teleop overhaul
 
@@ -76,6 +80,9 @@
 - [x] Remove redundant root `test_*.sh` delegators
 - [x] Add `scripts/quicktest/*.cmd` for fixed collaboration runs
 - [x] Documentation sync (English)
+- [x] English user-facing prints and logs
+- [x] joycon-robotics: pin upstream submodule; apply `patches/joycon-robotics.patch` via `make joycon-sync` (no in-submodule project commits)
+- [x] GitHub repository `alexhegit/so101-simstudio`
 
 ## Evolution
 
@@ -83,8 +90,8 @@
 v0.0.x: so101-mujoco-teleop
         ↓ v0.1.0
         ↓ v0.1.1 (unified view_mode + evdev)
-        ↓ v0.1.2 (Joy-Con cylindrical + one-handed recording)
-Current: so101-simstudio
+        ↓ v0.1.2 (`release-v0.1.2`) Joy-Con cylindrical + one-handed recording + joycon patch workflow
+Current: so101-simstudio @ v0.1.2
         Expert trajectory generation (teleop, scenes, record, replay, validate)
         Future: domain randomization, policy rollout, real follower
 ```

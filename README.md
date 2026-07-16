@@ -114,7 +114,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 
 ## Version history
 
-- **v0.1.2** (unreleased): Joy-Con cylindrical reach/swing control; decoupled stick input; gripper toggle; one-handed A/Y/+ recording buttons; `scripts/quicktest/`; root test script cleanup
+- **v0.1.2** (`release-v0.1.2`): Joy-Con cylindrical reach/swing; decoupled HID sticks; gripper toggle; one-handed A/Y/+ recording; `scripts/quicktest/`; joycon-robotics upstream pin + install-time patch; English docs/prints; repo `so101-simstudio`
 - **v0.1.1** (`release-v0.1.1`): Unified `--view_mode mujoco/rerun`; evdev recording controls; leader reliability; `reset_arm` / `reset_cube`; smoke scripts in `scripts/smoke/`
 - **v0.1.0** (`release-v0.1.0`): First stable release; keyboard, Joy-Con, leader
 - **v0.0.2** (`release-v0.0.2`): Leader arm support
