@@ -49,15 +49,12 @@
 
 - [x] Evdev focus-independent keyboard (Rerun / Wayland)
 - [x] Leader / Joy-Con evdev recording controls (N/R/Q)
+- [x] Recording control debounce (prevents key bursts from skipping episodes)
 
 ### Leader arm
 
 - [x] Stable teleop/record sync; safe gripper mapping
 - [x] `reset_arm: home|follow`, `reset_cube: fixed|random|none`
-
-### Input (recording)
-
-- [x] Recording control debounce (prevents key bursts from skipping episodes)
 
 ### Engineering
 
