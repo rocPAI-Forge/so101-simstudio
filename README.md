@@ -84,6 +84,7 @@ See [QUICKSTART.md](QUICKSTART.md).
 git clone --recursive https://github.com/alexhegit/so101-simstudio.git
 cd so101-simstudio
 make rocm-sync
+# Joy-Con users: also run `make joycon-sync` (see QUICKSTART Install)
 
 .venv-rocm/bin/python -m simstudio.scripts.record \
     --config configs/so101_mujoco_keyboard.yaml \
