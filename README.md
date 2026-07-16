@@ -1,8 +1,16 @@
+<p align="center">
+  <img src="docs/assets/banner-flat-logo.png" alt="SO-101 SimStudio — MuJoCo · LeRobot · Expert Trajectories" width="900"/>
+</p>
+
 # SO-101 SimStudio
 
 SO-101 simulation studio for expert trajectory generation with MuJoCo and LeRobot.
 
 ## Overview
+
+<p align="center">
+  <img src="docs/assets/architecture-flow.png" alt="Teleoperation (keyboard, Joy-Con, leader arm) → MuJoCo simulation → LeRobot dataset v3.0" width="820"/>
+</p>
 
 SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting high-quality expert demonstration datasets for behavior cloning.
 

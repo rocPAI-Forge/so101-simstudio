@@ -30,6 +30,10 @@ Build a clean, maintainable SO-101 teleoperation and dataset-collection project 
 
 ## High-Level Architecture
 
+![Data flow overview](docs/assets/architecture-flow.png)
+
+*Teleoperation inputs → MuJoCo simulation → LeRobot dataset. See [README](README.md#overview).*
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  LeRobot scripts (lerobot_record, lerobot_replay, ...)  │
