@@ -26,9 +26,27 @@ index 4ee4e4a..cb1dec4 100644
          self.vendor_id   = vendor_id
          self.product_id  = product_id
 diff --git a/joyconrobotics/joyconrobotics.py b/joyconrobotics/joyconrobotics.py
-index 428922d..da0ec5d 100644
+index 428922d..2d5441b 100644
 --- a/joyconrobotics/joyconrobotics.py
 +++ b/joyconrobotics/joyconrobotics.py
+@@ -172,7 +172,7 @@ class JoyconRobotics:
+         elif device == "left":
+             self.joycon_id = get_L_id()
+         else:
+-            print("get a wrong device name of joycon")
++            print(f"Invalid Joy-Con device name: {device!r}")
+         device_serial = self.joycon_id[2][:6]
+         
+         # init joycon
+@@ -187,7 +187,7 @@ class JoyconRobotics:
+         self.without_rest_init = without_rest_init
+         # print(f"connect to {device} joycon successful.")
+         
+-        print(f"\033[32mconnect to {device} joycon successful.\033[0m")
++        print(f"Connected to {device} Joy-Con.")
+         if not self.without_rest_init:
+             self.reset_joycon()
+         
 @@ -231,7 +231,7 @@ class JoyconRobotics:
          self.button_control = 0
          
@@ -38,3 +56,29 @@ index 428922d..da0ec5d 100644
          
          self.running = True
          self.lock = threading.Lock()
+@@ -243,14 +243,14 @@ class JoyconRobotics:
+     
+     def reset_joycon(self):
+         
+-        print(f"\033[33mcalibrating(2 seconds)..., please place it horizontally on the desktop.\033[0m")
++        print("Calibrating (2 s)... Place the Joy-Con flat on the desk.")
+ 
+         self.gyro.calibrate()
+         time.sleep(2)
+         self.gyro.reset_orientation
+         self.orientation_sensor.reset_yaw()
+ 
+-        print(f"\033[32mJoycon calibrations is complete.\033[0m")
++        print("Joy-Con calibration complete.")
+     
+     def check_limits_position(self):
+         for i in range(3):
+@@ -519,7 +519,7 @@ class JoyconRobotics:
+     def set_position(self, set_position):
+         # self.x, self.y, self.z = set_position
+         self.position = set_position
+-        print('set position complect.')
++        print("Position set.")
+         
+     def close_horizontal_stick(self):
+         self.close_horizontal_stick = 'close'

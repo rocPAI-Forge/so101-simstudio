@@ -1,5 +1,5 @@
 #!/bin/bash
-# 安装 joycon-robotics (submodule) 并应用补丁
+# Install joycon-robotics (submodule) and apply project patch.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -7,20 +7,18 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 SUBMODULE_DIR="$PROJECT_DIR/third_party/joycon-robotics"
 PATCH_FILE="$PROJECT_DIR/patches/joycon-robotics.patch"
 
-echo "=== 安装 joycon-robotics ==="
+echo "=== Installing joycon-robotics ==="
 
-# 安装到项目 venv
 cd "$PROJECT_DIR"
 uv pip install -e "$SUBMODULE_DIR"
 
-# 应用补丁
-echo "=== 应用补丁 ==="
+echo "=== Applying patch ==="
 cd "$SUBMODULE_DIR"
 if git apply --check "$PATCH_FILE" 2>/dev/null; then
     git apply "$PATCH_FILE"
-    echo "✓ 补丁已应用"
+    echo "Patch applied"
 else
-    echo "⚠ 补丁可能已应用或不再适用"
+    echo "Warning: patch already applied or no longer applicable"
 fi
 
-echo "=== 完成 ==="
+echo "=== Done ==="

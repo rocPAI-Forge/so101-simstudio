@@ -1,4 +1,5 @@
-# Keyboard teleop 测试配置（仅实时控制，不录制）
+# Keyboard teleop only (live control, no recording)
+
 
 robot:
   type: so101_mujoco

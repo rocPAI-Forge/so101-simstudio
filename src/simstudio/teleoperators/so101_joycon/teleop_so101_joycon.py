@@ -124,7 +124,7 @@ class SO101JoyConTeleop(Teleoperator):
         self._prev_posture = list(posture)
         self._prev_time = time.time()
         self._connect_time = self._prev_time
-        print(f"✓ Connected to {side} Joy-Con")
+        print(f"Connected to {side} Joy-Con")
         up_btn = "R" if side == "right" else "L"
         grip_btn = "ZR" if side == "right" else "ZL"
         print(f"  Stick: forward/back=reach in/out, left/right=base swing; {up_btn}=up, stick press=down")

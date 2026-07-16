@@ -104,7 +104,7 @@ Leader arm outputs are auto-scaled from normalized motor values to MuJoCo radian
 ## Package Layout
 
 ```
-so101-mujoco-teleop/
+so101-simstudio/
 ├── lerobot/                          # HF LeRobot submodule (pinned, unmodified)
 ├── src/
 │   └── simstudio/

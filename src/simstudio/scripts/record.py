@@ -227,7 +227,7 @@ def _install_evdev_recording_controls() -> bool:
     if not listener.start():
         logging.warning(
             "Focus-independent evdev recording controls unavailable (no device or "
-            "permission); falling back to terminal input — keep the terminal focused. "
+            "permission); falling back to terminal input - keep the terminal focused. "
             "For focus-independent keys add your user to the 'input' group: "
             "sudo usermod -aG input $USER"
         )
@@ -458,7 +458,7 @@ def _init_record_session_from_argv(argv: list[str]) -> None:
     _record_session["saved_this_session"] = 0
     if num_episodes is not None:
         logger.info(
-            "Record session: %s episode(s) this run (→/N save & next, ←/R re-record, ESC/Q stop all)",
+            "Record session: %s episode(s) this run (Right/N save & next, Left/R re-record, ESC/Q stop all)",
             num_episodes,
         )
 

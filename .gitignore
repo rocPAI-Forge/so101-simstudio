@@ -28,4 +28,3 @@ dist/
 # Logs
 *.log
 .venv
-test_joycon.sh

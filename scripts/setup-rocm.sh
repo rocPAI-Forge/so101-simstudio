@@ -75,7 +75,7 @@ uv pip install --python "$PY" --constraints "$TORCH_CONSTRAINTS" \
     "safetensors>=0.4.3"
 
 # ── install local editable packages last, without deps ───────────────────
-info "Installing so101-mujoco-teleop (editable, no-deps) ..."
+info "Installing so101-simstudio (editable, no-deps) ..."
 uv pip install --python "$PY" --no-deps -e ".[smolvla]"
 
 info "Installing lerobot (editable, no-deps) ..."

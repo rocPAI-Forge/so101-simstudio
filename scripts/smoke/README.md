@@ -15,4 +15,4 @@ Interactive launchers for local hardware/teleop checks. These are **not** run by
 
 Makefile shortcuts: `make smoke-keyboard-record`, `make smoke-keyboard-replay`, `make smoke-keyboard-teleop`, etc.
 
-Root-level `./test_*.sh` scripts are thin wrappers that call these files.
+For fixed 2-episode collaboration runs with `test.log` output, see `scripts/quicktest/`.
