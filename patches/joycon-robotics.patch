@@ -13,32 +13,62 @@ index 4ca7965..a0f411c 100644
  
          if debug:
 diff --git a/joyconrobotics/joycon.py b/joyconrobotics/joycon.py
-index 4ee4e4a..cb1dec4 100644
+index 4ee4e4a..3fdf6cc 100644
 --- a/joyconrobotics/joycon.py
 +++ b/joyconrobotics/joycon.py
-@@ -28,7 +28,7 @@ class JoyCon:
+@@ -27,18 +27,24 @@ class JoyCon:
+         if product_id not in JOYCON_PRODUCT_IDS:
              raise ValueError(f'product_id is invalid: {product_id!r}')
          
-         if serial[:9] not in JOYCON_SERIAL_HEAD:
+-        if serial[:9] not in JOYCON_SERIAL_HEAD:
 -            raise ValueError(f'serial is invalid: {serial!r}')
-+            print(f"\033[33mWarning: serial {serial} does not match expected format. Continuing anyway.\033[0m")
++        serial_ok = serial is not None and serial[:9] in JOYCON_SERIAL_HEAD
++        if not serial_ok:
++            if serial is None:
++                print(
++                    "\033[33mWarning: Joy-Con serial is missing. Continuing anyway.\033[0m"
++                )
++            else:
++                print(
++                    f"\033[33mWarning: serial {serial} does not match expected format. "
++                    "Continuing anyway.\033[0m"
++                )
  
          self.vendor_id   = vendor_id
          self.product_id  = product_id
+         self.serial      = serial
+         self.simple_mode = simple_mode  # TODO: It's for reporting mode 0x3f
+-        
+-        if serial[:9] not in JOYCON_SERIAL_HEAD:
+-            self.calibrate_value = True
+-        else:
+-            self.calibrate_value = False
++
++        self.calibrate_value = not serial_ok
+             
+         # setup internal state
+         self._input_hooks = []
 diff --git a/joyconrobotics/joyconrobotics.py b/joyconrobotics/joyconrobotics.py
-index 428922d..2d5441b 100644
+index 428922d..cfc6a58 100644
 --- a/joyconrobotics/joyconrobotics.py
 +++ b/joyconrobotics/joyconrobotics.py
-@@ -172,7 +172,7 @@ class JoyconRobotics:
+@@ -172,8 +172,13 @@ class JoyconRobotics:
          elif device == "left":
              self.joycon_id = get_L_id()
          else:
 -            print("get a wrong device name of joycon")
-+            print(f"Invalid Joy-Con device name: {device!r}")
-         device_serial = self.joycon_id[2][:6]
+-        device_serial = self.joycon_id[2][:6]
++            raise ValueError(f"Invalid Joy-Con device name: {device!r}")
++
++        if not self.joycon_id or self.joycon_id[0] is None:
++            raise IOError(f"No {device} Joy-Con found. Pair over Bluetooth and retry.")
++
++        serial = self.joycon_id[2]
++        device_serial = serial[:6] if serial else ""
          
          # init joycon
-@@ -187,7 +187,7 @@ class JoyconRobotics:
+         self.joycon = JoyCon(*self.joycon_id)
+@@ -187,7 +192,7 @@ class JoyconRobotics:
          self.without_rest_init = without_rest_init
          # print(f"connect to {device} joycon successful.")
          
@@ -47,7 +77,7 @@ index 428922d..2d5441b 100644
          if not self.without_rest_init:
              self.reset_joycon()
          
-@@ -231,7 +231,7 @@ class JoyconRobotics:
+@@ -231,7 +236,7 @@ class JoyconRobotics:
          self.button_control = 0
          
          if device_serial != JOYCON_SERIAL_SUPPORT and self.joycon_id != None:
@@ -56,7 +86,7 @@ index 428922d..2d5441b 100644
          
          self.running = True
          self.lock = threading.Lock()
-@@ -243,14 +243,14 @@ class JoyconRobotics:
+@@ -243,14 +248,14 @@ class JoyconRobotics:
      
      def reset_joycon(self):
          
@@ -73,7 +103,7 @@ index 428922d..2d5441b 100644
      
      def check_limits_position(self):
          for i in range(3):
-@@ -519,7 +519,7 @@ class JoyconRobotics:
+@@ -519,7 +524,7 @@ class JoyconRobotics:
      def set_position(self, set_position):
          # self.x, self.y, self.z = set_position
          self.position = set_position
