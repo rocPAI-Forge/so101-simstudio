@@ -6,6 +6,9 @@ update-check: 2026-07
 
 # PyTorch Backend Selection
 
+> **SO-101 SimStudio:** Only **ROCm on Ubuntu 24.04** is supported (`make rocm-sync`).
+> CUDA and macOS are not supported in the current release.
+
 PyTorch supports three compute backends: CUDA (NVIDIA), ROCm (AMD), MPS (Apple Silicon). Only one can be active per install.
 
 ## Decision logic

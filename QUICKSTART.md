@@ -4,18 +4,30 @@ Get SO-101 SimStudio running and recording demonstrations.
 
 ## Requirements
 
-- **OS:** Ubuntu 24.04 (supported platform for this release)
-- **GPU:** AMD GPU with **ROCm 7.2.x** (required for the supported setup)
+- **OS:** Ubuntu 24.04 (only supported platform for this release)
+- **GPU:** AMD GPU with **system ROCm 7.x** installed and working (`rocm-smi` should succeed)
 - **Python:** 3.12+
-- **MuJoCo:** 3.x (installed via project deps)
+- **Package manager:** [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- **MuJoCo:** 3.x (installed via `make rocm-sync`)
+- **Disk / network:** ~15 GB for `.venv-rocm`; first `make rocm-sync` downloads ~6 GB ROCm PyTorch (may take 1–3 hours)
 
-**Not supported yet (planned):** macOS (including Apple Silicon / MPS) and NVIDIA CUDA on Linux.
-SimStudio is a **ROCm-first** simulation tool; use `make rocm-sync` below. See [ROADMAP.md](ROADMAP.md).
+### Not supported (current release)
+
+The following environments are **not supported** — they have not been verified and there is no documented install path:
+
+| Environment | Status |
+|-------------|--------|
+| **NVIDIA CUDA (Linux)** | Not supported — planned ([ROADMAP.md](ROADMAP.md)) |
+| **macOS / Apple Silicon (MPS)** | Not supported — planned ([ROADMAP.md](ROADMAP.md)) |
+
+Do **not** use `uv sync` as a substitute for `make rocm-sync`. It installs CUDA PyTorch and will not work on AMD GPUs.
+
+SimStudio is **ROCm-only** for this release. Use `make rocm-sync` below.
 
 ## Install
 
 ```bash
-git clone --recursive https://github.com/alexhegit/so101-simstudio.git
+git clone --recursive https://github.com/rocPAI-Forge/so101-simstudio.git
 cd so101-simstudio
 make rocm-sync
 source .venv-rocm/bin/activate
@@ -26,6 +38,31 @@ If submodules are missing after clone:
 ```bash
 git submodule update --init --recursive
 ```
+
+### Verify ROCm PyTorch
+
+After `make rocm-sync` completes, confirm the environment before recording or training:
+
+```bash
+python -c "
+import torch
+print('torch:', torch.__version__)
+print('HIP:', getattr(torch.version, 'hip', None))
+print('GPU available:', torch.cuda.is_available())
+if torch.cuda.is_available():
+    print('GPU name:', torch.cuda.get_device_name(0))
+"
+```
+
+**Expected on a working ROCm machine:**
+
+- `torch` version contains `+rocm` (not `+cu128` or similar CUDA tag)
+- `HIP` is a version string, not `None`
+- `GPU available: True`
+
+If HIP is `None` or the version shows `+cu128`, delete `.venv-rocm` and re-run `make rocm-sync`. Do not run `uv sync` afterward.
+
+`make rocm-sync` also installs **SmolVLA training dependencies** (`transformers`, `accelerate`, `lerobot-train` CLI) for VLA fine-tuning.
 
 **Joy-Con (optional):** Submodule `third_party/joycon-robotics` is pinned to upstream box2ai-robotics; project-specific fixes ship as `patches/joycon-robotics.patch` and are applied **locally at install time** (not committed inside the submodule):
 
@@ -42,9 +79,11 @@ installed by SimStudio by default. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTI
 
 ## Smoke check
 
+Requires `.venv-rocm` (run `make rocm-sync` first).
+
 ```bash
 # Preview MuJoCo scene
-python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml
+.venv-rocm/bin/python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml
 
 # Pytest + optional ROCm record smoke
 make rocm-smoke-record
@@ -268,6 +307,8 @@ robot:
 **Record loop slower than target FPS?** Lower `record_fps` and `dataset.fps` together. Leader defaults to 20 Hz for this reason.
 
 **Leader gripper desync?** Recalibrate fully. Ensure FPS is achievable; watch for `running slower than target FPS` warnings.
+
+**Wrong PyTorch backend after install?** Version shows `+cu128` or HIP is `None` → delete `.venv-rocm`, run `make rocm-sync` again. Never run `uv sync` in `.venv-rocm`.
 
 **Upload to HuggingFace:**
 

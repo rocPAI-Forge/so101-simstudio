@@ -9,18 +9,18 @@ VIEW_MODE ?= mujoco
 SIDE ?= right
 
 # ---------------------------------------------------------------------------
-# CUDA / CPU (default) — uses .venv
+# Lint / format / test — require .venv-rocm (create with make rocm-sync)
 # ---------------------------------------------------------------------------
 
 format:
-	uv run ruff format
-	uv run ruff check --fix
+	.venv-rocm/bin/ruff format
+	.venv-rocm/bin/ruff check --fix
 
 lint:
-	uv run ruff check
+	.venv-rocm/bin/ruff check
 
 test:
-	uv run pytest
+	.venv-rocm/bin/python -m pytest
 
 # ---------------------------------------------------------------------------
 # ROCm — uses .venv-rocm (created by scripts/setup-rocm.sh)

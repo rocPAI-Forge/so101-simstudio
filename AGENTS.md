@@ -21,12 +21,43 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 
 ## Setup
 
+**Supported platform:** Ubuntu 24.04 + AMD GPU + system ROCm 7.x, Python 3.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+**Not supported yet (unverified; planned):** NVIDIA CUDA on Linux and macOS (including Apple Silicon / MPS). Do **not** use `uv sync` for this project — it installs CUDA PyTorch and is not a supported install path. See [ROADMAP.md](ROADMAP.md).
+
 ```bash
-git clone --recursive https://github.com/alexhegit/so101-simstudio.git
+git clone --recursive https://github.com/rocPAI-Forge/so101-simstudio.git
 cd so101-simstudio
-uv sync
-source .venv/bin/activate
+make rocm-sync
+source .venv-rocm/bin/activate
 ```
+
+`make rocm-sync` runs `scripts/setup-rocm.sh`, which:
+
+1. Creates `.venv-rocm` (Python 3.12).
+2. Installs **ROCm PyTorch first** (`uv pip install --torch-backend rocm7.2 torch torchvision`).
+3. Installs remaining deps under torch version constraints (MuJoCo, LeRobot, SmolVLA training deps, etc.).
+4. Editable-installs this project and the `lerobot` submodule.
+5. Verifies `torch.version.hip` is present.
+
+First run may take 1–3 hours (ROCm torch wheel is ~6 GB). Re-run `make rocm-sync` to refresh deps; do **not** run bare `uv sync` inside `.venv-rocm`.
+
+**Verify after install:**
+
+```bash
+python -c "
+import torch
+print('torch:', torch.__version__)
+print('HIP:', getattr(torch.version, 'hip', None))
+print('GPU:', torch.cuda.is_available(), end='')
+if torch.cuda.is_available():
+    print(' ', torch.cuda.get_device_name(0))
+else:
+    print()
+"
+```
+
+Expected: version contains `+rocm`, HIP is not `None`, GPU is `True` on a working ROCm machine.
 
 **Critical**: `lerobot/` and `third_party/joycon-robotics/` are git submodules. If missing, run:
 
@@ -34,7 +65,7 @@ source .venv/bin/activate
 git submodule update --init --recursive
 ```
 
-**Joy-Con (optional):** The joycon-robotics submodule stays at the pinned upstream commit; project changes are **not** committed inside it. After `uv sync` (or `make rocm-sync`), install Joy-Con support and apply the local patch:
+**Joy-Con (optional):** The joycon-robotics submodule stays at the pinned upstream commit; project changes are **not** committed inside it. After `make rocm-sync`, install Joy-Con support and apply the local patch:
 
 ```bash
 make joycon-sync
@@ -47,32 +78,32 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 - This project is validated against that upstream LeRobot release.
 - Do not assume the latest LeRobot main branch is compatible.
 - Upgrade the submodule only in a dedicated branch, then re-run record/replay smoke tests before merging.
-- LeRobot 0.6.0 pulls **torch ≥ 2.7**; on Linux CUDA, ensure `triton` installs completely after `uv sync` (reinstall with `uv pip install --reinstall triton` if imports fail).
 
 ## Commands
 
 | Task | Command |
 |------|---------|
-| Lint | `make lint` |
-| Format | `make format` |
-| Test | `make test` |
-| MuJoCo preview | `python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml` |
+| Lint | `make rocm-lint` |
+| Format | `make rocm-format` |
+| Test | `make rocm-test` |
+| MuJoCo preview | `.venv-rocm/bin/python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml` |
 | Smoke: keyboard record | `make smoke-keyboard-record VIEW_MODE=mujoco` |
 | Smoke: keyboard replay | `make smoke-keyboard-replay` |
 | Smoke: keyboard teleop | `make smoke-keyboard-teleop` |
 | Smoke: Joy-Con record | `make smoke-joycon-record SIDE=right VIEW_MODE=mujoco` |
 | Smoke: leader record | `make smoke-leader-record VIEW_MODE=mujoco` |
-| Record (keyboard) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
-| Record (Joy-Con right) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml` |
-| Record (Joy-Con left) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
+| Record (keyboard) | `.venv-rocm/bin/python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard.yaml` |
+| Record (Joy-Con right) | `.venv-rocm/bin/python -m simstudio.scripts.record --config configs/so101_mujoco_joycon.yaml` |
+| Record (Joy-Con left) | `.venv-rocm/bin/python -m simstudio.scripts.record --config configs/so101_mujoco_joycon_left.yaml` |
 | Quick-test record | `./scripts/quicktest/keyboard.cmd` / `joycon.cmd` / `leader.cmd` |
-| Teleoperate (leader arm) | `uv run python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
-| Record (leader arm) | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml` |
-| Short functional test | `uv run python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
-| Replay one episode | `uv run python -m simstudio.scripts.replay --config configs/so101_mujoco_replay.yaml` |
-| Replay all episodes | `uv run python -m simstudio.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
-| Dataset visualization | `uv run python -m simstudio.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
-| Dataset validation | `uv run python -m simstudio.scripts.validate_dataset --root <dataset_root>` |
+| Teleoperate (leader arm) | `.venv-rocm/bin/python -m simstudio.scripts.teleoperate --config configs/so101_mujoco_leader_teleop.yaml` |
+| Record (leader arm) | `.venv-rocm/bin/python -m simstudio.scripts.record --config configs/so101_mujoco_leader.yaml` |
+| Short functional test | `.venv-rocm/bin/python -m simstudio.scripts.record --config configs/so101_mujoco_keyboard_test.yaml` |
+| Replay one episode | `.venv-rocm/bin/python -m simstudio.scripts.replay --config configs/so101_mujoco_replay.yaml` |
+| Replay all episodes | `.venv-rocm/bin/python -m simstudio.scripts.replay_multi --config configs/so101_mujoco_replay_multi.yaml` |
+| Dataset visualization | `.venv-rocm/bin/python -m simstudio.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
+| Dataset validation | `.venv-rocm/bin/python -m simstudio.scripts.validate_dataset --root <dataset_root>` |
+| VLA training (SmolVLA) | `.venv-rocm/bin/lerobot-train ...` (see [QUICKSTART.md](QUICKSTART.md)) |
 | Joy-Con setup | `make joycon-sync` |
 | ROCm setup | `make rocm-sync` |
 
@@ -93,9 +124,11 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 
 ## ROCm
 
-- Uses `.venv-rocm` created by `scripts/setup-rocm.sh`.
-- Installs torch with `--torch-backend rocm7.2` after project deps to avoid pulling CUDA torch.
-- Commands: `make rocm-lint`, `make rocm-test`, `make rocm-format`.
+- **Only supported Python environment:** `.venv-rocm`, created by `scripts/setup-rocm.sh` (`make rocm-sync`).
+- Installs **ROCm PyTorch first** (`--torch-backend rocm7.2`), then pins torch while installing MuJoCo, LeRobot, SmolVLA deps (`transformers`, `accelerate`, …), and dev tools.
+- **Do not** run `uv sync` in `.venv-rocm` — it can replace ROCm torch with a CUDA build.
+- Commands: `make rocm-sync`, `make rocm-lint`, `make rocm-test`, `make rocm-format`, `make rocm-smoke-record`.
+- Details: [llm-wiki/gpu-compute/rocm-setup.md](llm-wiki/gpu-compute/rocm-setup.md).
 
 ## Reusable Knowledge
 

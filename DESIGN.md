@@ -6,11 +6,11 @@ Build a clean, maintainable SO-101 teleoperation and dataset-collection project 
 
 1. Uses latest HuggingFace LeRobot as a submodule **without modifying it**.
 2. Runs SO-101 in MuJoCo simulation with keyboard and leader-arm teleop.
-3. Targets **AMD ROCm on Ubuntu 24.04** as the primary supported platform (`uv` + `make rocm-sync`).
+3. Targets **AMD ROCm on Ubuntu 24.04** as the **only supported** platform (`make rocm-sync`).
 4. Uses Python 3.12+.
 5. Supports behavior cloning training and policy inference (planned).
 
-**Platform scope:** macOS and NVIDIA CUDA are **not supported** in the current release; they are listed on the [ROADMAP](ROADMAP.md) for future work.
+**Platform scope:** Only **Ubuntu 24.04 + AMD ROCm** is supported in the current release. macOS and NVIDIA CUDA are **not supported** (unverified; listed on [ROADMAP](ROADMAP.md) for future work). Do not use `uv sync` — use `make rocm-sync` only.
 
 ## Implemented
 

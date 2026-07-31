@@ -7,7 +7,7 @@ if [[ -x "$REPO_ROOT/.venv-rocm/bin/python" ]]; then
 elif [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
     PYTHON="$REPO_ROOT/.venv/bin/python"
 else
-    echo "No project venv found. Run: make rocm-sync  (or uv sync)" >&2
+    echo "No project venv found. Run: make rocm-sync" >&2
     exit 1
 fi
 

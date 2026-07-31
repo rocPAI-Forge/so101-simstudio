@@ -21,7 +21,7 @@ SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting high-qu
 - LeRobot v3.0 dataset format
 - Modular, extensible architecture
 
-**Platform focus:** Validated on **Ubuntu 24.04 + AMD ROCm**. macOS and NVIDIA CUDA are **not supported yet** (see [ROADMAP](ROADMAP.md)).
+**Platform focus:** Validated on **Ubuntu 24.04 + AMD ROCm** only. **NVIDIA CUDA (Linux)** and **macOS (Apple Silicon / MPS)** are **not supported** in this release — unverified, no install path; see [ROADMAP](ROADMAP.md).
 
 ## Features
 
@@ -66,16 +66,15 @@ Post-recording visualization: `dataset_viz` (Rerun) and replay scripts.
 
 | Environment | Status |
 |-------------|--------|
-| **Ubuntu 24.04 + AMD ROCm 7.2.x** | ✅ **Primary** — tested and documented |
-| **NVIDIA CUDA (Linux)** | 🔲 **Not supported** — planned |
-| **macOS (incl. Apple Silicon / MPS)** | 🔲 **Not supported** — planned |
+| **Ubuntu 24.04 + AMD ROCm 7.x** | ✅ **Supported** — tested and documented (`make rocm-sync`) |
+| **NVIDIA CUDA (Linux)** | ❌ **Not supported** — unverified; planned |
+| **macOS (incl. Apple Silicon / MPS)** | ❌ **Not supported** — unverified; planned |
 
-SimStudio is developed as a **ROCm-first** simulation toolkit for expert trajectory
-collection on AMD GPUs. Other platforms may install dependencies manually, but they
-are outside the supported matrix until listed on the roadmap as done.
+SimStudio ships a **single supported install path:** `make rocm-sync` → `.venv-rocm` with ROCm PyTorch.
 
-CPU-only runs are possible (e.g. CI smoke tests with `render_window: false`) but
-camera rendering is slow without a GPU.
+**Do not** use `uv sync` — it installs CUDA PyTorch and is not supported. CUDA and macOS support will be added in a future release once validated; see [ROADMAP](ROADMAP.md).
+
+CPU-only runs are possible for headless CI (`render_window: false`) but are not the target workflow; GPU teleoperation and VLA training require ROCm.
 
 ### Tested environment
 
@@ -113,9 +112,14 @@ so101-simstudio/
 See [QUICKSTART.md](QUICKSTART.md).
 
 ```bash
-git clone --recursive https://github.com/alexhegit/so101-simstudio.git
+git clone --recursive https://github.com/rocPAI-Forge/so101-simstudio.git
 cd so101-simstudio
 make rocm-sync
+source .venv-rocm/bin/activate
+
+# Verify ROCm PyTorch (HIP must not be None; version should contain +rocm)
+python -c "import torch; print(torch.__version__, torch.version.hip, torch.cuda.is_available())"
+
 # Joy-Con users: also run `make joycon-sync` (see QUICKSTART Install)
 
 .venv-rocm/bin/python -m simstudio.scripts.record \
