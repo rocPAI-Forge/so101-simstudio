@@ -184,22 +184,63 @@ python -m simstudio.scripts.replay_multi \
 
 ---
 
-## 5. Train SmolVLA — planned
+## 5. Train SmolVLA
 
-Not run yet for this lab dataset. Planned workflow on ROCm:
+Fine-tune `lerobot/smolvla_base` on the lab dataset. Requires validated data and `.venv-rocm` (`make rocm-sync`).
+
+**One command:**
+
+```bash
+source .venv-rocm/bin/activate
+./labs/lab01_pnp/train.cmd
+```
+
+**Manual equivalent** (same defaults as `train.cmd`):
 
 ```bash
 lerobot-train \
-  --policy.type=smolvla \
-  --policy.pretrained_path=lerobot/smolvla_base \
+  --policy.path=lerobot/smolvla_base \
+  --policy.push_to_hub=false \
+  --policy.empty_cameras=1 \
+  --policy.scheduler_warmup_steps=500 \
   --dataset.repo_id=alexhegit/so101-simstudio-pnp \
   --dataset.root=./datasets/so101-simstudio-pnp \
+  --dataset.video_backend=pyav \
   --output_dir=./outputs/train/lab01_pnp_smolvla \
-  --rename_map='{"observation.images.top":"observation.images.camera1","observation.images.front":"observation.images.camera2","observation.images.wrist":"observation.images.camera3"}' \
-  --job_name=lab01_pnp_smolvla
+  --job_name=lab01_pnp_smolvla \
+  --rename_map='{"observation.images.camera_top":"observation.images.camera1","observation.images.camera_front":"observation.images.camera2","observation.images.camera_wrist":"observation.images.camera3"}' \
+  --batch_size=2 \
+  --steps=15000 \
+  --save_checkpoint=true \
+  --save_freq=2000
 ```
 
-Tune `batch_size`, `steps`, and `eval_freq` for available VRAM. Requires `.venv-rocm` with `lerobot[smolvla]` (installed by `make rocm-sync`).
+**Camera rename map** (dataset → `smolvla_base`):
+
+| Dataset key | Policy key |
+|-------------|------------|
+| `observation.images.camera_top` | `observation.images.camera1` |
+| `observation.images.camera_front` | `observation.images.camera2` |
+| `observation.images.camera_wrist` | `observation.images.camera3` |
+
+`--policy.empty_cameras=1` matches the base model’s fourth padded camera slot.
+
+**Tune via env or CLI overrides:**
+
+```bash
+LAB01_TRAIN_STEPS=20000 LAB01_TRAIN_BATCH_SIZE=1 ./labs/lab01_pnp/train.cmd
+./labs/lab01_pnp/train.cmd --steps 20000 --batch_size 1
+./labs/lab01_pnp/train.cmd --resume true
+```
+
+Log: `train.log` at repo root. Checkpoints: `./outputs/train/lab01_pnp_smolvla/checkpoints/`.
+
+**Notes for 30-episode dataset**
+
+- ~14k frames: `steps=15000` is a reasonable first run; increase if loss still falling.
+- OOM: `--batch_size 1` or `LAB01_TRAIN_BATCH_SIZE=1`.
+- First run downloads HF weights; needs network.
+- MuJoCo closed-loop eval is not wired yet (see §6).
 
 ---
 
@@ -217,7 +258,7 @@ Placeholder (API may change when rollout wrapper lands):
 # TODO: replace with simstudio rollout script once available
 lerobot-eval \
   --policy.path=./outputs/train/lab01_pnp_smolvla/checkpoints/.../pretrained_model \
-  --rename_map='{"observation.images.top":"observation.images.camera1","observation.images.front":"observation.images.camera2","observation.images.wrist":"observation.images.camera3"}'
+  --rename_map='{"observation.images.camera_top":"observation.images.camera1","observation.images.camera_front":"observation.images.camera2","observation.images.camera_wrist":"observation.images.camera3"}'
 ```
 
 ---
@@ -232,6 +273,8 @@ lerobot-eval \
 | Rerun viewer not found | `source .venv-rocm/bin/activate` or use `dataset_viz --save` |
 | Rerun playback jumpy | Use `--save` + `rerun --memory-limit 4GB`, or `ffplay` on dataset mp4 |
 | Used `smoke-leader-teleop` for Rerun | Rerun only works with **record**, not `teleoperate` |
+| SmolVLA training OOM | `./labs/lab01_pnp/train.cmd --batch_size 1` |
+| `rename_map` / camera mismatch | Use `camera_top/front/wrist` keys (see §5 table) |
 
 ---
 
@@ -240,6 +283,7 @@ lerobot-eval \
 | File | Purpose |
 |------|---------|
 | `record.cmd` | One-command leader pick-and-place recording for this lab |
+| `train.cmd` | One-command SmolVLA fine-tune from `smolvla_base` |
 | `lab01_pnp.md` | This runbook |
 
 Related repo configs: `configs/so101_mujoco_pick_leader.yaml`
