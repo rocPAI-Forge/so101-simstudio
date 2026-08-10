@@ -209,8 +209,8 @@ lerobot-train \
   --output_dir=./outputs/train/lab01_pnp_smolvla \
   --job_name=lab01_pnp_smolvla \
   --rename_map='{"observation.images.camera_top":"observation.images.camera1","observation.images.camera_front":"observation.images.camera2","observation.images.camera_wrist":"observation.images.camera3"}' \
-  --batch_size=2 \
-  --steps=15000 \
+  --batch_size=4 \
+  --steps=7500 \
   --save_checkpoint=true \
   --save_freq=2000
 ```
@@ -233,14 +233,63 @@ LAB01_TRAIN_STEPS=20000 LAB01_TRAIN_BATCH_SIZE=1 ./labs/lab01_pnp/train.cmd
 ./labs/lab01_pnp/train.cmd --resume true
 ```
 
-Log: `train.log` at repo root. Checkpoints: `./outputs/train/lab01_pnp_smolvla/checkpoints/`.
+Log: `train.log` at repo root. Checkpoints: `./outputs/train/lab01_pnp_smolvla/checkpoints/` (override output dir with `LAB01_TRAIN_OUTPUT=...`).
 
 **Notes for 30-episode dataset**
 
-- ~14k frames: `steps=15000` is a reasonable first run; increase if loss still falling.
+- Default **`batch_size=4`, `steps=7500`** (~30k sample updates); see reference run below for wall time on Strix Halo.
 - OOM: `--batch_size 1` or `LAB01_TRAIN_BATCH_SIZE=1`.
 - First run downloads HF weights; needs network.
 - MuJoCo closed-loop eval is not wired yet (see §6).
+
+### Reference platform & software (Run 1)
+
+Measured on the machine used for the first full lab training run:
+
+| Item | Value |
+|------|-------|
+| Machine | AMD Strix Halo Laptop (Ryzen AI MAX+ 395) |
+| GPU | AMD Radeon 8060S (iGPU) |
+| PyTorch | 2.13 |
+| ROCm | 7.2 (`.venv-rocm` via `make rocm-sync`) |
+| LeRobot | 0.6.0 (pinned submodule commit `30da8e68`) |
+| Video decode | `pyav` (`torchcodec` fails on ROCm) |
+
+### Default training settings (`train.cmd`)
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Base policy | `lerobot/smolvla_base` | Use `--policy.path`, not `pretrained_path` |
+| `batch_size` | **4** | ~2.88 GB VRAM on Run 1; reduce to 1 if OOM |
+| `steps` | **7500** | ~30k sample updates (7500 × batch 4) |
+| `policy.scheduler_warmup_steps` | 500 | |
+| `policy.empty_cameras` | 1 | Pads fourth camera slot expected by base model |
+| `policy.push_to_hub` | false | Avoids HF repo_id requirement |
+| `dataset.video_backend` | pyav | Required on ROCm |
+| `save_freq` | 2000 | Checkpoints at 2k / 4k / 6k / final |
+| Dataset | 30 ep, 14265 frames @ 20 Hz | `alexhegit/so101-simstudio-pnp` |
+| Output (Run 1) | `./outputs/train/lab01_pnp_smolvla_bs4` | Set via `LAB01_TRAIN_OUTPUT=...` |
+
+Reproduce Run 1:
+
+```bash
+source .venv-rocm/bin/activate
+LAB01_TRAIN_OUTPUT=./outputs/train/lab01_pnp_smolvla_bs4 ./labs/lab01_pnp/train.cmd
+```
+
+### Training run log
+
+| Run | Platform | batch | steps | wall time | step/s | VRAM | final loss | checkpoint |
+|-----|----------|-------|-------|-----------|--------|------|------------|------------|
+| 1 | Strix Halo / 8060S iGPU | 4 | 7500 | **1h 54m** (2026-08-10 22:55 → 00:49) | ~**1.10** | ~**2.88 GB** | **0.159** (step 7400) | `./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/` |
+
+**Run 1 details**
+
+- **Speed:** ~1.10 step/s sustained (~4 samples/s with batch 4); `updt_s` ~0.90 s/step in logs.
+- **Loss curve:** dropped through warmup, then plateaued ~**0.15–0.16** from step 6600 onward; last logged value **0.159** at step 7400 (logs every 200 steps).
+- **Loss plot:** `labs/lab01_pnp/loss_curve_run1.png` (raw points: `loss_curve_run1.csv`, parsed from `train.log`).
+- **Checkpoints saved:** `002000`, `004000`, `006000`, `007500`, plus `last → 007500`.
+- **Inference path:** `./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model/`
 
 ---
 
