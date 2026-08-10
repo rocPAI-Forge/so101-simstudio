@@ -31,8 +31,8 @@
       <!-- Top camera: oblique view (-15,38,42) cm robot frame at home, ~28 deg from nadir -->
       <camera name="top" pos="0.05 0.26 0.42" quat="-0.535362 -0.133481 0.201765 0.809235" fovy="60"/>
 
-      <!-- Front camera - angled view showing robot and workspace in front -->
-      <camera name="front" pos="0.25 0.5 0.05" euler="-1.4 0.2 3.14159" fovy="65"/>
+      <!-- Front camera: front-right 3/4 view (12,52,26) cm robot frame at home -->
+      <camera name="front" pos="0.3200 0.4000 0.2600" quat="0.138452 0.058333 0.383862 0.911086" fovy="65"/>
       <light pos="0 0 3" dir="0 0 -1" diffuse="1 1 1" specular=".3 .3 .3"/>
       <light pos="0.2 0.3 .5" mode="targetbodycom" target="block" diffuse=".8 .8 .8" specular=".3 .3 .3"/>
       <geom name="floor" size="3 3 0.01" type="plane" material="grid"/>
