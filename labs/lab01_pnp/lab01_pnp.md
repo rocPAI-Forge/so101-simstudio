@@ -293,22 +293,52 @@ LAB01_TRAIN_OUTPUT=./outputs/train/lab01_pnp_smolvla_bs4 ./labs/lab01_pnp/train.
 
 ---
 
-## 6. Policy eval in MuJoCo — planned
+## 6. Policy eval in MuJoCo (sim2sim)
 
-Closed-loop rollout in sim is **not implemented yet** (see `ROADMAP.md`: policy rollout in MuJoCo). Planned steps:
+Closed-loop rollout: load a fine-tuned checkpoint, run inference at 20 Hz in MuJoCo with the same three cameras and position-control actions as training.
 
-1. Load checkpoint from `./outputs/train/lab01_pnp_smolvla`
-2. Run inference at 20 Hz against `so101_mujoco` with the same three cameras
-3. Measure success rate on random cube resets (`reset_cube: random`)
-
-Placeholder (API may change when rollout wrapper lands):
+### Quick eval (success rate)
 
 ```bash
-# TODO: replace with simstudio rollout script once available
-lerobot-eval \
-  --policy.path=./outputs/train/lab01_pnp_smolvla/checkpoints/.../pretrained_model \
-  --rename_map='{"observation.images.camera_top":"observation.images.camera1","observation.images.camera_front":"observation.images.camera2","observation.images.camera_wrist":"observation.images.camera3"}'
+source .venv-rocm/bin/activate
+./labs/lab01_pnp/eval.cmd
 ```
+
+Defaults: Run 1 checkpoint, **10 episodes × 60 s**, random cube reset, RTC inference (SmolVLA on iGPU).
+
+Manual equivalent:
+
+```bash
+python -m simstudio.scripts.eval \
+  --config configs/so101_mujoco_rollout.yaml \
+  --policy.path=./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model \
+  --eval.num_episodes=10
+```
+
+Success criterion: cube center inside container bounds in `simple_pick` scene (see `simstudio.common.eval_success`).
+
+### Single continuous rollout (no success tally)
+
+```bash
+python -m simstudio.scripts.rollout \
+  --config configs/so101_mujoco_rollout.yaml \
+  --strategy.type=base \
+  --policy.path=./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model \
+  --duration=60
+```
+
+### Options
+
+| Override | Example |
+|----------|---------|
+| Checkpoint | `LAB01_POLICY_PATH=./outputs/train/.../pretrained_model ./labs/lab01_pnp/eval.cmd` |
+| Episode count | `LAB01_EVAL_EPISODES=5 ./labs/lab01_pnp/eval.cmd` |
+| Sync inference (debug) | `./labs/lab01_pnp/eval.cmd --inference.type sync` |
+| Rerun viz | `./labs/lab01_pnp/eval.cmd --display_data true` |
+
+**Camera rename map** (same as training §5): `camera_top/front/wrist` → `camera1/2/3`.
+
+If inference is slower than 20 Hz, keep `--inference.type=rtc` (default in `so101_mujoco_rollout.yaml`).
 
 ---
 
@@ -333,6 +363,7 @@ lerobot-eval \
 |------|---------|
 | `record.cmd` | One-command leader pick-and-place recording for this lab |
 | `train.cmd` | One-command SmolVLA fine-tune from `smolvla_base` |
+| `eval.cmd` | One-command sim2sim policy eval (multi-episode success rate) |
 | `lab01_pnp.md` | This runbook |
 
 Related repo configs: `configs/so101_mujoco_pick_leader.yaml`
