@@ -1,0 +1,82 @@
+# =============================================================================
+# SO-101 SimStudio - Production pick-and-place recording (keyboard)
+# =============================================================================
+# Usage:
+#   source .venv-rocm/bin/activate
+#   python -m simstudio.scripts.record --config configs/so101_mujoco_pick_keyboard.yaml
+#
+# Episode controls (evdev, focus-independent): N/Right = save, R/Left = re-record, ESC/Q = stop
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: velocity
+  reset_mode: auto
+  reset_arm: home
+  reset_cube: fixed
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json
+  record_fps: 30
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+  lin_speed: 0.04
+  yaw_speed: 1.20
+  grip_speed: 0.7
+  ori_gain: 6.0
+  tilt_deadzone: 0.03
+  tilt_wmax: 6.0
+  lambda_pos: 0.01
+  lambda_tilt: 0.0001
+  vel_limit: 0.5
+  vel_limit_wrist: 8.0
+  smooth_dq: 0.30
+  smooth_dq_wrist: 0.08
+  wrist_gff_gain: 0.5
+  table_z: 0.0
+  clearance: 0.07
+  ee_site_name: wrist_site
+  tool_axis_site: [0.0, -1.0, 0.0]
+
+teleop:
+  type: so101_keyboard
+
+dataset:
+  repo_id: alexhegit/so101_pick_keyboard
+  root: ./datasets/so101_pick_keyboard
+  single_task: "Pick up the cube and place it in the box."
+  fps: 30
+  episode_time_s: 90
+  reset_time_s: 3
+  num_episodes: 50
+  video: true
+  push_to_hub: false
+  private: false
+  tags: [so101, mujoco, pick-place, keyboard]
+  num_image_writer_processes: 0
+  num_image_writer_threads_per_camera: 4
+  video_encoding_batch_size: 1
+  streaming_encoding: false
+  encoder_queue_maxsize: 30
+  encoder_threads: null
+  rgb_encoder:
+    vcodec: libsvtav1
+    pix_fmt: yuv420p
+    g: 2
+    crf: 28
+    preset: 12
+    fast_decode: 0
+    video_backend: pyav
+    extra_options: {}
+
+display_data: false
+display_mode: rerun
+display_ip: null
+display_port: null
+display_compressed_images: false
+play_sounds: false
+resume: false

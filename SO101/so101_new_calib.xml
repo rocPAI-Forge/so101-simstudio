@@ -121,8 +121,10 @@
                 <geom type="mesh" class="collision" pos="8.32667e-17 -0.000218214 0.000949706" quat="0 1 0 0" mesh="wrist_roll_follower_so101_v1_hull_11"/>
                 <!-- Frame gripperframe -->
                 <site group="3" name="gripperframe" pos="-0.0079 -0.000218121 -0.0981274" quat="0.707107 -0 0.707107 -2.37788e-17"/>
-                <!-- Wrist-mounted camera - mounted higher up on arm, points down to see pick target -->
-                <camera name="wrist" pos="0.0 0.01 -0.04" quat="1 0 0 0" fovy="65"/>
+                <!-- Wrist camera (fixed jaw / gripper body), spec at home in robot frame:
+                     lens offset from gripperframe (fixed fingertip ref): (-5.0, -4.5, 0) cm;
+                     look in XY plane, +40 deg from +Y. Parent: gripper (not moving_jaw). -->
+                <camera name="wrist" pos="-0.0103 0.0497 -0.0531" quat="0.680 -0.236 -0.248 -0.648" fovy="65"/>
                 <!-- Link moving_jaw_so101_v1 -->
                 <body name="moving_jaw_so101_v1" pos="0.0202 0.0188 -0.0234" quat="0.707107 0.707107 -1.85362e-08 1.85362e-08">
                   <!-- Joint from gripper to moving_jaw_so101_v1 -->
