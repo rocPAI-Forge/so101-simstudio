@@ -171,11 +171,66 @@ def _reset_pause(robot: SO101MujocoRobot, reset_time_s: float, fps: float) -> No
         precise_sleep(1.0 / fps)
 
 
-def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], rename_map: dict) -> None:
-    """Align normalizer ``observation.state`` stats with the 6-dim policy input.
+def _policy_state_dim(ctx: Any) -> int | None:
+    """Return the policy's expected ``observation.state`` dimension, if any."""
+    policy_cfg = ctx.policy.policy.config
+    robot_state = getattr(policy_cfg, "robot_state_feature", None)
+    if robot_state is not None:
+        return int(robot_state.shape[0])
+    input_features = getattr(policy_cfg, "input_features", {}) or {}
+    state_feat = input_features.get("observation.state")
+    if state_feat is not None:
+        return int(state_feat.shape[0])
+    return None
 
-    Training checkpoints may embed 15-dim dataset stats (pos+vel+ee) while rollout
-    feeds 6 joint positions — slice stats to match.
+
+def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
+    """Include vel/ee in rollout ``observation.state`` when the policy expects them.
+
+    LeRobot rollout only routes ``*.pos`` joint keys to the policy by default.
+    ACT trained on our dataset uses 15-dim state (pos+vel+ee).
+    """
+    from lerobot.utils.constants import OBS_STR
+    from lerobot.utils.feature_utils import hw_to_dataset_features
+
+    policy_dim = _policy_state_dim(ctx)
+    if policy_dim is None:
+        return
+
+    current = ctx.data.dataset_features.get("observation.state", {})
+    current_dim = int(current.get("shape", [0])[0]) if current else 0
+    if current_dim >= policy_dim:
+        return
+
+    obs_hw = {
+        k: v
+        for k, v in robot.observation_features.items()
+        if isinstance(v, tuple) or v is float
+    }
+    state_features = hw_to_dataset_features(obs_hw, OBS_STR)
+    state_names = state_features["observation.state"]["names"]
+    if len(state_names) < policy_dim:
+        logger.warning(
+            "Robot observation has %d state keys but policy expects %d",
+            len(state_names),
+            policy_dim,
+        )
+        return
+
+    ctx.data.dataset_features.update(state_features)
+    ctx.data.hw_features.update(state_features)
+    logger.info(
+        "Expanded rollout observation.state from %d to %d dims for policy inference",
+        current_dim,
+        policy_dim,
+    )
+
+
+def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], rename_map: dict) -> None:
+    """Align normalizer ``observation.state`` stats with the policy input dimension.
+
+    SmolVLA uses 6 joint positions at inference; slice 15-dim dataset stats.
+    ACT uses the full 15-dim dataset state — keep stats unsliced.
     """
     from lerobot.datasets import LeRobotDatasetMetadata
     from lerobot.processor.normalize_processor import NormalizerProcessorStep
@@ -183,7 +238,7 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
 
     repo_id = eval_settings["stats_dataset_repo_id"]
     root = eval_settings.get("stats_dataset_root")
-    state_dim = int(eval_settings.get("state_dim", 6))
+    state_dim = _policy_state_dim(ctx) or int(eval_settings.get("state_dim", 6))
 
     ds_meta = LeRobotDatasetMetadata(repo_id, root=root)
     stats = rename_stats(ds_meta.stats, rename_map)
@@ -225,8 +280,10 @@ def eval_main(cfg: RolloutConfig) -> None:
 
     signal_handler = ProcessSignalHandler(use_threads=True, display_pid=False)
     ctx = build_rollout_context(cfg, signal_handler.shutdown_event)
-    _fix_preprocessor_normalizer_stats(ctx, eval_settings, cfg.rename_map)
     robot = ctx.hardware.robot_wrapper
+    inner_robot = getattr(robot, "inner", robot)
+    _expand_rollout_state_features(ctx, inner_robot)
+    _fix_preprocessor_normalizer_stats(ctx, eval_settings, cfg.rename_map)
     inner = getattr(robot, "inner", robot)
     if not isinstance(inner, SO101MujocoRobot):
         raise TypeError(f"eval.py expects so101_mujoco robot, got {type(inner)}")

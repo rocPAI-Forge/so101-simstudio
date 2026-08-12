@@ -1,0 +1,55 @@
+# =============================================================================
+# SO-101 SimStudio — ACT sim2sim policy rollout / eval
+# =============================================================================
+# Closed-loop inference in MuJoCo (position control, 20 Hz, three cameras).
+# Uses dataset camera names directly (no SmolVLA rename_map). Sync inference.
+# reset_arm: follow matches leader recording (configs/so101_mujoco_pick_leader.yaml).
+#
+# Usage:
+#   python -m simstudio.scripts.eval --config configs/so101_mujoco_rollout_act.yaml \
+#     --policy.path=./outputs/train/lab01_pnp_act/checkpoints/050000/pretrained_model \
+#     --eval.num_episodes=20 --robot.render_window=false
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: position
+  home_gripper: -0.1
+  reset_mode: auto
+  reset_arm: follow
+  reset_cube: random
+  cube_random_x_range: [0.03, 0.11]
+  cube_random_y_range: [0.03, 0.10]
+  cube_random_z: 0.0125
+  cube_random_yaw_range: [-45.0, 45.0]
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json
+  record_fps: 20
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+
+fps: 20
+task: "Pick up the cube and place it in the box."
+
+strategy:
+  type: base
+
+inference:
+  type: sync
+
+play_sounds: false
+display_data: false
+display_mode: rerun
+return_to_initial_position: false
+
+eval:
+  num_episodes: 20
+  episode_time_s: 60
+  reset_time_s: 3
+  stats_dataset_repo_id: alexhegit/so101-simstudio-pnp
+  stats_dataset_root: ./datasets/so101-simstudio-pnp
