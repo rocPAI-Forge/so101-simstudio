@@ -291,6 +291,22 @@ LAB01_TRAIN_OUTPUT=./outputs/train/lab01_pnp_smolvla_bs4 ./labs/lab01_pnp/train.
 - **Checkpoints saved:** `002000`, `004000`, `006000`, `007500`, plus `last → 007500`.
 - **Inference path:** `./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model/`
 
+### ACT training (Run 1)
+
+```bash
+source .venv-rocm/bin/activate
+./labs/lab01_pnp/train_act.cmd
+```
+
+| Run | Platform | batch | steps | wall time | step/s | VRAM | final loss | checkpoint |
+|-----|----------|-------|-------|-----------|--------|------|------------|------------|
+| 1 | Strix Halo / 8060S iGPU | 8 | 10000 | **~5h 30m** | ~**0.50** | ~**5.8 GB** | **0.249** (step 10000) | `./outputs/train/lab01_pnp_act/checkpoints/010000/` |
+| 2 (resume) | Strix Halo / 8060S iGPU | 8 | 30000 | **~10h 50m** (10k→30k) | ~**0.51** | ~**5.8 GB** | **0.130** (step 30000) | `./outputs/train/lab01_pnp_act/checkpoints/030000/` |
+
+Also saved: Run 1 `005000`; Run 2 `020000`, `030000`, `last → 030000`. Logs: `train_act.log`, `train_act_run2.log`.
+
+**ACT eval (20 episodes, headless, `reset_arm: follow`):** checkpoint `030000` → **7/20 (35%)**. Successful episodes place the cube in the container (~0.30, 0.19–0.21).
+
 ---
 
 ## 6. Policy eval in MuJoCo (sim2sim)
@@ -340,6 +356,29 @@ python -m simstudio.scripts.rollout \
 
 If inference is slower than 20 Hz, keep `--inference.type=rtc` (default in `so101_mujoco_rollout.yaml`).
 
+### ACT eval
+
+```bash
+./labs/lab01_pnp/eval_act.cmd   # 20 episodes, headless, sync inference
+```
+
+Uses `configs/so101_mujoco_rollout_act.yaml` (no camera rename_map; dataset camera names directly).
+
+| Policy | Episodes | Success |
+|--------|----------|---------|
+| SmolVLA 7500-step (GUI) | 10 | 0/10 (0%) — arm reaches cube, grasp fails |
+| ACT 10000-step (headless) | 20 | **0/20 (0%)** |
+| ACT 10000-step (`reset_arm: follow`, headless) | 10 | **0/10 (0%)** — reset 对齐后仍无成功 |
+| ACT 30000-step (`reset_arm: follow`, headless) | 20 | **7/20 (35%)** — default `n_action_steps=100` |
+| ACT 30000-step inference sweep (headless, 20 ep each) | | |
+| → `n_action_steps=5` | 20 | 0/20 (0%) |
+| → `n_action_steps=10` | 20 | 1/20 (5%) |
+| → `n_action_steps=20` | 20 | 4/20 (20%) |
+| → `n_action_steps=50` | 20 | 5/20 (25%) |
+| → `n_action_steps=1` + `temporal_ensemble_coeff=0.01` | 20 | 4/20 (20%) |
+
+Sweep logs: `labs/lab01_pnp/sweep_logs/` (2026-08-12). **Default `n_action_steps=100` remains best** — shorter replan intervals hurt (model trained for 100-step open-loop chunks).
+
 ---
 
 ## Troubleshooting
@@ -363,7 +402,9 @@ If inference is slower than 20 Hz, keep `--inference.type=rtc` (default in `so10
 |------|---------|
 | `record.cmd` | One-command leader pick-and-place recording for this lab |
 | `train.cmd` | One-command SmolVLA fine-tune from `smolvla_base` |
-| `eval.cmd` | One-command sim2sim policy eval (multi-episode success rate) |
+| `train_act.cmd` | One-command ACT imitation learning on pnp dataset |
+| `eval.cmd` | One-command sim2sim SmolVLA eval (multi-episode success rate) |
+| `eval_act.cmd` | One-command sim2sim ACT eval (20 episodes, headless) |
 | `lab01_pnp.md` | This runbook |
 
 Related repo configs: `configs/so101_mujoco_pick_leader.yaml`
