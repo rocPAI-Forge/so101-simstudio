@@ -1,8 +1,7 @@
 #!/bin/bash
-# Lab 01 — ACT imitation learning on so101-simstudio-lab01-pnp.
+# Lab 01 — ACT imitation learning.
 #
-# Prereq: dataset at ./datasets/so101-simstudio-lab01-pnp (validate first).
-#         .venv-rocm with lerobot (make rocm-sync).
+# Defaults: labs/lab01_pnp/_env.sh (override via LAB01_* env vars).
 #
 # Usage (from repo root):
 #   source .venv-rocm/bin/activate
@@ -11,7 +10,9 @@
 # Options (pass through to lerobot-train):
 #   ./labs/lab01_pnp/train_act.cmd --steps 100000 --batch_size 16
 set -euo pipefail
-source "$(dirname "$0")/../../scripts/quicktest/_common.sh"
+_LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
+source "$_LAB01_DIR/_env.sh"
 
 LEROBOT_TRAIN="$(dirname "$PYTHON")/lerobot-train"
 if [[ ! -x "$LEROBOT_TRAIN" ]]; then
@@ -19,15 +20,10 @@ if [[ ! -x "$LEROBOT_TRAIN" ]]; then
     exit 1
 fi
 
-OUTPUT_DIR="${LAB01_ACT_OUTPUT:-./outputs/train/lab01_pnp_act}"
-STEPS="${LAB01_ACT_STEPS:-10000}"
-BATCH_SIZE="${LAB01_ACT_BATCH_SIZE:-8}"
-SAVE_FREQ="${LAB01_ACT_SAVE_FREQ:-10000}"
-
 echo "=== Lab 01: ACT training ==="
-echo "Dataset:  ./datasets/so101-simstudio-lab01-pnp"
-echo "Output:   $OUTPUT_DIR"
-echo "Steps:    $STEPS  batch_size: $BATCH_SIZE"
+echo "Dataset:  $LAB01_DATASET_ROOT  ($LAB01_DATASET_REPO_ID)"
+echo "Output:   $LAB01_ACT_OUTPUT"
+echo "Steps:    $LAB01_ACT_STEPS  batch_size: $LAB01_ACT_BATCH_SIZE"
 echo "Log:      $REPO_ROOT/train_act.log"
 echo ""
 
@@ -35,15 +31,15 @@ set +e
 "$LEROBOT_TRAIN" \
     --policy.type=act \
     --policy.push_to_hub=false \
-    --dataset.repo_id=alexhegit/so101-simstudio-lab01-pnp \
-    --dataset.root=./datasets/so101-simstudio-lab01-pnp \
+    --dataset.repo_id="$LAB01_DATASET_REPO_ID" \
+    --dataset.root="$LAB01_DATASET_ROOT" \
     --dataset.video_backend=pyav \
-    --output_dir="$OUTPUT_DIR" \
+    --output_dir="$LAB01_ACT_OUTPUT" \
     --job_name=lab01_pnp_act \
-    --batch_size="$BATCH_SIZE" \
-    --steps="$STEPS" \
+    --batch_size="$LAB01_ACT_BATCH_SIZE" \
+    --steps="$LAB01_ACT_STEPS" \
     --save_checkpoint=true \
-    --save_freq="$SAVE_FREQ" \
+    --save_freq="$LAB01_ACT_SAVE_FREQ" \
     "$@" \
     2>&1 | tee train_act.log
 status=${PIPESTATUS[0]}
@@ -58,4 +54,4 @@ fi
 
 echo ""
 echo "Training complete. Latest checkpoint:"
-ls -td "$OUTPUT_DIR"/checkpoints/*/pretrained_model 2>/dev/null | head -1
+ls -td "$LAB01_ACT_OUTPUT"/checkpoints/*/pretrained_model 2>/dev/null | head -1

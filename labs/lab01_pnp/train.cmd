@@ -1,9 +1,7 @@
 #!/bin/bash
-# Lab 01 — SmolVLA fine-tune from lerobot/smolvla_base on so101-simstudio-lab01-pnp.
+# Lab 01 — SmolVLA fine-tune from lerobot/smolvla_base.
 #
-# Prereq: dataset at ./datasets/so101-simstudio-lab01-pnp (validate first).
-#         .venv-rocm with lerobot[smolvla] (make rocm-sync).
-#         Network for first-run HF weight download.
+# Defaults: labs/lab01_pnp/_env.sh (override via LAB01_* env vars).
 #
 # Usage (from repo root):
 #   source .venv-rocm/bin/activate
@@ -13,7 +11,9 @@
 #   ./labs/lab01_pnp/train.cmd --steps 20000 --batch_size 1
 #   ./labs/lab01_pnp/train.cmd --resume true
 set -euo pipefail
-source "$(dirname "$0")/../../scripts/quicktest/_common.sh"
+_LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
+source "$_LAB01_DIR/_env.sh"
 
 LEROBOT_TRAIN="$(dirname "$PYTHON")/lerobot-train"
 if [[ ! -x "$LEROBOT_TRAIN" ]]; then
@@ -21,20 +21,11 @@ if [[ ! -x "$LEROBOT_TRAIN" ]]; then
     exit 1
 fi
 
-OUTPUT_DIR="${LAB01_TRAIN_OUTPUT:-./outputs/train/lab01_pnp_smolvla}"
-STEPS="${LAB01_TRAIN_STEPS:-7500}"
-BATCH_SIZE="${LAB01_TRAIN_BATCH_SIZE:-4}"
-WARMUP="${LAB01_TRAIN_WARMUP:-500}"
-SAVE_FREQ="${LAB01_TRAIN_SAVE_FREQ:-2000}"
-
-# Dataset keys: camera_top/front/wrist → smolvla_base: camera1/2/3 (+ empty_cameras=1)
-RENAME_MAP='{"observation.images.camera_top":"observation.images.camera1","observation.images.camera_front":"observation.images.camera2","observation.images.camera_wrist":"observation.images.camera3"}'
-
 echo "=== Lab 01: SmolVLA fine-tune ==="
 echo "Base:     lerobot/smolvla_base"
-echo "Dataset:  ./datasets/so101-simstudio-lab01-pnp"
-echo "Output:   $OUTPUT_DIR"
-echo "Steps:    $STEPS  batch_size: $BATCH_SIZE  warmup: $WARMUP"
+echo "Dataset:  $LAB01_DATASET_ROOT  ($LAB01_DATASET_REPO_ID)"
+echo "Output:   $LAB01_TRAIN_OUTPUT"
+echo "Steps:    $LAB01_TRAIN_STEPS  batch_size: $LAB01_TRAIN_BATCH_SIZE  warmup: $LAB01_TRAIN_WARMUP"
 echo "Log:      $REPO_ROOT/train.log"
 echo ""
 
@@ -43,17 +34,17 @@ set +e
     --policy.path=lerobot/smolvla_base \
     --policy.push_to_hub=false \
     --policy.empty_cameras=1 \
-    --policy.scheduler_warmup_steps="$WARMUP" \
-    --dataset.repo_id=alexhegit/so101-simstudio-lab01-pnp \
-    --dataset.root=./datasets/so101-simstudio-lab01-pnp \
+    --policy.scheduler_warmup_steps="$LAB01_TRAIN_WARMUP" \
+    --dataset.repo_id="$LAB01_DATASET_REPO_ID" \
+    --dataset.root="$LAB01_DATASET_ROOT" \
     --dataset.video_backend=pyav \
-    --output_dir="$OUTPUT_DIR" \
+    --output_dir="$LAB01_TRAIN_OUTPUT" \
     --job_name=lab01_pnp_smolvla \
-    --rename_map="$RENAME_MAP" \
-    --batch_size="$BATCH_SIZE" \
-    --steps="$STEPS" \
+    --rename_map="$LAB01_RENAME_MAP" \
+    --batch_size="$LAB01_TRAIN_BATCH_SIZE" \
+    --steps="$LAB01_TRAIN_STEPS" \
     --save_checkpoint=true \
-    --save_freq="$SAVE_FREQ" \
+    --save_freq="$LAB01_TRAIN_SAVE_FREQ" \
     "$@" \
     2>&1 | tee train.log
 status=${PIPESTATUS[0]}

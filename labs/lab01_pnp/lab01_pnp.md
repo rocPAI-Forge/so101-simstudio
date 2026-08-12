@@ -17,6 +17,22 @@ Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, insp
 | Cameras | `front`, `top`, `wrist` (640×480, wrist aligned Isaac `gripper_cam`) |
 | Teleop | Leader arm, 1:1 joint position (`action_mode: position`) |
 
+**Script defaults** live in [`labs/lab01_pnp/_env.sh`](_env.sh). Override via environment:
+
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `LAB01_DATASET_NAME` | `so101-simstudio-lab01-pnp` | record, train, eval |
+| `LAB01_DATASET_HF_USER` | `alexhegit` | record, train, eval |
+| `LAB01_DATASET_REPO_ID` | `$LAB01_DATASET_HF_USER/$LAB01_DATASET_NAME` | record, train, eval |
+| `LAB01_DATASET_ROOT` | `./datasets/$NAME` | record, train, eval |
+| `LAB01_NUM_EPISODES` | `50` | record |
+| `LAB01_EPISODE_TIME_S` | `90` | record |
+| `LAB01_RESET_TIME_S` | `5` | record |
+| `LAB01_TRAIN_OUTPUT` / `LAB01_ACT_OUTPUT` | see `_env.sh` | train / train_act |
+| `LAB01_POLICY_PATH` / `LAB01_ACT_POLICY_PATH` | unset = latest checkpoint under train output | eval / eval_act |
+
+Example: `LAB01_DATASET_NAME=my-run ./labs/lab01_pnp/record.cmd`
+
 ---
 
 ## Prerequisites
@@ -93,7 +109,7 @@ python -m simstudio.scripts.record \
 **Fresh re-record**
 
 ```bash
-rm -rf ./datasets/so101-simstudio-lab01-pnp
+rm -rf ./datasets/so101-simstudio-lab01-pnp   # or: rm -rf "$LAB01_DATASET_ROOT"
 ./labs/lab01_pnp/record.cmd
 ```
 

@@ -26,7 +26,7 @@ def _preselect_mujoco_gl_eval(argv: list[str]) -> None:
             headless = headless or argv[i + 1].lower() in ("false", "0")
         elif arg.startswith("--robot.render_window="):
             headless = headless or arg.split("=", 1)[1].lower() in ("false", "0")
-    if headless:
+    if headless and not os.environ.get("MUJOCO_GL"):
         os.environ["MUJOCO_GL"] = "egl"
 
 
@@ -92,6 +92,8 @@ def _parse_eval_overrides(argv: list[str]) -> dict[str, Any]:
             overrides[name] = int(value)
         elif name in ("episode_time_s", "reset_time_s"):
             overrides[name] = float(value)
+        elif name in ("stats_dataset_repo_id", "stats_dataset_root"):
+            overrides[name] = value
         i += 1
     return overrides
 
