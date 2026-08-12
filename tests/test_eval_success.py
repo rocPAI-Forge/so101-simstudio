@@ -2,7 +2,7 @@ from simstudio.common.eval_success import check_pick_success
 
 
 def test_pick_success_inside_container():
-    assert check_pick_success((0.3, 0.2, 0.015))
+    assert check_pick_success((0.07, 0.065, 0.015))
 
 
 def test_pick_success_outside_xy():
@@ -10,7 +10,7 @@ def test_pick_success_outside_xy():
 
 
 def test_pick_success_too_high():
-    assert not check_pick_success((0.3, 0.2, 0.05))
+    assert not check_pick_success((0.07, 0.065, 0.05))
 
 
 def test_pick_success_none():

@@ -13,7 +13,7 @@
       <geom friction="1.0 0.005 0.0001" solimp="0.99 0.99 0.001" solref="0.01 1"/>
     </default>
 
-    <statistic center="0.2 0.15 0.2" extent=".6"/>
+    <statistic center="0.19 0.13 0.15" extent=".55"/>
 
     <visual>
       <headlight diffuse=".4 .4 .4" ambient=".5 .5 .5"/>
@@ -37,8 +37,8 @@
       <light pos="0.2 0.3 .5" mode="targetbodycom" target="block" diffuse=".8 .8 .8" specular=".3 .3 .3"/>
       <geom name="floor" size="3 3 0.01" type="plane" material="grid"/>
 
-      <!-- Block for pick task - positioned in robot's forward workspace (+Y direction) -->
-      <body name="block" pos="0.2 0.15 .015">
+      <!-- Block default at former container location (cube spawn swapped) -->
+      <body name="block" pos="0.3 0.2 .015">
         <freejoint name="block"/>
         <!-- Block dimensions: 2cm x 3cm x 1.5cm -->
         <!-- High friction for reliable grasping -->
@@ -50,8 +50,8 @@
               margin="0.003" condim="4"/>
       </body>
 
-      <!-- Container for drop task - positioned to the right of robot -->
-      <body name="container" pos="0.3 0.2 0.01">
+      <!-- Container at former cube spawn centre (cube/container positions swapped) -->
+      <body name="container" pos="0.07 0.065 0.01">
         <!-- Container dimensions: 9cm x 9cm x 2cm height (inner 8cm x 8cm) -->
         <!-- Wall thickness: 0.5cm, Wall height: 2cm -->
 

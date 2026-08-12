@@ -18,8 +18,8 @@ robot:
   reset_mode: auto
   reset_arm: follow
   reset_cube: random
-  cube_random_x_range: [0.03, 0.11]
-  cube_random_y_range: [0.03, 0.10]
+  cube_random_x_range: [0.26, 0.34]
+  cube_random_y_range: [0.165, 0.235]
   cube_random_z: 0.0125
   cube_random_yaw_range: [-45.0, 45.0]
   xml_path: SO101/scenes/simple_pick/scene.xml

@@ -96,7 +96,7 @@ class SO101MujocoConfig(RobotConfig):
 
     # Random cube placement bounds (metres / degrees), used when reset_cube == "random".
     # Defaults cover the graspable rectangle observed in cube_positions.json.
-    cube_random_x_range: list[float] = field(default_factory=lambda: [0.03, 0.11])
-    cube_random_y_range: list[float] = field(default_factory=lambda: [0.03, 0.10])
+    cube_random_x_range: list[float] = field(default_factory=lambda: [0.26, 0.34])
+    cube_random_y_range: list[float] = field(default_factory=lambda: [0.165, 0.235])
     cube_random_z: float = 0.0125
     cube_random_yaw_range: list[float] = field(default_factory=lambda: [0.0, 0.0])
