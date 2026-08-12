@@ -52,8 +52,8 @@ DEFAULT_EVAL = {
     "num_episodes": 10,
     "episode_time_s": 60.0,
     "reset_time_s": 3.0,
-    "stats_dataset_repo_id": "alexhegit/so101-simstudio-pnp",
-    "stats_dataset_root": "./datasets/so101-simstudio-pnp",
+    "stats_dataset_repo_id": "alexhegit/so101-simstudio-lab01-pnp",
+    "stats_dataset_root": "./datasets/so101-simstudio-lab01-pnp",
     "state_dim": 6,
 }
 

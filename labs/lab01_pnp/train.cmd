@@ -1,7 +1,7 @@
 #!/bin/bash
-# Lab 01 — SmolVLA fine-tune from lerobot/smolvla_base on so101-simstudio-pnp.
+# Lab 01 — SmolVLA fine-tune from lerobot/smolvla_base on so101-simstudio-lab01-pnp.
 #
-# Prereq: dataset at ./datasets/so101-simstudio-pnp (validate first).
+# Prereq: dataset at ./datasets/so101-simstudio-lab01-pnp (validate first).
 #         .venv-rocm with lerobot[smolvla] (make rocm-sync).
 #         Network for first-run HF weight download.
 #
@@ -32,7 +32,7 @@ RENAME_MAP='{"observation.images.camera_top":"observation.images.camera1","obser
 
 echo "=== Lab 01: SmolVLA fine-tune ==="
 echo "Base:     lerobot/smolvla_base"
-echo "Dataset:  ./datasets/so101-simstudio-pnp"
+echo "Dataset:  ./datasets/so101-simstudio-lab01-pnp"
 echo "Output:   $OUTPUT_DIR"
 echo "Steps:    $STEPS  batch_size: $BATCH_SIZE  warmup: $WARMUP"
 echo "Log:      $REPO_ROOT/train.log"
@@ -44,8 +44,8 @@ set +e
     --policy.push_to_hub=false \
     --policy.empty_cameras=1 \
     --policy.scheduler_warmup_steps="$WARMUP" \
-    --dataset.repo_id=alexhegit/so101-simstudio-pnp \
-    --dataset.root=./datasets/so101-simstudio-pnp \
+    --dataset.repo_id=alexhegit/so101-simstudio-lab01-pnp \
+    --dataset.root=./datasets/so101-simstudio-lab01-pnp \
     --dataset.video_backend=pyav \
     --output_dir="$OUTPUT_DIR" \
     --job_name=lab01_pnp_smolvla \

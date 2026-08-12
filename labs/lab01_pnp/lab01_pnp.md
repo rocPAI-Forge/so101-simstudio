@@ -1,18 +1,20 @@
 # Lab 01 — Leader Teleop Pick-and-Place Dataset
 
-Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, inspect trajectories, replay in sim, then (planned) train SmolVLA and evaluate in MuJoCo.
+Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, inspect trajectories, replay in sim, then train ACT/SmolVLA and evaluate in MuJoCo.
+
+> **Dataset v1 deprecated:** `so101-simstudio-pnp` (old wrist camera + original cube/container layout) is no longer used. Lab 01 now uses **`so101-simstudio-lab01-pnp`** only (new wrist cam, swapped spawn layout).
 
 | Item | Value |
 |------|-------|
 | Scene | `SO101/scenes/simple_pick/scene.xml` |
 | Task | Pick up the cube and place it in the box. |
-| Dataset root | `./datasets/so101-simstudio-pnp` |
-| Dataset repo_id | `alexhegit/so101-simstudio-pnp` |
-| Episodes | 30 |
-| Episode length | 60 s max (save early with `N` / `→`) |
+| Dataset root | `./datasets/so101-simstudio-lab01-pnp` |
+| Dataset repo_id | `alexhegit/so101-simstudio-lab01-pnp` |
+| Episodes | 50 |
+| Episode length | 90 s max (save early with `N` / `→`) |
 | Reset window | 5 s between episodes |
 | Record FPS | 20 Hz (leader serial stability) |
-| Cameras | `front`, `top`, `wrist` (640×480) |
+| Cameras | `front`, `top`, `wrist` (640×480, wrist aligned Isaac `gripper_cam`) |
 | Teleop | Leader arm, 1:1 joint position (`action_mode: position`) |
 
 ---
@@ -59,10 +61,10 @@ Equivalent manual command:
 python -m simstudio.scripts.record \
   --config configs/so101_mujoco_pick_leader.yaml \
   --view_mode mujoco \
-  --dataset.root ./datasets/so101-simstudio-pnp \
-  --dataset.repo_id alexhegit/so101-simstudio-pnp \
-  --dataset.num_episodes 30 \
-  --dataset.episode_time_s 60 \
+  --dataset.root ./datasets/so101-simstudio-lab01-pnp \
+  --dataset.repo_id alexhegit/so101-simstudio-lab01-pnp \
+  --dataset.num_episodes 50 \
+  --dataset.episode_time_s 90 \
   --dataset.reset_time_s 5 \
   --resume false
 ```
@@ -91,7 +93,7 @@ python -m simstudio.scripts.record \
 **Fresh re-record**
 
 ```bash
-rm -rf ./datasets/so101-simstudio-pnp
+rm -rf ./datasets/so101-simstudio-lab01-pnp
 ./labs/lab01_pnp/record.cmd
 ```
 
@@ -105,17 +107,17 @@ Automated integrity check (frame count, 20 Hz timestamps, action ranges, videos)
 
 ```bash
 python -m simstudio.scripts.validate_dataset \
-  --root ./datasets/so101-simstudio-pnp
+  --root ./datasets/so101-simstudio-lab01-pnp
 ```
 
-Expect `PASSED` with 30 episodes and LeRobot `codebase_version: v3.0`.
+Expect `PASSED` with 50 episodes and LeRobot `codebase_version: v3.0`.
 
 Quick metadata:
 
 ```bash
 python -c "
 import json
-info = json.load(open('datasets/so101-simstudio-pnp/meta/info.json'))
+info = json.load(open('datasets/so101-simstudio-lab01-pnp/meta/info.json'))
 print('task:', info.get('single_task'))
 print('episodes:', info['total_episodes'], 'frames:', info['total_frames'], 'fps:', info['fps'])
 "
@@ -131,8 +133,8 @@ print('episodes:', info['total_episodes'], 'frames:', info['total_frames'], 'fps
 source .venv-rocm/bin/activate   # ensures rerun CLI on PATH
 
 python -m simstudio.scripts.dataset_viz \
-  --repo-id alexhegit/so101-simstudio-pnp \
-  --root ./datasets/so101-simstudio-pnp \
+  --repo-id alexhegit/so101-simstudio-lab01-pnp \
+  --root ./datasets/so101-simstudio-lab01-pnp \
   --episode 0
 ```
 
@@ -140,18 +142,18 @@ Export `.rrd` for smoother playback (avoids live gRPC 1 GiB memory drops):
 
 ```bash
 python -m simstudio.scripts.dataset_viz \
-  --repo-id alexhegit/so101-simstudio-pnp \
-  --root ./datasets/so101-simstudio-pnp \
+  --repo-id alexhegit/so101-simstudio-lab01-pnp \
+  --root ./datasets/so101-simstudio-lab01-pnp \
   --episode 0 \
   --save --output-dir ./outputs/viz
 
-rerun --memory-limit 4GB ./outputs/viz/alexhegit_so101-simstudio-pnp_episode_0.rrd
+rerun --memory-limit 4GB ./outputs/viz/alexhegit_so101-simstudio-lab01-pnp_episode_0.rrd
 ```
 
 ### MP4 spot-check (smoothest video preview)
 
 ```bash
-ffplay -autoexit datasets/so101-simstudio-pnp/videos/observation.images.camera_front/chunk-000/file-000.mp4
+ffplay -autoexit datasets/so101-simstudio-lab01-pnp/videos/observation.images.camera_front/chunk-000/file-000.mp4
 ```
 
 **Note:** Rerun live mode can look accelerated or jumpy when uncompressed RGB exceeds the viewer memory limit. That is a visualization artifact, not a dataset defect.
@@ -167,8 +169,8 @@ Replay recorded joint trajectories in the same sim scene.
 ```bash
 python -m simstudio.scripts.replay \
   --config configs/so101_mujoco_replay.yaml \
-  --dataset.root ./datasets/so101-simstudio-pnp \
-  --dataset.repo_id alexhegit/so101-simstudio-pnp \
+  --dataset.root ./datasets/so101-simstudio-lab01-pnp \
+  --dataset.repo_id alexhegit/so101-simstudio-lab01-pnp \
   --dataset.episode 0
 ```
 
@@ -177,8 +179,8 @@ python -m simstudio.scripts.replay \
 ```bash
 python -m simstudio.scripts.replay_multi \
   --config configs/so101_mujoco_replay_multi.yaml \
-  --dataset.root ./datasets/so101-simstudio-pnp \
-  --dataset.repo_id alexhegit/so101-simstudio-pnp \
+  --dataset.root ./datasets/so101-simstudio-lab01-pnp \
+  --dataset.repo_id alexhegit/so101-simstudio-lab01-pnp \
   --dataset.episodes all
 ```
 
@@ -203,8 +205,8 @@ lerobot-train \
   --policy.push_to_hub=false \
   --policy.empty_cameras=1 \
   --policy.scheduler_warmup_steps=500 \
-  --dataset.repo_id=alexhegit/so101-simstudio-pnp \
-  --dataset.root=./datasets/so101-simstudio-pnp \
+  --dataset.repo_id=alexhegit/so101-simstudio-lab01-pnp \
+  --dataset.root=./datasets/so101-simstudio-lab01-pnp \
   --dataset.video_backend=pyav \
   --output_dir=./outputs/train/lab01_pnp_smolvla \
   --job_name=lab01_pnp_smolvla \
@@ -267,7 +269,7 @@ Measured on the machine used for the first full lab training run:
 | `policy.push_to_hub` | false | Avoids HF repo_id requirement |
 | `dataset.video_backend` | pyav | Required on ROCm |
 | `save_freq` | 2000 | Checkpoints at 2k / 4k / 6k / final |
-| Dataset | 30 ep, 14265 frames @ 20 Hz | `alexhegit/so101-simstudio-pnp` |
+| Dataset | 50 ep target @ 20 Hz | `alexhegit/so101-simstudio-lab01-pnp` |
 | Output (Run 1) | `./outputs/train/lab01_pnp_smolvla_bs4` | Set via `LAB01_TRAIN_OUTPUT=...` |
 
 Reproduce Run 1:
@@ -291,7 +293,9 @@ LAB01_TRAIN_OUTPUT=./outputs/train/lab01_pnp_smolvla_bs4 ./labs/lab01_pnp/train.
 - **Checkpoints saved:** `002000`, `004000`, `006000`, `007500`, plus `last → 007500`.
 - **Inference path:** `./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model/`
 
-### ACT training (Run 1)
+### ACT training (Run 1) — v1 dataset only (historical)
+
+> Trained on deprecated `so101-simstudio-pnp` (old wrist cam + layout). Do not use for lab01-pnp eval; retrain on `so101-simstudio-lab01-pnp` after recording.
 
 ```bash
 source .venv-rocm/bin/activate

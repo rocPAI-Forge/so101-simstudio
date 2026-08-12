@@ -8,10 +8,10 @@ Usage:
 
     # Save .rrd and open manually (no spawn):
     .venv-rocm/bin/python -m simstudio.scripts.dataset_viz \
-        --repo-id alexhegit/so101-simstudio-pnp \
-        --root ./datasets/so101-simstudio-pnp \
+        --repo-id alexhegit/so101-simstudio-lab01-pnp \
+        --root ./datasets/so101-simstudio-lab01-pnp \
         --episode 0 --save --output-dir ./outputs/viz
-    .venv-rocm/bin/rerun ./outputs/viz/alexhegit_so101-simstudio-pnp_episode_0.rrd
+    .venv-rocm/bin/rerun ./outputs/viz/alexhegit_so101-simstudio-lab01-pnp_episode_0.rrd
 """
 
 import argparse

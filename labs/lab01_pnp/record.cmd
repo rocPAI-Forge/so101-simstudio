@@ -1,5 +1,5 @@
 #!/bin/bash
-# Lab 01 — leader-arm pick-and-place recording (30 episodes, 60s each, 5s reset).
+# Lab 01 — leader-arm pick-and-place recording (50 episodes, 90s each, 5s reset).
 #
 # Prereq: leader on /dev/ttyACM0, dialout group, feetech-servo-sdk installed.
 # Control: N/→ save & next, R/← re-record, Q/ESC stop (evdev).
@@ -13,12 +13,12 @@
 #   ./labs/lab01_pnp/record.cmd --teleop.port /dev/ttyACM1
 #   ./labs/lab01_pnp/record.cmd --resume true
 #
-# Fresh run: rm -rf ./datasets/so101-simstudio-pnp
+# Fresh run: rm -rf ./datasets/so101-simstudio-lab01-pnp
 set -euo pipefail
 source "$(dirname "$0")/../../scripts/quicktest/_common.sh"
 
 echo "=== Lab 01: SO-101 pick-and-place recording ==="
-echo "Dataset: ./datasets/so101-simstudio-pnp (30 x 60s, reset 5s)"
+echo "Dataset: ./datasets/so101-simstudio-lab01-pnp (50 x 90s, reset 5s)"
 echo "Log:     $REPO_ROOT/test.log"
 echo ""
 
@@ -26,10 +26,10 @@ set +e
 "$PYTHON" -m simstudio.scripts.record \
     --config configs/so101_mujoco_pick_leader.yaml \
     --view_mode mujoco \
-    --dataset.root ./datasets/so101-simstudio-pnp \
-    --dataset.repo_id alexhegit/so101-simstudio-pnp \
-    --dataset.num_episodes 30 \
-    --dataset.episode_time_s 60 \
+    --dataset.root ./datasets/so101-simstudio-lab01-pnp \
+    --dataset.repo_id alexhegit/so101-simstudio-lab01-pnp \
+    --dataset.num_episodes 50 \
+    --dataset.episode_time_s 90 \
     --dataset.reset_time_s 5 \
     --resume false \
     "$@" \

@@ -1,7 +1,7 @@
 #!/bin/bash
-# Lab 01 — ACT imitation learning on so101-simstudio-pnp.
+# Lab 01 — ACT imitation learning on so101-simstudio-lab01-pnp.
 #
-# Prereq: dataset at ./datasets/so101-simstudio-pnp (validate first).
+# Prereq: dataset at ./datasets/so101-simstudio-lab01-pnp (validate first).
 #         .venv-rocm with lerobot (make rocm-sync).
 #
 # Usage (from repo root):
@@ -25,7 +25,7 @@ BATCH_SIZE="${LAB01_ACT_BATCH_SIZE:-8}"
 SAVE_FREQ="${LAB01_ACT_SAVE_FREQ:-10000}"
 
 echo "=== Lab 01: ACT training ==="
-echo "Dataset:  ./datasets/so101-simstudio-pnp"
+echo "Dataset:  ./datasets/so101-simstudio-lab01-pnp"
 echo "Output:   $OUTPUT_DIR"
 echo "Steps:    $STEPS  batch_size: $BATCH_SIZE"
 echo "Log:      $REPO_ROOT/train_act.log"
@@ -35,8 +35,8 @@ set +e
 "$LEROBOT_TRAIN" \
     --policy.type=act \
     --policy.push_to_hub=false \
-    --dataset.repo_id=alexhegit/so101-simstudio-pnp \
-    --dataset.root=./datasets/so101-simstudio-pnp \
+    --dataset.repo_id=alexhegit/so101-simstudio-lab01-pnp \
+    --dataset.root=./datasets/so101-simstudio-lab01-pnp \
     --dataset.video_backend=pyav \
     --output_dir="$OUTPUT_DIR" \
     --job_name=lab01_pnp_act \
