@@ -499,18 +499,19 @@ Optional **`LAB01_N_ACTION_STEPS`**: when set, passed as `--policy.n_action_step
 
 Numbers below are closed-loop MuJoCo evals on the lab01-pnp scene. **n** is small for demo/fixed runs; treat those as indicative, not precise CI estimates. Full-range rows are the primary generalization numbers.
 
-| Policy | Spawn | Inference | Backend | Episodes | Success | Notes |
-|--------|-------|-----------|---------|----------|---------|-------|
-| SmolVLA 50K | Full-range random | RTC | EGL | 50 | **11/50 (22%)** | Most fails never leave spawn; grasp/close unreliable |
-| SmolVLA 50K | Demo random (early box `x≤0.30`, yaw ±15°) | RTC | EGL | 20 | **5/20 (25%)** | Narrowing alone did not fix grasp failures |
-| SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | RTC | GLFW | 10 | **5/10 (50%)** | Same pose; RTC delay warnings throughout |
-| SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | Sync | GLFW | 10 | **3/10 (30%)** | Fewer “knock away”; more mid-transfer drops |
-| ACT 50K | Full-range random | Sync | EGL | 50 | **32/50 (64%)** | Reference with `LAB01_N_ACTION_STEPS=50` |
-| ACT 50K | Full-range random | Sync | — | 50 | **23/50 (46%)** | Same checkpoint with `n_action_steps=100` (historical log) |
-| ACT 50K | Fixed `(0.27,0.20,−8°)` | Sync | GLFW | 10 | **8/10 (80%)** | `n_action_steps=100`, `rollout_act_demo_fixed.yaml` |
+| Policy | Spawn | `reset_arm` | Inference | Backend | Episodes | Success | Notes |
+|--------|-------|-------------|-----------|---------|----------|---------|-------|
+| SmolVLA 50K | Full-range random | `home` | RTC | EGL | 50 | **11/50 (22%)** | Most fails never leave spawn; grasp/close unreliable |
+| SmolVLA 50K | Demo random (early box `x≤0.30`, yaw ±15°) | `home` | RTC | EGL | 20 | **5/20 (25%)** | Narrowing alone did not fix grasp failures |
+| SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | RTC | GLFW | 10 | **5/10 (50%)** | Same pose; RTC delay warnings throughout |
+| SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | GLFW | 10 | **3/10 (30%)** | Fewer “knock away”; more mid-transfer drops |
+| ACT 50K | Full-range random | `follow` | Sync | EGL | 50 | **32/50 (64%)** | Reference with `LAB01_N_ACTION_STEPS=50` |
+| ACT 50K | Full-range random | `follow` | Sync | — | 50 | **23/50 (46%)** | Same checkpoint with `n_action_steps=100` (historical log) |
+| ACT 50K | Fixed `(0.27,0.20,−8°)` | `follow` | Sync | GLFW | 10 | **8/10 (80%)** | `n_action_steps=100`, `rollout_act_demo_fixed.yaml` |
 
 **Reading the table**
 
+- `reset_arm` matches the intentional §6.2 contrast (SmolVLA eval YAMLs → `home`, ACT → `follow`). Do not mix rows when claiming a single protocol.
 - On this 50-episode dataset, **ACT full-range ≫ SmolVLA full-range** under the measured setups.
 - **Demo / fixed spawn raises ACT demo reliability** (80% @ fixed) but does **not** make SmolVLA classroom-stable (≈30–50% even at a known-good pose).
 - For SmolVLA, spawn tightening helped less than expected: failure analysis pointed to **grasp instability** and **yaw polarity** (positive yaw often knocks the cube) more than XY coverage alone.
