@@ -1,0 +1,27 @@
+---
+description: Lab conventions (Lab 01 template; justified exceptions OK)
+alwaysApply: true
+---
+
+# Lab & experiment development
+
+**Default template:** `labs/lab01_pnp/`. **Human guide:** `labs/README.md`.
+
+These are **shared defaults for new labs**, not hard laws. Start from Lab 01’s shape; if a later lab’s goal cannot fit a rule cleanly, **adapt and document the exception** in that lab’s runbook (why it differs). Do not force every lab into an identical pipeline.
+
+## Strong defaults (usually keep)
+
+- **Lab-bound vs foundational:** lab-only artifacts under `labs/<lab_id>/`; product configs/scenes/templates at repo root. Avoid parking one-off measurement YAMLs in root `configs/`.
+- **Centralize knobs** in sectioned `_env.sh`; scripts `source` + run; override with `LAB##_` env vars. Prefer recipes as env overrides over host profile enums (`igpu`/`mi300x`).
+- **Smoke for script refactors** (bash -n, short eval/train, temp dataset). Full retrain only when publishing new reference metrics.
+- **Keep runbook / `_env` / YAML comments / Hub cards aligned** in the same change set.
+- Scratch in `.tmp/`; do not clobber formal Hub datasets.
+
+## Lab 01–shaped defaults (reuse when the lab matches)
+
+- One policy-agnostic entrypoint per role (e.g. `eval.cmd` + path/config macros).
+- Short safe `_env` defaults; long reference runs documented as overrides.
+- Hub example ids + user-overridable `*_HF_USER` / `*_HF_REPO_ID`.
+- `reset_arm`: `follow` for real leader, `home` for keyboard/Joy-Con; eval contrasts are optional teaching tools — record the protocol next to metrics.
+
+Skip or reshape these when the lab is not record→train→eval (e.g. perception-only, data audit, hardware bring-up). Say so in the runbook.

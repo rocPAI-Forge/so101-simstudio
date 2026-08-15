@@ -735,4 +735,5 @@ Local scratch (not committed): project-root `.tmp/`.
 under `labs/lab01_pnp/configs/`). Foundational product features stay at repo root —
 e.g. `configs/so101_mujoco_pick_leader.yaml` (leader PnP record),
 `configs/scenes/simple_pick/`, generic keyboard/joycon/leader templates — even when
-Lab 01 wraps them via `LAB01_*`.
+Lab 01 wraps them via `LAB01_*`. Shared lab conventions for future labs:
+[labs/README.md](../README.md).

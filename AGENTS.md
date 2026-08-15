@@ -16,8 +16,10 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
   - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
+- **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why.
 - **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
 - **`third_party/joycon-robotics/`**: Upstream [box2ai-robotics/joycon-robotics](https://github.com/box2ai-robotics/joycon-robotics) git submodule (pinned to upstream `master`). **Do not commit project-specific edits inside the submodule.** SO-101 fixes (serial compatibility, English connect messages) live in `patches/joycon-robotics.patch` and are applied locally by `make joycon-sync` / `scripts/setup-joycon.sh`.
+- **`.tmp/`**: Local scratch (not committed). One-shot smoke helpers and temp logs may live here; do not point formal Hub datasets here.
 
 ## Setup
 
@@ -121,6 +123,7 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 - **Episode reset (sim)**: `robot.reset_mode: auto` (default) resets before each recorded episode; `manual` leaves state unchanged (real-hardware style). Under `auto`, `robot.reset_arm` (`home` teleport vs `follow` = stay put, for the passive leader arm) and `robot.reset_cube` (`fixed` predefined / `random` within `cube_random_*` bounds / `none`) control arm and cube independently. Keyboard/replay default to `home`+`fixed`; leader configs default to `follow`+`random`. `dataset.reset_time_s` still allows a short teleop window between episodes.
 - **Rendering performance**: Camera rendering is done with MuJoCo's offscreen renderer. On CPU-only machines the record loop will be slower than 30 Hz; it still records and saves episodes, but a GPU is strongly recommended for real teleoperation.
 - **Smoke scripts**: Interactive manual tests live in `scripts/smoke/` (`make smoke-*`). Fixed collaboration quick-tests live in `scripts/quicktest/` (`*.cmd`, tee `test.log`). Pytest unit tests stay in `tests/`.
+- **Labs**: Use Lab 01 as the **default template** (`labs/README.md`, `.cursor/rules/lab-development.mdc`). Strong defaults (lab vs root layout, `_env.sh`, smoke, docs sync) usually apply; Lab 01–shaped pipeline patterns apply when the lab matches — otherwise adapt and note deviations in the new runbook.
 
 ## ROCm
 
@@ -136,6 +139,7 @@ Project-agnostic development knowledge lives in `llm-wiki/`:
 
 | Topic | Path |
 |-------|------|
+| Lab development principles | [labs/README.md](labs/README.md) |
 | PyPI mirrors | `llm-wiki/python-dev/mirrors.md` |
 | uv constraints | `llm-wiki/python-dev/uv-constraints.md` |
 | ROCm setup | `llm-wiki/gpu-compute/rocm-setup.md` |
