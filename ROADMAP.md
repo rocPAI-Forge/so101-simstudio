@@ -81,6 +81,29 @@
 - [x] joycon-robotics: pin upstream submodule; apply `patches/joycon-robotics.patch` via `make joycon-sync` (no in-submodule project commits)
 - [x] GitHub repository `alexhegit/so101-simstudio`
 
+## v0.1.3 ✅ (`release-v0.1.3`)
+
+### Lab 01 — pick-and-place train / eval
+
+- [x] Leader PnP lab runbook (`labs/lab01_pnp/`) with centralized `_env.sh`
+- [x] Record → validate → ACT / SmolVLA train → MuJoCo sim2sim eval scripts
+- [x] Lab-local eval YAMLs under `labs/lab01_pnp/configs/` (demo / fixed / full-range)
+- [x] Single policy-agnostic `eval.cmd` (SmolVLA + ACT via `LAB01_POLICY_PATH` / `LAB01_EVAL_CONFIG`)
+- [x] Document `reset_arm: home|follow` (keyboard/Joy-Con vs leader; intentional eval contrast)
+- [x] Hub reference assets: dataset + ACT + SmolVLA (`alexhegit/so101-simstudio-lab01-pnp*`)
+
+### Scene / cameras
+
+- [x] Wrist camera aligned with Sim-to-Real Isaac `gripper_cam`
+- [x] Swapped cube spawn vs container layout for Lab 01 dataset
+- [x] Lab dataset id `so101-simstudio-lab01-pnp` (deprecate v1 `so101-simstudio-pnp`)
+
+### Platform / docs
+
+- [x] ROCm-only install guidance (no CUDA/macOS path in this release)
+- [x] Joy-Con init guards (invalid device / missing serial)
+- [x] Headless MuJoCo camera backend notes (`llm-wiki`)
+
 ## Evolution
 
 ```
@@ -88,9 +111,10 @@ v0.0.x: so101-mujoco-teleop
         ↓ v0.1.0
         ↓ v0.1.1 (unified view_mode + evdev)
         ↓ v0.1.2 (`release-v0.1.2`) Joy-Con cylindrical + one-handed recording + joycon patch workflow
-Current: so101-simstudio @ v0.1.2
-        Expert trajectory generation (teleop, scenes, record, replay, validate)
-        Future: domain randomization, policy rollout, real follower
+        ↓ v0.1.3 (`release-v0.1.3`) Lab 01 PnP: train ACT/SmolVLA + MuJoCo sim2sim eval + Hub assets
+Current: so101-simstudio @ v0.1.3
+        Expert trajectories + Lab 01 closed-loop train/eval (ROCm)
+        Future: domain randomization, broader automated pipeline, real follower, CUDA/macOS
 ```
 
 ## Future work
@@ -105,8 +129,9 @@ Current: so101-simstudio @ v0.1.2
 ### Automated data pipeline
 
 - [ ] Dataset annotation (VLM language labels)
-- [ ] Behavior cloning training
-- [ ] Policy rollout in MuJoCo
+- [x] Behavior cloning training — Lab 01 ACT / SmolVLA (`labs/lab01_pnp/`)
+- [x] Policy rollout in MuJoCo — Lab 01 sim2sim eval (`eval.cmd` + lab configs)
+- [ ] Broader multi-task / multi-scene automated pipeline beyond Lab 01
 
 ### Real hardware
 

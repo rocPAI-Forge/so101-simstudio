@@ -146,11 +146,12 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 | Record / replay / validate | ✅ |
 | MuJoCo recording GUI (`view_mode=mujoco`) | ✅ |
 | Rerun recording GUI (`view_mode=rerun`) | ✅ |
+| Lab 01 ACT / SmolVLA train + MuJoCo eval | ✅ |
 | Real follower hardware | 🔲 Planned |
-| Behavior cloning training | 🔲 Planned |
 
 ## Version history
 
+- **v0.1.3** (`release-v0.1.3`): Lab 01 pick-and-place (record → ACT/SmolVLA train → sim2sim eval); lab-local eval configs; Hub reference dataset/policies; wrist cam + spawn layout; ROCm-only docs
 - **v0.1.2** (`release-v0.1.2`): Joy-Con cylindrical reach/swing; decoupled HID sticks; gripper toggle; one-handed A/Y/+ recording; `scripts/quicktest/`; joycon-robotics upstream pin + install-time patch; English docs/prints; repo `so101-simstudio`
 - **v0.1.1** (`release-v0.1.1`): Unified `--view_mode mujoco/rerun`; evdev recording controls; leader reliability; `reset_arm` / `reset_cube`; smoke scripts in `scripts/smoke/`
 - **v0.1.0** (`release-v0.1.0`): First stable release; keyboard, Joy-Con, leader
@@ -160,6 +161,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 ## Documentation
 
 - [Quick start](QUICKSTART.md)
+- [Lab 01 — PnP record / train / eval](labs/lab01_pnp/lab01_pnp.md)
 - [Architecture](DESIGN.md)
 - [Roadmap](ROADMAP.md)
 - [Agent / dev guide](AGENTS.md)
