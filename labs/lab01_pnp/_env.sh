@@ -25,12 +25,23 @@ LAB01_TRAIN_WARMUP="${LAB01_TRAIN_WARMUP:-500}"
 LAB01_TRAIN_SAVE_FREQ="${LAB01_TRAIN_SAVE_FREQ:-2000}"
 LAB01_RENAME_MAP='{"observation.images.camera_top":"observation.images.camera1","observation.images.camera_front":"observation.images.camera2","observation.images.camera_wrist":"observation.images.camera3"}'
 
-# ACT training
+# SmolVLA resume (train_smolvla_resume.cmd)
+LAB01_TRAIN_RESUME_FROM="${LAB01_TRAIN_RESUME_FROM:-007500}"
+LAB01_TRAIN_RESUME_STEPS="${LAB01_TRAIN_RESUME_STEPS:-20000}"
+
+# ACT training / Hub
+LAB01_ACT_HF_REPO_ID="${LAB01_ACT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act}"
 LAB01_ACT_OUTPUT="${LAB01_ACT_OUTPUT:-./outputs/train/lab01_pnp_act}"
 LAB01_ACT_STEPS="${LAB01_ACT_STEPS:-10000}"
 LAB01_ACT_BATCH_SIZE="${LAB01_ACT_BATCH_SIZE:-8}"
 LAB01_ACT_SAVE_FREQ="${LAB01_ACT_SAVE_FREQ:-10000}"
 
-# Eval (SmolVLA: set LAB01_POLICY_PATH to pin a checkpoint; else latest under LAB01_TRAIN_OUTPUT)
+# Eval
+# MUJOCO_GL: egl (headless GPU), glfw (window), osmesa (CPU headless)
+LAB01_MUJOCO_GL="${LAB01_MUJOCO_GL:-}"
+LAB01_SMOLVLA_CKPT_STEP="${LAB01_SMOLVLA_CKPT_STEP:-050000}"
+LAB01_ACT_CKPT_STEP="${LAB01_ACT_CKPT_STEP:-050000}"
 LAB01_EVAL_EPISODES="${LAB01_EVAL_EPISODES:-10}"
 LAB01_ACT_EVAL_EPISODES="${LAB01_ACT_EVAL_EPISODES:-20}"
+# ACT inference: 50 beat 100 on lab01 50K EGL eval (64% vs 46% @ 50 ep)
+LAB01_ACT_N_ACTION_STEPS="${LAB01_ACT_N_ACTION_STEPS:-50}"

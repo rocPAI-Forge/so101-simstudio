@@ -29,7 +29,11 @@ Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, insp
 | `LAB01_EPISODE_TIME_S` | `90` | record |
 | `LAB01_RESET_TIME_S` | `5` | record |
 | `LAB01_TRAIN_OUTPUT` / `LAB01_ACT_OUTPUT` | see `_env.sh` | train / train_act |
-| `LAB01_POLICY_PATH` / `LAB01_ACT_POLICY_PATH` | unset = latest checkpoint under train output | eval / eval_act |
+| `LAB01_POLICY_PATH` / `LAB01_ACT_POLICY_PATH` | unset = `checkpoints/$CKPT_STEP` then `last` | eval / eval_act |
+| `LAB01_SMOLVLA_CKPT_STEP` / `LAB01_ACT_CKPT_STEP` | `050000` | eval / eval_act |
+| `LAB01_MUJOCO_GL` | unset → `glfw` if `DISPLAY`, else `egl` | eval / eval_act (`egl` / `glfw` / `osmesa`) |
+| `LAB01_ACT_N_ACTION_STEPS` | `50` | eval_act |
+| `LAB01_ACT_HF_REPO_ID` | `alexhegit/so101-simstudio-lab01-pnp-act` | push_act_model_card |
 
 Example: `LAB01_DATASET_NAME=my-run ./labs/lab01_pnp/record.cmd`
 
@@ -253,12 +257,20 @@ LAB01_TRAIN_STEPS=20000 LAB01_TRAIN_BATCH_SIZE=1 ./labs/lab01_pnp/train.cmd
 
 Log: `train.log` at repo root. Checkpoints: `./outputs/train/lab01_pnp_smolvla/checkpoints/` (override output dir with `LAB01_TRAIN_OUTPUT=...`).
 
-**Notes for 30-episode dataset**
+**Resume** from a saved checkpoint (needs `pretrained_model/` + `training_state/`):
 
-- Default **`batch_size=4`, `steps=7500`** (~30k sample updates); see reference run below for wall time on Strix Halo.
+```bash
+# e.g. 7500 → 20000, or 20000 → 50000
+LAB01_TRAIN_RESUME_FROM=020000 LAB01_TRAIN_RESUME_STEPS=50000 \
+  ./labs/lab01_pnp/train_smolvla_resume.cmd
+```
+
+**Notes**
+
+- Default **`batch_size=4`, `steps=7500`** for a first short run; longer runs use `train_smolvla_resume.cmd` (reference: 50K on MI300X).
 - OOM: `--batch_size 1` or `LAB01_TRAIN_BATCH_SIZE=1`.
 - First run downloads HF weights; needs network.
-- MuJoCo closed-loop eval is not wired yet (see §6).
+- Closed-loop eval: §6 (`eval.cmd`).
 
 ### Reference platform & software (Run 1)
 
@@ -327,48 +339,62 @@ Also saved: Run 1 `005000`; Run 2 `020000`, `030000`, `last → 030000`. Logs: `
 
 **ACT eval (20 episodes, headless, `reset_arm: follow`):** checkpoint `030000` → **7/20 (35%)**. Successful episodes place the cube in the container (~0.30, 0.19–0.21).
 
+### ACT training (lab01-pnp, MI300X 50K) — current reference
+
+| Run | Platform | batch | steps | final loss | checkpoint |
+|-----|----------|-------|-------|------------|------------|
+| lab01-pnp | DORobot / MI300X | 128 | 50000 | **0.053** | `./outputs/train/lab01_pnp_act/checkpoints/050000/` |
+
+**Loss curve** (from `train_act.log`, not eval): `labs/lab01_pnp/loss_curve_act_mi300x_50k.png` / `.csv`.
+
+Regenerate after a new ACT run:
+
+```bash
+.venv-rocm/bin/python labs/lab01_pnp/plot_act_loss.py \
+  --log train_act.log --steps 50000 --tag mi300x_50k
+```
+
+**ACT eval (EGL, `n_action_steps=50`):** see §6 — reference **32/50 (64%)**.
+
 ---
 
 ## 6. Policy eval in MuJoCo (sim2sim)
 
-Closed-loop rollout: load a fine-tuned checkpoint, run inference at 20 Hz in MuJoCo with the same three cameras and position-control actions as training.
-
-### Quick eval (success rate)
-
-```bash
-source .venv-rocm/bin/activate
-./labs/lab01_pnp/eval.cmd
-```
-
-Defaults: Run 1 checkpoint, **10 episodes × 60 s**, random cube reset, RTC inference (SmolVLA on iGPU).
-
-Manual equivalent:
-
-```bash
-python -m simstudio.scripts.eval \
-  --config configs/so101_mujoco_rollout.yaml \
-  --policy.path=./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model \
-  --eval.num_episodes=10
-```
+Closed-loop rollout: load a fine-tuned checkpoint, run inference at 20 Hz in MuJoCo with the same cameras and position-control actions as training.
 
 Success criterion: cube center inside container bounds in `simple_pick` scene (see `simstudio.common.eval_success`).
 
-### Single continuous rollout (no success tally)
+### SmolVLA eval
 
 ```bash
-python -m simstudio.scripts.rollout \
-  --config configs/so101_mujoco_rollout.yaml \
-  --strategy.type=base \
-  --policy.path=./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model \
-  --duration=60
+source .venv-rocm/bin/activate
+# Default: checkpoints/050000, MUJOCO_GL=egl if no DISPLAY else glfw
+./labs/lab01_pnp/eval.cmd
+
+LAB01_MUJOCO_GL=egl LAB01_EVAL_EPISODES=50 ./labs/lab01_pnp/eval.cmd
+LAB01_MUJOCO_GL=glfw LAB01_EVAL_EPISODES=10 ./labs/lab01_pnp/eval.cmd
+LAB01_SMOLVLA_CKPT_STEP=020000 ./labs/lab01_pnp/eval.cmd
 ```
+
+### ACT eval
+
+```bash
+source .venv-rocm/bin/activate
+LAB01_MUJOCO_GL=egl LAB01_ACT_EVAL_EPISODES=50 ./labs/lab01_pnp/eval_act.cmd
+LAB01_MUJOCO_GL=glfw ./labs/lab01_pnp/eval_act.cmd
+# CPU fallback (slow): LAB01_MUJOCO_GL=osmesa ./labs/lab01_pnp/eval_act.cmd
+```
+
+Default `LAB01_ACT_N_ACTION_STEPS=50` (lab01 50K EGL: **32/50 (64%)** vs `100` → 46%).
 
 ### Options
 
 | Override | Example |
 |----------|---------|
-| Checkpoint | `LAB01_POLICY_PATH=./outputs/train/.../pretrained_model ./labs/lab01_pnp/eval.cmd` |
+| Checkpoint path | `LAB01_POLICY_PATH=./outputs/train/.../pretrained_model ./labs/lab01_pnp/eval.cmd` |
+| Checkpoint step | `LAB01_SMOLVLA_CKPT_STEP=020000 ./labs/lab01_pnp/eval.cmd` |
 | Episode count | `LAB01_EVAL_EPISODES=5 ./labs/lab01_pnp/eval.cmd` |
+| GL backend | `LAB01_MUJOCO_GL=egl ./labs/lab01_pnp/eval.cmd` |
 | Sync inference (debug) | `./labs/lab01_pnp/eval.cmd --inference.type sync` |
 | Rerun viz | `./labs/lab01_pnp/eval.cmd --display_data true` |
 
@@ -376,28 +402,23 @@ python -m simstudio.scripts.rollout \
 
 If inference is slower than 20 Hz, keep `--inference.type=rtc` (default in `so101_mujoco_rollout.yaml`).
 
-### ACT eval
+### Historical notes (v1 / short ACT runs)
+
+Older ACT runs on deprecated data or shorter schedules (10K/30K) are not the lab01-pnp reference. Prefer the MI300X **50K** checkpoint and `LAB01_ACT_N_ACTION_STEPS=50` above.
+
+---
+
+## 7. Hub publish
 
 ```bash
-./labs/lab01_pnp/eval_act.cmd   # 20 episodes, headless, sync inference
+# Dataset (after hf auth login)
+./labs/lab01_pnp/push_dataset.cmd
+
+# ACT model card only
+./labs/lab01_pnp/push_act_model_card.cmd
 ```
 
-Uses `configs/so101_mujoco_rollout_act.yaml` (no camera rename_map; dataset camera names directly).
-
-| Policy | Episodes | Success |
-|--------|----------|---------|
-| SmolVLA 7500-step (GUI) | 10 | 0/10 (0%) — arm reaches cube, grasp fails |
-| ACT 10000-step (headless) | 20 | **0/20 (0%)** |
-| ACT 10000-step (`reset_arm: follow`, headless) | 10 | **0/10 (0%)** — reset 对齐后仍无成功 |
-| ACT 30000-step (`reset_arm: follow`, headless) | 20 | **7/20 (35%)** — default `n_action_steps=100` |
-| ACT 30000-step inference sweep (headless, 20 ep each) | | |
-| → `n_action_steps=5` | 20 | 0/20 (0%) |
-| → `n_action_steps=10` | 20 | 1/20 (5%) |
-| → `n_action_steps=20` | 20 | 4/20 (20%) |
-| → `n_action_steps=50` | 20 | 5/20 (25%) |
-| → `n_action_steps=1` + `temporal_ensemble_coeff=0.01` | 20 | 4/20 (20%) |
-
-Sweep logs: `labs/lab01_pnp/sweep_logs/` (2026-08-12). **Default `n_action_steps=100` remains best** — shorter replan intervals hurt (model trained for 100-step open-loop chunks).
+Cards: `hf_dataset_card.md`, `hf_model_card_act.md`.
 
 ---
 
@@ -413,6 +434,7 @@ Sweep logs: `labs/lab01_pnp/sweep_logs/` (2026-08-12). **Default `n_action_steps
 | Used `smoke-leader-teleop` for Rerun | Rerun only works with **record**, not `teleoperate` |
 | SmolVLA training OOM | `./labs/lab01_pnp/train.cmd --batch_size 1` |
 | `rename_map` / camera mismatch | Use `camera_top/front/wrist` keys (see §5 table) |
+| Eval window / EGL | `LAB01_MUJOCO_GL=glfw` or `egl` / `osmesa` |
 
 ---
 
@@ -420,11 +442,21 @@ Sweep logs: `labs/lab01_pnp/sweep_logs/` (2026-08-12). **Default `n_action_steps
 
 | File | Purpose |
 |------|---------|
-| `record.cmd` | One-command leader pick-and-place recording for this lab |
-| `train.cmd` | One-command SmolVLA fine-tune from `smolvla_base` |
-| `train_act.cmd` | One-command ACT imitation learning on pnp dataset |
-| `eval.cmd` | One-command sim2sim SmolVLA eval (multi-episode success rate) |
-| `eval_act.cmd` | One-command sim2sim ACT eval (20 episodes, headless) |
+| `_env.sh` | Shared defaults for all lab scripts |
+| `record.cmd` | Leader pick-and-place recording |
+| `train.cmd` | SmolVLA fine-tune from `smolvla_base` |
+| `train_smolvla_resume.cmd` | Resume SmolVLA from a checkpoint |
+| `train_act.cmd` | ACT imitation learning |
+| `eval.cmd` | SmolVLA sim2sim eval (`MUJOCO_GL` + ckpt step) |
+| `eval_act.cmd` | ACT sim2sim eval (`MUJOCO_GL` + `n_action_steps`) |
+| `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
+| `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |
+| `push_act_model_card.cmd` / `hf_model_card_act.md` | Upload ACT Hub README |
+| `loss_curve_run1.*` | SmolVLA Run 1 training loss (reference) |
+| `loss_curve_act_mi300x_50k.*` | ACT 50K training loss (reference) |
 | `lab01_pnp.md` | This runbook |
+
+Local scratch (not committed): project-root `.tmp/`.
+
 
 Related repo configs: `configs/so101_mujoco_pick_leader.yaml`

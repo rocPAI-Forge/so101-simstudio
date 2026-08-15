@@ -31,3 +31,6 @@ dist/
 # Logs
 *.log
 .venv
+
+# Local scratch (temp scripts, one-off experiments — never commit)
+.tmp/
