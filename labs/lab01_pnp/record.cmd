@@ -9,6 +9,8 @@
 #   source .venv-rocm/bin/activate
 #   ./labs/lab01_pnp/record.cmd
 #
+# Config / knobs: labs/lab01_pnp/_env.sh (Shared + Record). Override LAB01_RECORD_CONFIG etc.
+#
 # Options:
 #   ./labs/lab01_pnp/record.cmd --view_mode rerun
 #   ./labs/lab01_pnp/record.cmd --teleop.port /dev/ttyACM1
@@ -22,6 +24,7 @@ source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
 source "$_LAB01_DIR/_env.sh"
 
 echo "=== Lab 01: SO-101 pick-and-place recording ==="
+echo "Config:   $LAB01_RECORD_CONFIG"
 echo "Dataset:  $LAB01_DATASET_ROOT  ($LAB01_DATASET_REPO_ID)"
 echo "Episodes: $LAB01_NUM_EPISODES x ${LAB01_EPISODE_TIME_S}s (reset ${LAB01_RESET_TIME_S}s)"
 echo "Log:      $REPO_ROOT/test.log"

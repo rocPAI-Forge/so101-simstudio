@@ -1,0 +1,53 @@
+# =============================================================================
+# Lab 01 — SmolVLA fixed-pose demo eval
+# =============================================================================
+# Every episode: (x0.27, y0.20, yaw -8deg) from cube_positions_demo_fixed.json.
+# reset_arm: home (contrast with ACT demo_fixed = follow). See lab01_pnp.md §6.2.
+#
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_smolvla_demo_fixed.yaml \
+#     ./labs/lab01_pnp/eval.cmd
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: position
+  home_gripper: -0.1
+  reset_mode: auto
+  reset_arm: home
+  reset_cube: fixed
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  cube_positions_path: labs/lab01_pnp/configs/cube_positions_demo_fixed.json
+  record_fps: 20
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+
+fps: 20
+task: "Pick up the cube and place it in the box."
+
+rename_map:
+  observation.images.camera_top: observation.images.camera1
+  observation.images.camera_front: observation.images.camera2
+  observation.images.camera_wrist: observation.images.camera3
+
+strategy:
+  type: base
+
+inference:
+  type: rtc
+
+play_sounds: false
+display_data: false
+display_mode: rerun
+return_to_initial_position: false
+
+eval:
+  num_episodes: 10
+  episode_time_s: 60
+  reset_time_s: 3
+  stats_dataset_repo_id: alexhegit/so101-simstudio-lab01-pnp
+  stats_dataset_root: ./datasets/so101-simstudio-lab01-pnp

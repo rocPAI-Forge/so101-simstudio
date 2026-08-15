@@ -1,18 +1,10 @@
 # =============================================================================
-# SO-101 SimStudio — SmolVLA sim2sim policy rollout / eval
+# Lab 01 — SmolVLA demo eval (narrowed random spawn; default for eval.cmd)
 # =============================================================================
-# Closed-loop inference in MuJoCo (position control, 20 Hz, three cameras).
-#
-# Usage:
-#   # Multi-episode eval with success rate (recommended):
-#   python -m simstudio.scripts.eval --config configs/so101_mujoco_rollout.yaml \
-#     --policy.path=./outputs/train/lab01_pnp_smolvla_bs4/checkpoints/007500/pretrained_model
-#
-#   # Single continuous rollout (lerobot-rollout base strategy):
-#   python -m simstudio.scripts.rollout --config configs/so101_mujoco_rollout.yaml \
-#     --strategy.type=base \
-#     --policy.path=./outputs/train/.../pretrained_model \
-#     --duration=60
+# Teaching-friendly box (not an honest full-range benchmark):
+#   x[0.265,0.29] y[0.175,0.205] yaw[-15,0]
+# reset_arm: home (contrast with ACT eval YAMLs = follow). See lab01_pnp.md §6.2.
+# Full-range: labs/lab01_pnp/configs/rollout_smolvla.yaml
 # =============================================================================
 
 robot:
@@ -22,10 +14,10 @@ robot:
   reset_mode: auto
   reset_arm: home
   reset_cube: random
-  cube_random_x_range: [0.26, 0.34]
-  cube_random_y_range: [0.165, 0.235]
+  cube_random_x_range: [0.265, 0.29]
+  cube_random_y_range: [0.175, 0.205]
   cube_random_z: 0.0125
-  cube_random_yaw_range: [-45.0, 45.0]
+  cube_random_yaw_range: [-15.0, 0.0]
   xml_path: SO101/scenes/simple_pick/scene.xml
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json
   record_fps: 20

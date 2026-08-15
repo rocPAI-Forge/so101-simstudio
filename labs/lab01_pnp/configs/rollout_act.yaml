@@ -1,0 +1,56 @@
+# =============================================================================
+# Lab 01 — ACT full-range sim2sim eval (honest generalization)
+# =============================================================================
+# No SmolVLA rename_map (dataset camera_* keys). Sync inference.
+# reset_arm: follow — intentional contrast with SmolVLA eval YAMLs (home).
+#   Same meanings as recording: follow ≈ leader-record style; home ≈ keyboard/Joy-Con
+#   fixed start. Kept different on purpose as a side-by-side example — see
+#   labs/lab01_pnp/lab01_pnp.md §1 / §6.2.
+#
+#   LAB01_POLICY_PATH=./outputs/train/lab01_pnp_act/checkpoints/last/pretrained_model \
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act.yaml \
+#   LAB01_N_ACTION_STEPS=50 LAB01_EVAL_EPISODES=50 ./labs/lab01_pnp/eval.cmd
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: position
+  home_gripper: -0.1
+  reset_mode: auto
+  reset_arm: follow
+  reset_cube: random
+  cube_random_x_range: [0.26, 0.34]
+  cube_random_y_range: [0.165, 0.235]
+  cube_random_z: 0.0125
+  cube_random_yaw_range: [-45.0, 45.0]
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json
+  record_fps: 20
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+
+fps: 20
+task: "Pick up the cube and place it in the box."
+
+strategy:
+  type: base
+
+inference:
+  type: sync
+
+play_sounds: false
+display_data: false
+display_mode: rerun
+return_to_initial_position: false
+
+eval:
+  num_episodes: 20
+  episode_time_s: 60
+  reset_time_s: 3
+  stats_dataset_repo_id: alexhegit/so101-simstudio-lab01-pnp
+  stats_dataset_root: ./datasets/so101-simstudio-lab01-pnp

@@ -1,83 +1,67 @@
 #!/bin/bash
-# Lab 01 — sim2sim SmolVLA policy eval in MuJoCo.
+# Lab 01 — sim2sim policy eval in MuJoCo (any LeRobot policy).
 #
-# Defaults: labs/lab01_pnp/_env.sh (override via LAB01_* env vars).
+# All knobs: labs/lab01_pnp/_env.sh (categorized: Shared / Record / Train / Eval / Hub).
+# Point LAB01_POLICY_PATH at a pretrained_model/ dir and LAB01_EVAL_CONFIG at a
+# matching lab YAML under labs/lab01_pnp/configs/ (SmolVLA needs rename_map;
+# ACT must use rollout_act*.yaml without that map).
 #
-# Usage (from repo root):
 #   source .venv-rocm/bin/activate
 #   ./labs/lab01_pnp/eval.cmd
 #
-# Backend (MUJOCO_GL / LAB01_MUJOCO_GL):
-#   egl   — headless GPU (recommended for batch eval)
-#   glfw  — MuJoCo window (needs DISPLAY)
-#   osmesa — CPU headless (slow fallback)
+#   # SmolVLA full-range
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_smolvla.yaml \
+#     LAB01_EVAL_EPISODES=50 ./labs/lab01_pnp/eval.cmd
 #
-# Examples:
-#   LAB01_MUJOCO_GL=egl LAB01_EVAL_EPISODES=50 ./labs/lab01_pnp/eval.cmd
-#   LAB01_SMOLVLA_CKPT_STEP=020000 ./labs/lab01_pnp/eval.cmd
-#   LAB01_POLICY_PATH=./outputs/train/.../pretrained_model ./labs/lab01_pnp/eval.cmd
+#   # ACT
+#   LAB01_POLICY_PATH=./outputs/train/lab01_pnp_act/checkpoints/last/pretrained_model \
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act.yaml \
+#   LAB01_N_ACTION_STEPS=50 LAB01_EVAL_EPISODES=50 \
+#   LAB01_EVAL_LOG=./outputs/eval/act_egl.log \
+#     ./labs/lab01_pnp/eval.cmd
+#
+#   LAB01_MUJOCO_GL=glfw LAB01_RENDER_WINDOW=true ./labs/lab01_pnp/eval.cmd
 set -euo pipefail
 _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
 source "$_LAB01_DIR/_env.sh"
 
-# Resolve MuJoCo GL backend
-if [[ -n "${LAB01_MUJOCO_GL:-}" ]]; then
-    export MUJOCO_GL="$LAB01_MUJOCO_GL"
-elif [[ -z "${MUJOCO_GL:-}" ]]; then
-    if [[ -n "${DISPLAY:-}" ]]; then
-        export MUJOCO_GL=glfw
-    else
-        export MUJOCO_GL=egl
-    fi
-fi
-if [[ "$MUJOCO_GL" == "egl" || "$MUJOCO_GL" == "osmesa" ]]; then
-    unset DISPLAY || true
-    RENDER_WINDOW=false
-else
-    RENDER_WINDOW=true
-fi
+export MUJOCO_GL="$LAB01_MUJOCO_GL"
+# Headless backends must not see a DISPLAY or MuJoCo may pick GLX/GLFW instead.
+[[ "$MUJOCO_GL" == "glfw" ]] || unset DISPLAY
 
-CKPT_STEP="${LAB01_SMOLVLA_CKPT_STEP:-050000}"
-POLICY_PATH="${LAB01_POLICY_PATH:-}"
-if [[ -z "$POLICY_PATH" ]]; then
-    for candidate in \
-        "$LAB01_TRAIN_OUTPUT/checkpoints/${CKPT_STEP}/pretrained_model" \
-        "$LAB01_TRAIN_OUTPUT/checkpoints/last/pretrained_model"; do
-        if [[ -d "$candidate" ]]; then
-            POLICY_PATH="$candidate"
-            break
-        fi
-    done
-fi
-
-if [[ -z "$POLICY_PATH" || ! -d "$POLICY_PATH" ]]; then
-    echo "SmolVLA checkpoint not found under $LAB01_TRAIN_OUTPUT" >&2
-    echo "Expected: $LAB01_TRAIN_OUTPUT/checkpoints/${CKPT_STEP}/pretrained_model" >&2
-    echo "Train first: ./labs/lab01_pnp/train.cmd" >&2
-    echo "Or set LAB01_POLICY_PATH=./outputs/train/.../pretrained_model" >&2
+if [[ ! -d "$LAB01_POLICY_PATH" ]]; then
+    echo "Policy not found: $LAB01_POLICY_PATH" >&2
+    echo "Set LAB01_POLICY_PATH to a LeRobot pretrained_model/ directory." >&2
     exit 1
 fi
 
-EVAL_LOG="$LAB01_TRAIN_OUTPUT/eval_smolvla_${CKPT_STEP}_${MUJOCO_GL}.log"
-mkdir -p "$LAB01_TRAIN_OUTPUT"
+mkdir -p "$(dirname "$LAB01_EVAL_LOG")"
 
-echo "=== Lab 01: SmolVLA sim2sim eval ==="
-echo "MUJOCO_GL: $MUJOCO_GL"
-echo "DISPLAY:   ${DISPLAY:-<unset>}"
-echo "Policy:    $POLICY_PATH"
-echo "Dataset:   $LAB01_DATASET_ROOT  (normalizer stats)"
-echo "Config:    configs/so101_mujoco_rollout.yaml"
-echo "Episodes:  $LAB01_EVAL_EPISODES"
-echo "Log:       $EVAL_LOG"
+EXTRA_ARGS=()
+if [[ -n "${LAB01_N_ACTION_STEPS}" ]]; then
+    EXTRA_ARGS+=(--policy.n_action_steps="$LAB01_N_ACTION_STEPS")
+fi
+
+echo "=== Lab 01: sim2sim policy eval ==="
+echo "MUJOCO_GL:         $MUJOCO_GL"
+echo "render_window:     $LAB01_RENDER_WINDOW"
+echo "DISPLAY:           ${DISPLAY:-<unset>}"
+echo "Policy:            $LAB01_POLICY_PATH"
+echo "Config:            $LAB01_EVAL_CONFIG"
+echo "Episodes:          $LAB01_EVAL_EPISODES"
+echo "n_action_steps:    ${LAB01_N_ACTION_STEPS:-<checkpoint default>}"
+echo "Stats dataset:     $LAB01_DATASET_ROOT"
+echo "Log:               $LAB01_EVAL_LOG"
 echo ""
 
 "$PYTHON" -m simstudio.scripts.eval \
-    --config configs/so101_mujoco_rollout.yaml \
-    --policy.path="$POLICY_PATH" \
+    --config "$LAB01_EVAL_CONFIG" \
+    --policy.path="$LAB01_POLICY_PATH" \
     --eval.num_episodes="$LAB01_EVAL_EPISODES" \
     --eval.stats_dataset_repo_id="$LAB01_DATASET_REPO_ID" \
     --eval.stats_dataset_root="$LAB01_DATASET_ROOT" \
-    --robot.render_window="$RENDER_WINDOW" \
-    "$@" 2>&1 | tee "$EVAL_LOG"
+    --robot.render_window="$LAB01_RENDER_WINDOW" \
+    "${EXTRA_ARGS[@]}" \
+    "$@" 2>&1 | tee "$LAB01_EVAL_LOG"
 exit "${PIPESTATUS[0]}"

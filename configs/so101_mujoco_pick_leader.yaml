@@ -2,10 +2,13 @@
 # SO-101 SimStudio - Production pick-and-place recording (leader arm)
 # =============================================================================
 # Best trajectory quality: 1:1 joint position mapping from real leader arm.
+# Foundational record entry used by Lab 01 and by older docs / examples.
 #
 # Usage:
 #   source .venv-rocm/bin/activate
 #   python -m simstudio.scripts.record --config configs/so101_mujoco_pick_leader.yaml
+#   # Lab 01 wrapper (same config via LAB01_RECORD_CONFIG):
+#   ./labs/lab01_pnp/record.cmd
 #
 # Recording quality checklist (each episode):
 #   - Approach cube from above, align gripper, close on cube
@@ -19,6 +22,9 @@ robot:
   action_mode: position
   home_gripper: -0.1
   reset_mode: auto
+  # reset_arm: "follow" for real leader (do not teleport to home — avoids first-frame yank).
+  #            "home" for keyboard / Joy-Con (no physical leader to stay aligned with).
+  # See labs/lab01_pnp/lab01_pnp.md §1 and §6.2.
   reset_arm: follow
   reset_cube: random
   # Swapped with container: cube spawns where container was (~0.3, 0.2), same 8×7 cm rect.

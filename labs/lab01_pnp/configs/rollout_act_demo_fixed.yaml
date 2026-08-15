@@ -1,14 +1,15 @@
 # =============================================================================
-# SO-101 SimStudio — ACT sim2sim policy rollout / eval
+# Lab 01 — ACT fixed-pose demo eval
 # =============================================================================
-# Closed-loop inference in MuJoCo (position control, 20 Hz, three cameras).
-# Uses dataset camera names directly (no SmolVLA rename_map). Sync inference.
-# reset_arm: follow matches leader recording (configs/so101_mujoco_pick_leader.yaml).
+# Same pose as rollout_smolvla_demo_fixed.yaml; ACT-compatible (no rename_map).
+# reset_arm: follow (intentional contrast with SmolVLA demo_fixed = home).
+#   See labs/lab01_pnp/lab01_pnp.md §1 / §6.2.
 #
-# Usage:
-#   python -m simstudio.scripts.eval --config configs/so101_mujoco_rollout_act.yaml \
-#     --policy.path=./outputs/train/lab01_pnp_act/checkpoints/050000/pretrained_model \
-#     --eval.num_episodes=20 --robot.render_window=false
+#   LAB01_POLICY_PATH=./outputs/train/lab01_pnp_act/checkpoints/last/pretrained_model \
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act_demo_fixed.yaml \
+#   LAB01_MUJOCO_GL=glfw LAB01_RENDER_WINDOW=true \
+#   LAB01_EVAL_EPISODES=10 LAB01_N_ACTION_STEPS=100 \
+#     ./labs/lab01_pnp/eval.cmd
 # =============================================================================
 
 robot:
@@ -17,13 +18,9 @@ robot:
   home_gripper: -0.1
   reset_mode: auto
   reset_arm: follow
-  reset_cube: random
-  cube_random_x_range: [0.26, 0.34]
-  cube_random_y_range: [0.165, 0.235]
-  cube_random_z: 0.0125
-  cube_random_yaw_range: [-45.0, 45.0]
+  reset_cube: fixed
   xml_path: SO101/scenes/simple_pick/scene.xml
-  cube_positions_path: configs/scenes/simple_pick/cube_positions.json
+  cube_positions_path: labs/lab01_pnp/configs/cube_positions_demo_fixed.json
   record_fps: 20
   control_fps: 180
   physics_fps: 360
@@ -48,7 +45,7 @@ display_mode: rerun
 return_to_initial_position: false
 
 eval:
-  num_episodes: 20
+  num_episodes: 10
   episode_time_s: 60
   reset_time_s: 3
   stats_dataset_repo_id: alexhegit/so101-simstudio-lab01-pnp

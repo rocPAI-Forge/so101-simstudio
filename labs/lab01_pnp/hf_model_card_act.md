@@ -35,4 +35,4 @@ from lerobot.policies.act.modeling_act import ACTPolicy
 policy = ACTPolicy.from_pretrained("alexhegit/so101-simstudio-lab01-pnp-act")
 ```
 
-Sim2sim eval in MuJoCo: follow **§6 ACT eval** in [lab01_pnp.md](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp/lab01_pnp.md).
+Sim2sim eval in MuJoCo: follow **§6 Policy eval** in [lab01_pnp.md](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp/lab01_pnp.md) (ACT configs under `labs/lab01_pnp/configs/rollout_act*.yaml`).

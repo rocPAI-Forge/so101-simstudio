@@ -1,13 +1,12 @@
 #!/bin/bash
 # Lab 01 — SmolVLA fine-tune from lerobot/smolvla_base.
 #
-# Defaults: labs/lab01_pnp/_env.sh (override via LAB01_* env vars).
+# Defaults: labs/lab01_pnp/_env.sh (Shared + Train sections). Set batch/steps for your GPU.
 #
-# Usage (from repo root):
 #   source .venv-rocm/bin/activate
 #   ./labs/lab01_pnp/train.cmd
-#
-# Options (pass through to lerobot-train):
+#   LAB01_TRAIN_BATCH_SIZE=64 LAB01_TRAIN_STEPS=50000 LAB01_TRAIN_SAVE_FREQ=10000 \
+#     LAB01_TRAIN_NUM_WORKERS=8 ./labs/lab01_pnp/train.cmd
 #   ./labs/lab01_pnp/train.cmd --steps 20000 --batch_size 1
 #   ./labs/lab01_pnp/train.cmd --resume true
 set -euo pipefail
@@ -26,6 +25,7 @@ echo "Base:     lerobot/smolvla_base"
 echo "Dataset:  $LAB01_DATASET_ROOT  ($LAB01_DATASET_REPO_ID)"
 echo "Output:   $LAB01_TRAIN_OUTPUT"
 echo "Steps:    $LAB01_TRAIN_STEPS  batch_size: $LAB01_TRAIN_BATCH_SIZE  warmup: $LAB01_TRAIN_WARMUP"
+echo "Workers:  $LAB01_TRAIN_NUM_WORKERS  save_freq: $LAB01_TRAIN_SAVE_FREQ"
 echo "Log:      $REPO_ROOT/train.log"
 echo ""
 
@@ -43,6 +43,7 @@ set +e
     --rename_map="$LAB01_RENAME_MAP" \
     --batch_size="$LAB01_TRAIN_BATCH_SIZE" \
     --steps="$LAB01_TRAIN_STEPS" \
+    --num_workers="$LAB01_TRAIN_NUM_WORKERS" \
     --save_checkpoint=true \
     --save_freq="$LAB01_TRAIN_SAVE_FREQ" \
     "$@" \

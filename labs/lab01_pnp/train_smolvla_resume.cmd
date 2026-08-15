@@ -5,15 +5,12 @@
 #   outputs/train/lab01_pnp_smolvla/checkpoints/<FROM>/
 #   (pretrained_model/ + training_state/ — both required for --resume).
 #
-# Usage (from repo root):
 #   source .venv-rocm/bin/activate
-#   ./labs/lab01_pnp/train_smolvla_resume.cmd
-#
-# Resume 20k → 50k:
-#   LAB01_TRAIN_RESUME_FROM=020000 LAB01_TRAIN_RESUME_STEPS=50000 \
+#   LAB01_TRAIN_RESUME_FROM=007500 LAB01_TRAIN_RESUME_STEPS=20000 \
 #     ./labs/lab01_pnp/train_smolvla_resume.cmd
-#
-# Wait for scp then auto-start:
+#   LAB01_TRAIN_RESUME_FROM=050000 LAB01_TRAIN_RESUME_STEPS=100000 \
+#     LAB01_TRAIN_BATCH_SIZE=64 LAB01_TRAIN_SAVE_FREQ=10000 \
+#     ./labs/lab01_pnp/train_smolvla_resume.cmd
 #   ./labs/lab01_pnp/train_smolvla_resume.cmd --wait
 set -euo pipefail
 _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -28,14 +25,14 @@ for arg in "$@"; do
 done
 
 OUTPUT="$LAB01_TRAIN_OUTPUT"
-FROM="${LAB01_TRAIN_RESUME_FROM:-007500}"
+FROM="$LAB01_TRAIN_RESUME_FROM"
 CKPT="$OUTPUT/checkpoints/$FROM"
 PRE="$CKPT/pretrained_model"
 TS="$CKPT/training_state"
 CONFIG="$PRE/train_config.json"
-STEPS="${LAB01_TRAIN_RESUME_STEPS:-20000}"
-BATCH="${LAB01_TRAIN_BATCH_SIZE:-4}"
-SAVE_FREQ="${LAB01_TRAIN_SAVE_FREQ:-2000}"
+STEPS="$LAB01_TRAIN_RESUME_STEPS"
+BATCH="$LAB01_TRAIN_BATCH_SIZE"
+SAVE_FREQ="$LAB01_TRAIN_SAVE_FREQ"
 LOG="${LAB01_TRAIN_RESUME_LOG:-$REPO_ROOT/train_smolvla_resume_${FROM}_to_${STEPS}.log}"
 
 LEROBOT_TRAIN="$(dirname "$PYTHON")/lerobot-train"
