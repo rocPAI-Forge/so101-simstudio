@@ -1,0 +1,65 @@
+diff --git a/src/lerobot/policies/factory.py b/src/lerobot/policies/factory.py
+index 73fd9455..ec98c05d 100644
+--- a/src/lerobot/policies/factory.py
++++ b/src/lerobot/policies/factory.py
+@@ -18,6 +18,7 @@ from __future__ import annotations
+ 
+ import importlib
+ import logging
++from pathlib import Path
+ from typing import TYPE_CHECKING, Any, TypedDict, Unpack
+ 
+ import torch
+@@ -320,6 +321,52 @@ def make_pre_post_processors(
+                 ),
+             )
+ 
++        # MolmoAct2 Hub checkpoints use molmoact2_* processor steps (not the generic
++        # normalizer_processor / unnormalizer_processor keys that lerobot-train passes).
++        # Several releases also omit policy_postprocessor.json. Rebuild processors from
++        # dataset stats so fine-tunes pick up Lab01 quantile stats, rename_map, and
++        # joint_signs / joint_offsets from the policy config.
++        #
++        # A local fine-tune checkpoint already ships both processor files, and
++        # rebuilding would fall back to the base norm_tag stats (SO100/SO101
++        # degrees, 6-dim state) instead of the fine-tune's own stats, so load
++        # the saved pipelines in that case.
++        _molmo_local_processors = False
++        if isinstance(policy_cfg, MolmoAct2Config):
++            _pretrained_dir = Path(pretrained_path)
++            _molmo_local_processors = (
++                _pretrained_dir.is_dir()
++                and (_pretrained_dir / f"{POLICY_PREPROCESSOR_DEFAULT_NAME}.json").is_file()
++                and (_pretrained_dir / f"{POLICY_POSTPROCESSOR_DEFAULT_NAME}.json").is_file()
++            )
++
++        if isinstance(policy_cfg, MolmoAct2Config) and not _molmo_local_processors:
++            from .molmoact2.processor_molmoact2 import make_molmoact2_pre_post_processors
++            from ..processor.rename_processor import RenameObservationsProcessorStep, rename_stats
++
++            dataset_stats = kwargs.get("dataset_stats")
++            pre_overrides = kwargs.get("preprocessor_overrides") or {}
++            rename_map = (pre_overrides.get("rename_observations_processor") or {}).get("rename_map") or {}
++            if dataset_stats is not None and rename_map:
++                dataset_stats = rename_stats(dataset_stats, rename_map)
++
++            preprocessor, postprocessor = make_molmoact2_pre_post_processors(
++                config=policy_cfg,
++                dataset_stats=dataset_stats,
++                dataset_meta=kwargs.get("dataset_meta"),
++            )
++            if rename_map:
++                for step in preprocessor.steps:
++                    if isinstance(step, RenameObservationsProcessorStep):
++                        step.rename_map = dict(rename_map)
++                        break
++            device_override = (pre_overrides.get("device_processor") or {}).get("device")
++            if device_override is not None:
++                for step in list(preprocessor.steps) + list(postprocessor.steps):
++                    if hasattr(step, "device"):
++                        step.device = device_override
++            return preprocessor, postprocessor
++
+         preprocessor = PolicyProcessorPipeline.from_pretrained(
+             pretrained_model_name_or_path=pretrained_path,
+             config_filename=kwargs.get(

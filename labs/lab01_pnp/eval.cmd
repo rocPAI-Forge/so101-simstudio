@@ -36,11 +36,36 @@ if [[ ! -d "$LAB01_POLICY_PATH" ]]; then
     exit 1
 fi
 
+# MolmoAct2: extras are transformers/peft/scipy only. Never uv pip install
+# 'lerobot[molmoact2]' — LeRobot's ImportError suggests that, but it re-resolves
+# torch onto CUDA + nvidia-* wheels and breaks .venv-rocm.
+if [[ "$LAB01_EVAL_CONFIG" == *molmoact2* || "$LAB01_POLICY_PATH" == *molmoact2* ]]; then
+    if ! "$PYTHON" -c "import peft, transformers, scipy" 2>/dev/null; then
+        echo "MolmoAct2 extras missing (transformers / peft / scipy)." >&2
+        echo "  ./scripts/install-molmoact2-deps.sh" >&2
+        echo "Do NOT run: uv pip install 'lerobot[molmoact2]' (pulls CUDA torch)." >&2
+        exit 1
+    fi
+    if ! "$PYTHON" -c "import torch; hip=getattr(torch.version,'hip',None); assert hip and '+rocm' in torch.__version__" 2>/dev/null; then
+        echo "ROCm torch missing or replaced by CUDA build." >&2
+        echo "  ./scripts/install-molmoact2-deps.sh --repair-torch" >&2
+        echo "  # or full reset: make rocm-sync" >&2
+        exit 1
+    fi
+fi
+
 mkdir -p "$(dirname "$LAB01_EVAL_LOG")"
 
 EXTRA_ARGS=()
 if [[ -n "${LAB01_N_ACTION_STEPS}" ]]; then
     EXTRA_ARGS+=(--policy.n_action_steps="$LAB01_N_ACTION_STEPS")
+fi
+# CUDA graphs (MolmoAct2 default) segfault HSA on gfx1151 / Strix Halo.
+# Keep enabled only when explicitly requested (e.g. MI300X).
+if [[ "$LAB01_EVAL_CONFIG" == *molmoact2* || "$LAB01_POLICY_PATH" == *molmoact2* ]]; then
+    if [[ "${LAB01_MOLMO_CUDA_GRAPH:-false}" != "true" ]]; then
+        EXTRA_ARGS+=(--policy.enable_inference_cuda_graph=false)
+    fi
 fi
 
 echo "=== Lab 01: sim2sim policy eval ==="

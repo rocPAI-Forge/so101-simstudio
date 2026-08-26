@@ -144,6 +144,12 @@ def _run_episode(
     engine = strategy._engine
     interpolator = strategy._interpolator
     control_interval = interpolator.get_control_interval(cfg.fps)
+    inner = getattr(robot, "inner", robot)
+    try:
+        debug_n = int(os.environ.get("LAB01_DEBUG_ACTIONS", "0") or "0")
+    except ValueError:
+        debug_n = 0
+    debug_left = [debug_n]
 
     start = time.perf_counter()
     engine.resume()
@@ -158,7 +164,20 @@ def _run_episode(
         if strategy._handle_warmup(cfg.use_torch_compile, loop_start, control_interval):
             continue
 
-        send_next_action(obs_processed, obs, ctx, interpolator)
+        sent = send_next_action(obs_processed, obs, ctx, interpolator)
+        if debug_left[0] > 0 and sent is not None:
+            debug_left[0] -= 1
+            names = list(getattr(inner, "JOINT_NAMES", []))
+            current = [float(obs.get(f"{n}.pos", float("nan"))) for n in names]
+            pred = [float(sent.get(f"{n}.pos", sent.get(n, float("nan")))) for n in names]
+            delta = [p - q for p, q in zip(pred, current, strict=False)]
+            logger.info(
+                "debug action[%d] pred=%s current=%s delta=%s",
+                debug_n - debug_left[0],
+                [round(v, 4) for v in pred],
+                [round(v, 4) for v in current],
+                [round(v, 4) for v in delta],
+            )
 
         dt = time.perf_counter() - loop_start
         if (sleep_t := control_interval - dt) > 0:
@@ -186,16 +205,57 @@ def _policy_state_dim(ctx: Any) -> int | None:
     return None
 
 
+def _molmoact2_normalizer_step(ctx: Any) -> Any | None:
+    """Return the MolmoAct2 masked normalizer step, if the policy uses one."""
+    for step in ctx.policy.preprocessor.steps:
+        if type(step).__name__.startswith("MolmoAct2Masked"):
+            return step
+    return None
+
+
+def _fitted_state_dim(step: Any) -> int | None:
+    """Return the ``observation.state`` dim the normalizer was fitted on."""
+    stats = getattr(step, "stats", None)
+    if not isinstance(stats, dict):
+        return None
+    feature_stats = stats.get("observation.state")
+    if not isinstance(feature_stats, dict):
+        return None
+    for key in ("mean", "q01", "min"):
+        value = feature_stats.get(key)
+        if value is None:
+            continue
+        shape = getattr(value, "shape", None)
+        return int(shape[-1]) if shape else len(value)
+    return None
+
+
 def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     """Include vel/ee in rollout ``observation.state`` when the policy expects them.
 
     LeRobot rollout only routes ``*.pos`` joint keys to the policy by default.
     ACT trained on our dataset uses 15-dim state (pos+vel+ee).
+
+    MolmoAct2 fine-tunes keep the base checkpoint's 6-dim ``input_features``
+    even though training fed the full dataset state, so trust the dim the
+    checkpoint normalizer was actually fitted on.
     """
     from lerobot.utils.constants import OBS_STR
     from lerobot.utils.feature_utils import hw_to_dataset_features
 
     policy_dim = _policy_state_dim(ctx)
+    molmo_step = _molmoact2_normalizer_step(ctx)
+    if molmo_step is not None:
+        fitted_dim = _fitted_state_dim(molmo_step)
+        if fitted_dim is not None and fitted_dim != policy_dim:
+            logger.info(
+                "MolmoAct2 checkpoint normalizer was fitted on %d state dims "
+                "(policy config says %s); using %d",
+                fitted_dim,
+                policy_dim,
+                fitted_dim,
+            )
+            policy_dim = fitted_dim
     if policy_dim is None:
         return
 
@@ -250,15 +310,19 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
         }
 
     for step in ctx.policy.preprocessor.steps:
-        if isinstance(step, NormalizerProcessorStep):
-            step.stats = stats
-            step.to(device=step.device)
-            logger.info(
-                "Patched normalizer stats from %s (observation.state dim=%d)",
-                repo_id,
-                state_dim,
-            )
-            return
+        # SmolVLA uses NormalizerProcessorStep. MolmoAct2 subclasses it
+        # (molmoact2_masked_normalizer); overwriting that step drops the
+        # checkpoint quantile stats / mask and can collapse closed-loop actions.
+        if type(step) is not NormalizerProcessorStep:
+            continue
+        step.stats = stats
+        step.to(device=step.device)
+        logger.info(
+            "Patched normalizer stats from %s (observation.state dim=%d)",
+            repo_id,
+            state_dim,
+        )
+        return
     logger.warning("NormalizerProcessorStep not found; skipping stats patch")
 
 

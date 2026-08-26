@@ -76,7 +76,8 @@ uv pip install --python "$PY" --constraints "$TORCH_CONSTRAINTS" \
     "placo>=0.9.6,<0.9.16" \
     "cmeel-urdfdom>=4,<5" \
     "cmeel-tinyxml2<11" \
-    "transformers>=4.53.0" \
+    "transformers>=5.4.0,<5.6.0" \
+    "peft>=0.18.0,<1.0.0" \
     "num2words>=0.5.14" \
     "accelerate>=1.7.0" \
     "safetensors>=0.4.3"
