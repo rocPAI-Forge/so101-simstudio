@@ -78,6 +78,14 @@ uv pip install --python .venv-rocm/bin/python --torch-backend rocm7.2 --force-re
 `uv sync` (without `--torch-backend rocm7.2`) resolves LeRobot deps against **CUDA** PyTorch wheels.
 That path is **not supported** for SimStudio. Always use `make rocm-sync` to create or refresh `.venv-rocm`.
 
+The same trap applies to **`uv pip install 'lerobot[molmoact2]'`** (and other `lerobot[extra]` installs that are not `--no-deps` on the local submodule). The extra only needs `transformers` / `peft` / `scipy`; installing it as a package extra re-resolves torch onto CUDA. Use:
+
+```bash
+./scripts/install-molmoact2-deps.sh
+# if nvidia-* / +cu already leaked in:
+./scripts/install-molmoact2-deps.sh --repair-torch
+```
+
 ## When NOT to use this guide
 
 - **NVIDIA GPU** → CUDA is not supported by SimStudio yet (planned)
@@ -91,7 +99,7 @@ That path is **not supported** for SimStudio. Always use `make rocm-sync` to cre
 | `torch.cuda.is_available()` returns False | Wrong torch build; delete `.venv-rocm`, re-run `make rocm-sync` |
 | `torch.version.hip` is None | CUDA torch installed; delete venv, re-run `make rocm-sync`; never run `uv sync` after |
 | Version shows `+cu128` | Same as above |
-| `nvidia-*` packages in venv | CUDA torch pulled in; recreate venv with `make rocm-sync` |
+| `nvidia-*` packages in venv | CUDA torch pulled in; recreate venv with `make rocm-sync`, or `./scripts/install-molmoact2-deps.sh --repair-torch` if only extras leaked |
 | Install very slow | Normal on first run (~6 GB torch wheel) |
 
 ## Pinning torch from resolver

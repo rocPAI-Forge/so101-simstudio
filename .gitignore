@@ -9,8 +9,10 @@ __pycache__/
 .venv/
 .venv-*/
 
-# Datasets
+# Datasets (Hub / local LeRobot stores). Keep the SimStudio Python package.
 datasets/
+!src/simstudio/datasets/
+!src/simstudio/datasets/*.py
 
 # Training checkpoints and eval artifacts
 outputs/

@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -144,6 +145,12 @@ def _run_episode(
     engine = strategy._engine
     interpolator = strategy._interpolator
     control_interval = interpolator.get_control_interval(cfg.fps)
+    inner = getattr(robot, "inner", robot)
+    try:
+        debug_n = int(os.environ.get("LAB01_DEBUG_ACTIONS", "0") or "0")
+    except ValueError:
+        debug_n = 0
+    debug_left = [debug_n]
 
     start = time.perf_counter()
     engine.resume()
@@ -158,7 +165,20 @@ def _run_episode(
         if strategy._handle_warmup(cfg.use_torch_compile, loop_start, control_interval):
             continue
 
-        send_next_action(obs_processed, obs, ctx, interpolator)
+        sent = send_next_action(obs_processed, obs, ctx, interpolator)
+        if debug_left[0] > 0 and sent is not None:
+            debug_left[0] -= 1
+            names = list(getattr(inner, "JOINT_NAMES", []))
+            current = [float(obs.get(f"{n}.pos", float("nan"))) for n in names]
+            pred = [float(sent.get(f"{n}.pos", sent.get(n, float("nan")))) for n in names]
+            delta = [p - q for p, q in zip(pred, current, strict=False)]
+            logger.info(
+                "debug action[%d] pred=%s current=%s delta=%s",
+                debug_n - debug_left[0],
+                [round(v, 4) for v in pred],
+                [round(v, 4) for v in current],
+                [round(v, 4) for v in delta],
+            )
 
         dt = time.perf_counter() - loop_start
         if (sleep_t := control_interval - dt) > 0:
@@ -186,16 +206,99 @@ def _policy_state_dim(ctx: Any) -> int | None:
     return None
 
 
+def _molmoact2_normalizer_step(ctx: Any) -> Any | None:
+    """Return the MolmoAct2 masked normalizer step, if the policy uses one."""
+    for step in ctx.policy.preprocessor.steps:
+        if type(step).__name__.startswith("MolmoAct2Masked"):
+            return step
+    return None
+
+
+def _fitted_state_dim(step: Any) -> int | None:
+    """Return the ``observation.state`` dim the normalizer was fitted on."""
+    stats = getattr(step, "stats", None)
+    if not isinstance(stats, dict):
+        return None
+    feature_stats = stats.get("observation.state")
+    if not isinstance(feature_stats, dict):
+        return None
+    for key in ("mean", "q01", "min"):
+        value = feature_stats.get(key)
+        if value is None:
+            continue
+        shape = getattr(value, "shape", None)
+        return int(shape[-1]) if shape else len(value)
+    return None
+
+
+def _preserve_vla_jepa_finetune_dims() -> None:
+    """Keep Lab01 VLA-JEPA ``state_dim`` when LIBERO ``input_features`` still say 8.
+
+    Fine-tunes store ``state_dim=15`` (and a 15-col state encoder) but leave the
+    base LIBERO ``observation.state`` shape at 8. ``validate_features`` would
+    clobber that, build an 8-d encoder, then skip the 15-d weights (strict=False).
+    """
+    from lerobot.policies.vla_jepa.configuration_vla_jepa import VLAJEPAConfig
+
+    orig = VLAJEPAConfig.validate_features
+
+    def wrapped(self) -> None:
+        saved_state = int(self.state_dim)
+        saved_action = int(self.action_dim)
+        orig(self)
+        if saved_state > self.state_dim:
+            logger.info(
+                "Keeping VLA-JEPA state_dim=%d (input_features had %s)",
+                saved_state,
+                self.state_dim,
+            )
+            self.state_dim = saved_state
+            feat = (self.input_features or {}).get("observation.state")
+            if feat is not None:
+                self.input_features["observation.state"] = replace(feat, shape=(saved_state,))
+        if saved_action and saved_action != self.action_dim:
+            self.action_dim = saved_action
+
+    VLAJEPAConfig.validate_features = wrapped  # type: ignore[method-assign]
+
+
+def _checkpoint_normalizer_fitted_state_dim(ctx: Any) -> int | None:
+    """Return ``observation.state`` dim from the loaded checkpoint normalizer."""
+    molmo_step = _molmoact2_normalizer_step(ctx)
+    if molmo_step is not None:
+        return _fitted_state_dim(molmo_step)
+    from lerobot.processor.normalize_processor import NormalizerProcessorStep
+
+    for step in ctx.policy.preprocessor.steps:
+        if type(step) is NormalizerProcessorStep:
+            return _fitted_state_dim(step)
+    return None
+
+
 def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     """Include vel/ee in rollout ``observation.state`` when the policy expects them.
 
     LeRobot rollout only routes ``*.pos`` joint keys to the policy by default.
     ACT trained on our dataset uses 15-dim state (pos+vel+ee).
+
+    MolmoAct2 / VLA-JEPA fine-tunes may keep the base checkpoint's smaller
+    ``input_features`` even though training fed the full dataset state, so
+    trust the dim the checkpoint normalizer was actually fitted on.
     """
     from lerobot.utils.constants import OBS_STR
     from lerobot.utils.feature_utils import hw_to_dataset_features
 
     policy_dim = _policy_state_dim(ctx)
+    fitted_dim = _checkpoint_normalizer_fitted_state_dim(ctx)
+    if fitted_dim is not None and fitted_dim != policy_dim:
+        logger.info(
+            "Checkpoint normalizer was fitted on %d state dims "
+            "(policy config says %s); using %d",
+            fitted_dim,
+            policy_dim,
+            fitted_dim,
+        )
+        policy_dim = fitted_dim
     if policy_dim is None:
         return
 
@@ -241,6 +344,14 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
     repo_id = eval_settings["stats_dataset_repo_id"]
     root = eval_settings.get("stats_dataset_root")
     state_dim = _policy_state_dim(ctx) or int(eval_settings.get("state_dim", 6))
+    fitted_dim = _checkpoint_normalizer_fitted_state_dim(ctx)
+    if fitted_dim is not None and fitted_dim > state_dim:
+        logger.info(
+            "Using checkpoint normalizer state dim %d instead of policy config %d",
+            fitted_dim,
+            state_dim,
+        )
+        state_dim = fitted_dim
 
     ds_meta = LeRobotDatasetMetadata(repo_id, root=root)
     stats = rename_stats(ds_meta.stats, rename_map)
@@ -250,15 +361,19 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
         }
 
     for step in ctx.policy.preprocessor.steps:
-        if isinstance(step, NormalizerProcessorStep):
-            step.stats = stats
-            step.to(device=step.device)
-            logger.info(
-                "Patched normalizer stats from %s (observation.state dim=%d)",
-                repo_id,
-                state_dim,
-            )
-            return
+        # SmolVLA uses NormalizerProcessorStep. MolmoAct2 subclasses it
+        # (molmoact2_masked_normalizer); overwriting that step drops the
+        # checkpoint quantile stats / mask and can collapse closed-loop actions.
+        if type(step) is not NormalizerProcessorStep:
+            continue
+        step.stats = stats
+        step.to(device=step.device)
+        logger.info(
+            "Patched normalizer stats from %s (observation.state dim=%d)",
+            repo_id,
+            state_dim,
+        )
+        return
     logger.warning("NormalizerProcessorStep not found; skipping stats patch")
 
 
@@ -281,6 +396,7 @@ def eval_main(cfg: RolloutConfig) -> None:
         )
 
     signal_handler = ProcessSignalHandler(use_threads=True, display_pid=False)
+    _preserve_vla_jepa_finetune_dims()
     ctx = build_rollout_context(cfg, signal_handler.shutdown_event)
     robot = ctx.hardware.robot_wrapper
     inner_robot = getattr(robot, "inner", robot)

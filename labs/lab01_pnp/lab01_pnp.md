@@ -1,6 +1,6 @@
 # Lab 01 — Leader Teleop Pick-and-Place Dataset
 
-Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, inspect trajectories, replay in sim, then train ACT/SmolVLA and evaluate in MuJoCo.
+Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, inspect trajectories, replay in sim, then train ACT / SmolVLA / MolmoAct2 and evaluate in MuJoCo.
 
 > **Dataset v1 deprecated:** `so101-simstudio-pnp` (old wrist camera + original cube/container layout) is no longer used. Lab 01 now uses **`so101-simstudio-lab01-pnp`** only (new wrist cam, swapped spawn layout).
 
@@ -11,7 +11,8 @@ Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, insp
 | Dataset root | `./datasets/so101-simstudio-lab01-pnp` |
 | Dataset (Hub) | [alexhegit/so101-simstudio-lab01-pnp](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp) (50 leader PnP episodes) |
 | SmolVLA (Hub) | [alexhegit/so101-simstudio-lab01-pnp-smolvla](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla) (MI300X bs64 @ 50K) |
-| ACT (Hub) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) (MI300X 50K) |
+| ACT (Hub, 15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) (MI300X 50K, pos+vel+ee) |
+| ACT (Hub, 6-D state) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) (MI300X 50K, joint pos; real-robot IL layout) |
 | Episodes | 50 |
 | Episode length | 90 s max (save early with `N` / `→`) |
 | Reset window | 5 s between episodes |
@@ -22,7 +23,7 @@ Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, insp
 Skip recording/training if you only need eval: download the Hub dataset + policy (§7; `alexhegit` examples, or your own HF id), then run `./labs/lab01_pnp/eval.cmd` with `LAB01_POLICY_PATH` pointed at the downloaded weights.
 
 **Script defaults** live in [`labs/lab01_pnp/_env.sh`](_env.sh) (centralized, sectioned:
-Shared / Record / Train / Train ACT / Eval / Hub). Override via environment:
+Shared / Record / Train / Train ACT / Train MolmoAct2 / Eval / Hub). Override via environment:
 
 | Variable | Default | Used by |
 |----------|---------|---------|
@@ -38,7 +39,8 @@ Shared / Record / Train / Train ACT / Eval / Hub). Override via environment:
 | `LAB01_TRAIN_STEPS` / `BATCH_SIZE` / `SAVE_FREQ` / `NUM_WORKERS` | `7500` / `4` / `2000` / `4` | train (set for your GPU; see §5) |
 | `LAB01_TRAIN_WARMUP` | `500` | train |
 | `LAB01_TRAIN_RESUME_FROM` / `RESUME_STEPS` | `007500` / `20000` | train_smolvla_resume |
-| `LAB01_ACT_STEPS` / `BATCH_SIZE` / `SAVE_FREQ` | `10000` / `8` / `10000` | train_act (short default; MI300X reference used 50K / 128) |
+| `LAB01_ACT_STEPS` / `BATCH_SIZE` / `SAVE_FREQ` | `10000` / `8` / `10000` | train_act (short default; MI300X reference used 50K / 128). `LAB01_ACT_STATE_DIM=6` for joint-pos-only |
+| `LAB01_MOLMO_*` | see `_env.sh` §5 | train_molmoact2 (MI300X defaults: bs32 / 10K) |
 | `LAB01_POLICY_PATH` | see `_env.sh` (any `pretrained_model/` path) | eval / push_smolvla_model |
 | `LAB01_MUJOCO_GL` | `egl` | eval (`egl` / `glfw` / `osmesa`) |
 | `LAB01_RENDER_WINDOW` | `false` | eval (`true` with glfw) |
@@ -47,6 +49,7 @@ Shared / Record / Train / Train ACT / Eval / Hub). Override via environment:
 | `LAB01_EVAL_LOG` | `./outputs/eval/eval_${MUJOCO_GL}.log` | eval |
 | `LAB01_N_ACTION_STEPS` | empty (checkpoint default) | eval; set e.g. `50` for ACT |
 | `LAB01_ACT_HF_REPO_ID` | `alexhegit/so101-simstudio-lab01-pnp-act` | push_act_model_card |
+| `LAB01_ACT_STATE6_HF_REPO_ID` | `alexhegit/so101-simstudio-lab01-pnp-act-state6` | push_act_state6_model |
 | `LAB01_SMOLVLA_HF_REPO_ID` | `alexhegit/so101-simstudio-lab01-pnp-smolvla` | push_smolvla_model |
 | `LAB01_SMOLVLA_CKPT_STEP` | `050000` | push_smolvla_model (when `LAB01_POLICY_PATH` unset) |
 
@@ -406,20 +409,77 @@ Also saved: Run 1 `005000`; Run 2 `020000`, `030000`, `last → 030000`. Logs: `
 
 **ACT eval (20 episodes, headless, `reset_arm: follow`):** checkpoint `030000` → **7/20 (35%)**. Successful episodes place the cube in the container (~0.30, 0.19–0.21).
 
-### ACT training (lab01-pnp, MI300X 50K) — current reference
+### ACT training (lab01-pnp, MI300X 50K) — current 15-D reference
 
 ```bash
 LAB01_ACT_BATCH_SIZE=128 LAB01_ACT_STEPS=50000 LAB01_ACT_SAVE_FREQ=10000 \
   ./labs/lab01_pnp/train_act.cmd
 ```
 
-| Run | Platform | batch | steps | final loss | checkpoint |
-|-----|----------|-------|-------|------------|------------|
-| lab01-pnp | DORobot / MI300X | 128 | 50000 | **0.053** | `./outputs/train/lab01_pnp_act/checkpoints/050000/` |
+| Run | Platform | batch | steps | state | final loss | checkpoint |
+|-----|----------|-------|-------|-------|------------|------------|
+| lab01-pnp | DORobot / MI300X | 128 | 50000 | **15** (pos+vel+ee) | **0.053** | `./outputs/train/lab01_pnp_act/checkpoints/050000/` |
 
 **Loss curve** (from `train_act.log`, not eval): `labs/lab01_pnp/loss_curve_act_mi300x_50k.png` / `.csv`.
 
-Regenerate after a new ACT run:
+### ACT 6-D retrain (joint positions) — real-robot IL / sim2real
+
+SimStudio records **15-D** `observation.state` (6 joint `.pos` + 6 `.vel` + 3 EE XYZ). That is a **sim-only** layout. Official real LeRobot SO-101 (`so_follower`) is **6-D joint positions** (+ 6-D joint actions). Training a policy on 15-D sim state means the network expects channels the real arm does not provide, which blocks mixing real IL data and adds a sim2real feature mismatch.
+
+This run trains ACT on the **first 6 dims only** so the policy input matches real-robot IL. Goals:
+
+- Same observation semantics as the real follower (joint `.pos`).
+- Easier **sim2real** and later merge with real datasets.
+- EE is FK of the joints; vel is largely redundant at `n_obs_steps=1`. Extra dims are not assumed to help closed-loop success.
+
+**Not solved by 6-D alone:** radians vs degrees, gripper scale. Align units before mixing sim and real parquet.
+
+**Do not crop a second dataset.** Videos dominate Lab 01 (~1.17 GB); the extra 9 floats are ~0.73 MB uncompressed (~0.07% of the store). Keep the Hub 15-D dataset; slice at train load (`LAB01_ACT_STATE_DIM=6`). Writes `lab01_pnp_act_state6` so the 15-D 64% checkpoint is not overwritten.
+
+```bash
+# DORobot / MI300X — same 50K / batch 128 schedule as the 15-D reference
+LAB01_ACT_STATE_DIM=6 \
+  LAB01_ACT_BATCH_SIZE=128 LAB01_ACT_STEPS=50000 LAB01_ACT_SAVE_FREQ=10000 \
+  LAB01_ACT_OUTPUT=/mnt/doscratch/outputs/train/lab01_pnp_act_state6 \
+  ./labs/lab01_pnp/train_act.cmd
+```
+
+| Run | Platform | batch | steps | state | final loss | wall | checkpoint |
+|-----|----------|-------|-------|-------|------------|------|------------|
+| lab01-pnp 6-D | DORobot / MI300X | 128 | 50000 | **6** (joint `.pos`) | **0.054** | ~17 h | `./outputs/train/lab01_pnp_act_state6/checkpoints/050000/` |
+
+**Hub:** [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) (see §7). Local eval:
+
+```bash
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_act_state6/checkpoints/050000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act.yaml \
+LAB01_N_ACTION_STEPS=50 LAB01_EVAL_EPISODES=50 \
+LAB01_MUJOCO_GL=egl LAB01_RENDER_WINDOW=false \
+LAB01_EVAL_LOG=./outputs/eval/act_state6_egl_fullrange.log \
+  ./labs/lab01_pnp/eval.cmd
+```
+
+Same YAML as 15-D ACT (`reset_arm: follow`). LeRobot rollout already feeds joint `.pos`. **§6.4 adds a new row**; do not overwrite the 15-D 64% line.
+
+| | 15-D ACT 50K | 6-D ACT 50K |
+|--|----------------|-------------|
+| Train loss | 0.053 | 0.054 |
+| Full-range eval | **32/50 (64%)** | **29/50 (58%)** |
+
+At n=50 the 6-point gap is within sampling noise: **same level** as 15-D. Use 6-D when the goal is real IL / sim2real alignment, not to raise sim success.
+
+Plot 6-D loss with a distinct tag (do not replace the 15-D curve):
+
+```bash
+.venv-rocm/bin/python labs/lab01_pnp/plot_act_loss.py \
+  --log train_act_state6.log --steps 50000 --tag mi300x_50k_state6
+```
+
+**15-D vs 6-D dataset size:** almost all of Lab 01’s store is **videos** (3×480×640 AV1). Parquet is ~2.5 MB. Train with `LAB01_ACT_STATE_DIM=6` instead of duplicating the dataset.
+
+MolmoAct2 / VLA-JEPA 6-D fine-tunes (same slice) are a separate measurement; do not copy this ACT success rate onto those policies.
+
+Regenerate the 15-D curve after a new 15-D ACT run:
 
 ```bash
 .venv-rocm/bin/python labs/lab01_pnp/plot_act_loss.py \
@@ -427,6 +487,70 @@ Regenerate after a new ACT run:
 ```
 
 **ACT eval:** measured rates and configs are in §6 (do not treat loss alone as a proxy for pick success).
+
+### MolmoAct2 training (lab01-pnp, MI300X) — DORobot
+
+Fine-tune [`lerobot/MolmoAct2-SO100_101-LeRobot`](https://huggingface.co/lerobot/MolmoAct2-SO100_101-LeRobot) on the Lab 01 dataset. Entry point matches ACT/SmolVLA: knobs in `_env.sh`, run `train_molmoact2.cmd`.
+
+**Defaults (single MI300X 192 GB HBM):** `batch_size=32`, `steps=10000`, `save_freq=2000`, `num_workers=8`, VLM LoRA + trainable action expert, `chunk_size=30`.
+
+| Choice | Lab 01 setting | Why |
+|--------|----------------|-----|
+| Base | `MolmoAct2-SO100_101-LeRobot` | SO-101 joint pose + LeRobot processor |
+| Cameras | `camera_top`→`cam0`, `camera_wrist`→`cam1` | Base is 2-view; keep warm-start layout |
+| Joint frame | signs/offsets = identity | Lab01 actions/state are **radians**; SO100 degree offsets must not apply |
+| Quantile stats | auto-augment if `meta/stats.json` lacks `q01`/`q99` | MolmoAct2 default norm |
+
+```bash
+source .venv-rocm/bin/activate
+# Molmo extras only — never: uv pip install 'lerobot[molmoact2]' (CUDA torch)
+./scripts/install-molmoact2-deps.sh
+
+# Dataset already under ./datasets/so101-simstudio-lab01-pnp on DORobot
+./labs/lab01_pnp/train_molmoact2.cmd
+```
+
+| Recipe | GPU | `batch_size` | `steps` | `save_freq` | `num_workers` | Notes |
+|--------|-----|--------------|---------|-------------|---------------|-------|
+| Lab / DORobot | Instinct **MI300X** | **32** | **10000** | 2000 | 8 | `_env.sh` defaults |
+| Smoke | any | 4 | 500 | 500 | 2 | `LAB01_MOLMO_BATCH_SIZE=4 LAB01_MOLMO_STEPS=500 ...` |
+
+```bash
+# Smoke
+LAB01_MOLMO_BATCH_SIZE=4 LAB01_MOLMO_STEPS=500 LAB01_MOLMO_NUM_WORKERS=2 \
+  LAB01_MOLMO_SAVE_FREQ=500 ./labs/lab01_pnp/train_molmoact2.cmd
+
+# Longer MI300X run
+LAB01_MOLMO_STEPS=20000 LAB01_MOLMO_BATCH_SIZE=48 \
+  ./labs/lab01_pnp/train_molmoact2.cmd
+```
+
+Log: `train_molmoact2.log`. Checkpoints: `./outputs/train/lab01_pnp_molmoact2/checkpoints/`.
+
+**Eval:** `rename_map` is `camera_top→cam0`, `camera_wrist→cam1`. Use `n_action_steps=30` and `inference: sync`.
+
+```bash
+# Copy the two Molmo YAML files to .43 if that tree predates them, then:
+cd /path/to/so101-simstudio
+source .venv-rocm/bin/activate
+./scripts/install-molmoact2-deps.sh   # once; skip if peft already imports
+
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_molmoact2/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_molmoact2_demo_fixed.yaml \
+LAB01_N_ACTION_STEPS=30 \
+LAB01_EVAL_EPISODES=10 \
+LAB01_EVAL_LOG=./outputs/eval/molmoact2_fixed.log \
+  ./labs/lab01_pnp/eval.cmd
+
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_molmoact2/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_molmoact2.yaml \
+LAB01_N_ACTION_STEPS=30 \
+LAB01_EVAL_EPISODES=20 \
+LAB01_EVAL_LOG=./outputs/eval/molmoact2_full.log \
+  ./labs/lab01_pnp/eval.cmd
+```
+
+**Deps:** `policy.type=molmoact2` lives in the editable `lerobot/` submodule. Install extras with `./scripts/install-molmoact2-deps.sh` (`transformers` 5.4, `peft`, `scipy`). **Do not** `uv pip install 'lerobot[molmoact2]'` — that extra re-resolves torch onto CUDA and `nvidia-*` wheels. If that already happened: `./scripts/install-molmoact2-deps.sh --repair-torch` (or `make rocm-sync`). `peft` is required when `LAB01_MOLMO_ENABLE_LORA_VLM=true`.
 
 ---
 
@@ -470,6 +594,8 @@ Recording / full-range box (leader teleop):
 | `labs/lab01_pnp/configs/rollout_smolvla_demo_fixed.yaml` | SmolVLA | `fixed` | `home` | Always `(0.27, 0.20, yaw −8°)` via `cube_positions_demo_fixed.json` | Fixed-pose SmolVLA demo |
 | `labs/lab01_pnp/configs/rollout_act.yaml` | ACT | `random` | `follow` | Full record box | Honest ACT benchmark |
 | `labs/lab01_pnp/configs/rollout_act_demo_fixed.yaml` | ACT | `fixed` | `follow` | Same pose as SmolVLA fixed demo | Fixed-pose ACT demo |
+| `labs/lab01_pnp/configs/rollout_molmoact2.yaml` | MolmoAct2 | `random` | `home` | Full record box | Honest MolmoAct2 benchmark (`top→cam0`, `wrist→cam1`) |
+| `labs/lab01_pnp/configs/rollout_molmoact2_demo_fixed.yaml` | MolmoAct2 | `fixed` | `home` | Always `(0.27, 0.20, yaw −8°)` | Fixed-pose MolmoAct2 demo |
 
 **`reset_arm` rule of thumb** (same meanings as in §1 recording):
 
@@ -495,27 +621,38 @@ Fixed pose freezes **both** translation and yaw. Episode-to-episode outcomes can
 Optional **`LAB01_N_ACTION_STEPS`**: when set, passed as `--policy.n_action_steps`. Leave empty to use the value stored in the checkpoint (SmolVLA 50K: 50; ACT 50K train: 100). Lab ACT full-range reference used `50`.
 
 
-### 6.4 Reference measurements (lab01-pnp, MI300X 50K checkpoints)
+### 6.4 Reference measurements (lab01-pnp)
 
-Numbers below are closed-loop MuJoCo evals on the lab01-pnp scene. **n** is small for demo/fixed runs; treat those as indicative, not precise CI estimates. Full-range rows are the primary generalization numbers.
+Living comparison table for closed-loop MuJoCo eval on this scene. Append a row when a new policy or checkpoint is measured; do not overwrite prior rows.
+
+**n** is small for demo/fixed runs; treat those as indicative, not precise CI estimates. Full-range rows are the primary generalization numbers. Quote `reset_arm`, inference backend, and `n_action_steps` with the success fraction — do not mix protocols.
+
+SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 
 | Policy | Spawn | `reset_arm` | Inference | Backend | Episodes | Success | Notes |
 |--------|-------|-------------|-----------|---------|----------|---------|-------|
 | SmolVLA 50K | Full-range random | `home` | RTC | EGL | 50 | **11/50 (22%)** | Most fails never leave spawn; grasp/close unreliable |
 | SmolVLA 50K | Demo random (early box `x≤0.30`, yaw ±15°) | `home` | RTC | EGL | 20 | **5/20 (25%)** | Narrowing alone did not fix grasp failures |
 | SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | RTC | GLFW | 10 | **5/10 (50%)** | Same pose; RTC delay warnings throughout |
-| SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | GLFW | 10 | **3/10 (30%)** | Fewer “knock away”; more mid-transfer drops |
-| ACT 50K | Full-range random | `follow` | Sync | EGL | 50 | **32/50 (64%)** | Reference with `LAB01_N_ACTION_STEPS=50` |
+| SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | GLFW | 10 | **3/10 (30%)** | Fewer knock-aways; more mid-transfer drops |
+| ACT 50K (15-D state) | Full-range random | `follow` | Sync | EGL | 50 | **32/50 (64%)** | Reference with `LAB01_N_ACTION_STEPS=50`; pos+vel+ee; Hub [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
+| ACT 50K (6-D state) | Full-range random | `follow` | Sync | EGL | 50 | **29/50 (58%)** | Joint `.pos` only (`LAB01_ACT_STATE_DIM=6`); same protocol as 15-D 64% row; Hub [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 | ACT 50K | Full-range random | `follow` | Sync | — | 50 | **23/50 (46%)** | Same checkpoint with `n_action_steps=100` (historical log) |
 | ACT 50K | Fixed `(0.27,0.20,−8°)` | `follow` | Sync | GLFW | 10 | **8/10 (80%)** | `n_action_steps=100`, `rollout_act_demo_fixed.yaml` |
+| MolmoAct2 10K | Full-range random | `home` | Sync | EGL | 50 | **15/50 (30%)** | `n_action_steps=30`, `rollout_molmoact2.yaml`; CUDA graphs off (gfx1151) |
+| MolmoAct2 10K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | EGL | 10 | **7/10 (70%)** | `n_action_steps=30`, `rollout_molmoact2_demo_fixed.yaml`; CUDA graphs off |
 
 **Reading the table**
 
-- `reset_arm` matches the intentional §6.2 contrast (SmolVLA eval YAMLs → `home`, ACT → `follow`). Do not mix rows when claiming a single protocol.
-- On this 50-episode dataset, **ACT full-range ≫ SmolVLA full-range** under the measured setups.
-- **Demo / fixed spawn raises ACT demo reliability** (80% @ fixed) but does **not** make SmolVLA classroom-stable (≈30–50% even at a known-good pose).
+- `reset_arm` matches the intentional §6.2 contrast (SmolVLA and MolmoAct2 eval YAMLs → `home`, ACT → `follow`). Do not mix rows when claiming a single protocol.
+- On this 50-episode dataset, under the measured setups: **ACT full-range (15-D 64% / 6-D 58%, same level at n=50) > MolmoAct2 10K full-range (30%) > SmolVLA 50K full-range (22%)**. Quote `state=15` vs `state=6` when citing ACT; do not collapse them into one “ACT 50K” number.
+- 6-D ACT matches real SO-101 joint-pos IL. The 6-point gap vs 15-D is within n=50 noise; choose 6-D for sim2real alignment, not for a sim-success gain.
+- Fixed spawn raises ACT (80%) and MolmoAct2 (70%) more than SmolVLA (≈30–50%). SmolVLA is not classroom-stable even at a known-good pose.
 - For SmolVLA, spawn tightening helped less than expected: failure analysis pointed to **grasp instability** and **yaw polarity** (positive yaw often knocks the cube) more than XY coverage alone.
 - RTC lag on iGPU (≈8–9 control frames) changes *how* SmolVLA fails; switching to sync did not turn fixed-pose eval into a high success rate.
+- MolmoAct2 10K eval requires loading the fine-tune processor JSON (not rebuilding from the SO100/SO101 degree `norm_tag`) and feeding the 15-dim dataset state the normalizer was fitted on. Apply `patches/lerobot-molmoact2-eval.patch` to the local `lerobot/` checkout (`git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch`); do not commit that edit inside the submodule.
+
+**Adding a new policy:** measure full-range (`n=50`) and optionally fixed-pose (`n=10`) with the matching `labs/lab01_pnp/configs/rollout_*.yaml`. Add one row per (policy, spawn, `reset_arm`, inference) tuple. Keep Success as `k/n (p%)`.
 
 ### 6.5 How to run
 
@@ -550,6 +687,26 @@ LAB01_MUJOCO_GL=glfw LAB01_RENDER_WINDOW=true \
 LAB01_EVAL_EPISODES=10 LAB01_N_ACTION_STEPS=100 \
 LAB01_EVAL_LOG=./outputs/eval/act_glfw_fixed.log \
   ./labs/lab01_pnp/eval.cmd
+
+# ACT 6-D (joint pos; real IL layout) — same yaml as 15-D ACT
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_act_state6/checkpoints/050000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act.yaml \
+LAB01_N_ACTION_STEPS=50 LAB01_EVAL_EPISODES=50 \
+LAB01_EVAL_LOG=./outputs/eval/act_state6_egl.log \
+  ./labs/lab01_pnp/eval.cmd
+
+# MolmoAct2 10K — cameras top→cam0, wrist→cam1; chunk 30; sync
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_molmoact2/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_molmoact2_demo_fixed.yaml \
+LAB01_N_ACTION_STEPS=30 LAB01_EVAL_EPISODES=10 \
+LAB01_EVAL_LOG=./outputs/eval/molmoact2_fixed.log \
+  ./labs/lab01_pnp/eval.cmd
+
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_molmoact2/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_molmoact2.yaml \
+LAB01_N_ACTION_STEPS=30 LAB01_EVAL_EPISODES=20 \
+LAB01_EVAL_LOG=./outputs/eval/molmoact2_full.log \
+  ./labs/lab01_pnp/eval.cmd
 ```
 
 | Override | Example |
@@ -580,7 +737,7 @@ When you change any axis, re-run with a fixed episode count and the same `MUJOCO
 
 ### Historical notes (v1 / short ACT runs)
 
-Older ACT runs on deprecated data or shorter schedules (10K/30K) are not the lab01-pnp reference. Prefer the MI300X **50K** checkpoints and the §6.4 table above.
+Older ACT runs on deprecated data or shorter schedules (10K/30K) are not the lab01-pnp reference. Prefer the MI300X **50K** checkpoints in the §6.4 table (15-D and 6-D).
 
 ---
 
@@ -595,7 +752,8 @@ Hugging Face user/org** for personal upload/download by overriding the env vars 
 | Dataset user | `LAB01_DATASET_HF_USER` | `your-hf-id` |
 | Dataset repo | `LAB01_DATASET_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp` |
 | SmolVLA model repo | `LAB01_SMOLVLA_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-smolvla` |
-| ACT model repo | `LAB01_ACT_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act` |
+| ACT model repo (15-D) | `LAB01_ACT_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act` |
+| ACT model repo (6-D) | `LAB01_ACT_STATE6_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act-state6` |
 
 Published Lab 01 reference assets (`alexhegit`):
 
@@ -603,7 +761,8 @@ Published Lab 01 reference assets (`alexhegit`):
 |-------|----------|
 | Dataset | [alexhegit/so101-simstudio-lab01-pnp](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp) |
 | SmolVLA policy | [alexhegit/so101-simstudio-lab01-pnp-smolvla](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla) |
-| ACT policy | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
+| ACT policy (15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
+| ACT policy (6-D joint pos) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 
 Commands in §7.1–7.2 keep `alexhegit/...` as copy-paste examples; replace the namespace with yours when working under your own Hub account.
 
@@ -640,9 +799,13 @@ snapshot_download(
 hf download alexhegit/so101-simstudio-lab01-pnp-smolvla \
   --local-dir ./outputs/hub/lab01_pnp_smolvla
 
-# ACT
+# ACT 15-D (pos+vel+ee)
 hf download alexhegit/so101-simstudio-lab01-pnp-act \
   --local-dir ./outputs/hub/lab01_pnp_act
+
+# ACT 6-D (joint pos; real-robot IL layout)
+hf download alexhegit/so101-simstudio-lab01-pnp-act-state6 \
+  --local-dir ./outputs/hub/lab01_pnp_act_state6
 ```
 
 **Eval with downloaded weights** (same `eval.cmd`; see §6):
@@ -652,11 +815,18 @@ hf download alexhegit/so101-simstudio-lab01-pnp-act \
 LAB01_POLICY_PATH=./outputs/hub/lab01_pnp_smolvla \
   ./labs/lab01_pnp/eval.cmd
 
-# ACT full-range
+# ACT 15-D full-range
 LAB01_POLICY_PATH=./outputs/hub/lab01_pnp_act \
 LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act.yaml \
 LAB01_N_ACTION_STEPS=50 LAB01_EVAL_EPISODES=50 \
 LAB01_EVAL_LOG=./outputs/eval/act_hub.log \
+  ./labs/lab01_pnp/eval.cmd
+
+# ACT 6-D full-range (same yaml)
+LAB01_POLICY_PATH=./outputs/hub/lab01_pnp_act_state6 \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_act.yaml \
+LAB01_N_ACTION_STEPS=50 LAB01_EVAL_EPISODES=50 \
+LAB01_EVAL_LOG=./outputs/eval/act_state6_hub.log \
   ./labs/lab01_pnp/eval.cmd
 ```
 
@@ -679,6 +849,7 @@ After `hf auth login`, push with the defaults (`alexhegit/...`) or your own ids:
 export LAB01_DATASET_HF_USER=your-hf-id
 export LAB01_SMOLVLA_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-smolvla
 export LAB01_ACT_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act
+export LAB01_ACT_STATE6_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act-state6
 
 # Dataset
 ./labs/lab01_pnp/push_dataset.cmd
@@ -686,11 +857,14 @@ export LAB01_ACT_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act
 # SmolVLA weights + card (MI300X bs64 @ 50K)
 ./labs/lab01_pnp/push_smolvla_model.cmd
 
-# ACT model card
+# ACT 15-D model card (weights already on Hub)
 ./labs/lab01_pnp/push_act_model_card.cmd
+
+# ACT 6-D weights + card
+LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_act_state6_model.cmd
 ```
 
-Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`.
+Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`.
 
 ## Troubleshooting
 
@@ -717,13 +891,15 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`.
 | `record.cmd` | Leader pick-and-place recording |
 | `train.cmd` | SmolVLA fine-tune |
 | `train_smolvla_resume.cmd` | Resume SmolVLA from a checkpoint |
-| `train_act.cmd` | ACT imitation learning |
+| `train_act.cmd` | ACT imitation learning (`LAB01_ACT_STATE_DIM=6` for joint-pos-only) |
+| `train_molmoact2.cmd` | MolmoAct2 fine-tune (MI300X / DORobot defaults) |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
 | `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
 | `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |
 | `push_smolvla_model.cmd` / `hf_model_card_smolvla.md` | Upload SmolVLA 50K weights + Hub README |
-| `push_act_model_card.cmd` / `hf_model_card_act.md` | Upload ACT Hub README |
+| `push_act_model_card.cmd` / `hf_model_card_act.md` | Upload ACT 15-D Hub README |
+| `push_act_state6_model.cmd` / `hf_model_card_act_state6.md` | Upload ACT 6-D weights + Hub README |
 | `loss_curve_run1.*` | SmolVLA Run 1 training loss (reference) |
 | `loss_curve_act_mi300x_50k.*` | ACT 50K training loss (reference) |
 | `lab01_pnp.md` | This runbook |

@@ -14,41 +14,41 @@ _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
 source "$_LAB01_DIR/_env.sh"
 
-LEROBOT_TRAIN="$(dirname "$PYTHON")/lerobot-train"
-if [[ ! -x "$LEROBOT_TRAIN" ]]; then
-    echo "lerobot-train not found. Run: make rocm-sync" >&2
-    exit 1
-fi
-
 echo "=== Lab 01: ACT training ==="
 echo "Dataset:  $LAB01_DATASET_ROOT  ($LAB01_DATASET_REPO_ID)"
 echo "Output:   $LAB01_ACT_OUTPUT"
 echo "Steps:    $LAB01_ACT_STEPS  batch_size: $LAB01_ACT_BATCH_SIZE"
-echo "Log:      $REPO_ROOT/train_act.log"
+if [[ -n "${LAB01_ACT_STATE_DIM:-}" ]]; then
+    echo "State:    first $LAB01_ACT_STATE_DIM dims of observation.state (on-disk dataset unchanged)"
+    export LAB01_ACT_STATE_DIM
+else
+    echo "State:    full observation.state (15-D pos+vel+ee)"
+fi
+echo "Log:      $REPO_ROOT/$LAB01_ACT_LOG"
 echo ""
 
 set +e
-"$LEROBOT_TRAIN" \
+"$PYTHON" -m simstudio.scripts.train_act \
     --policy.type=act \
     --policy.push_to_hub=false \
     --dataset.repo_id="$LAB01_DATASET_REPO_ID" \
     --dataset.root="$LAB01_DATASET_ROOT" \
     --dataset.video_backend=pyav \
     --output_dir="$LAB01_ACT_OUTPUT" \
-    --job_name=lab01_pnp_act \
+    --job_name="$LAB01_ACT_JOB_NAME" \
     --batch_size="$LAB01_ACT_BATCH_SIZE" \
     --steps="$LAB01_ACT_STEPS" \
     --save_checkpoint=true \
     --save_freq="$LAB01_ACT_SAVE_FREQ" \
     "$@" \
-    2>&1 | tee train_act.log
+    2>&1 | tee "$LAB01_ACT_LOG"
 status=${PIPESTATUS[0]}
 set -e
 
 if [[ "$status" -ne 0 ]]; then
     echo ""
-    echo "Training exited with error ($status). Last lines of train_act.log:"
-    tail -30 train_act.log
+    echo "Training exited with error ($status). Last lines of $LAB01_ACT_LOG:"
+    tail -30 "$LAB01_ACT_LOG"
     exit "$status"
 fi
 

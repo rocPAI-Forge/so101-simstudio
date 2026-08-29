@@ -107,6 +107,8 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Dataset validation | `.venv-rocm/bin/python -m simstudio.scripts.validate_dataset --root <dataset_root>` |
 | VLA training (SmolVLA) | `.venv-rocm/bin/lerobot-train ...` (see [QUICKSTART.md](QUICKSTART.md)) |
 | Joy-Con setup | `make joycon-sync` |
+| MolmoAct2 extras (ROCm-safe) | `./scripts/install-molmoact2-deps.sh` — **not** `uv pip install 'lerobot[molmoact2]'` |
+| MolmoAct2 eval processor patch | `git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch` (do not commit inside `lerobot/`) |
 | ROCm setup | `make rocm-sync` |
 
 ## Key Conventions
