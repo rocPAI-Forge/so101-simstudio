@@ -71,8 +71,23 @@ LAB01_TRAIN_RESUME_STEPS="${LAB01_TRAIN_RESUME_STEPS:-20000}"
 
 # -----------------------------------------------------------------------------
 # 4) Train (ACT) — train_act.cmd
+#    LAB01_ACT_STATE_DIM=6 → joint positions only (dataset stays 15-D on disk).
+#    Empty / unset → full 15-D (pos+vel+ee). Use a distinct OUTPUT dir for 6-D.
 # -----------------------------------------------------------------------------
-LAB01_ACT_OUTPUT="${LAB01_ACT_OUTPUT:-./outputs/train/lab01_pnp_act}"
+LAB01_ACT_STATE_DIM="${LAB01_ACT_STATE_DIM:-}"
+if [[ "${LAB01_ACT_STATE_DIM}" == "6" ]]; then
+  _lab01_act_out_default="./outputs/train/lab01_pnp_act_state6"
+  _lab01_act_log_default="train_act_state6.log"
+  _lab01_act_job_default="lab01_pnp_act_state6"
+else
+  _lab01_act_out_default="./outputs/train/lab01_pnp_act"
+  _lab01_act_log_default="train_act.log"
+  _lab01_act_job_default="lab01_pnp_act"
+fi
+LAB01_ACT_OUTPUT="${LAB01_ACT_OUTPUT:-${_lab01_act_out_default}}"
+LAB01_ACT_LOG="${LAB01_ACT_LOG:-${_lab01_act_log_default}}"
+LAB01_ACT_JOB_NAME="${LAB01_ACT_JOB_NAME:-${_lab01_act_job_default}}"
+unset _lab01_act_out_default _lab01_act_log_default _lab01_act_job_default
 LAB01_ACT_STEPS="${LAB01_ACT_STEPS:-10000}"
 LAB01_ACT_BATCH_SIZE="${LAB01_ACT_BATCH_SIZE:-8}"
 LAB01_ACT_SAVE_FREQ="${LAB01_ACT_SAVE_FREQ:-10000}"
@@ -152,12 +167,17 @@ LAB01_EVAL_LOG="${LAB01_EVAL_LOG:-./outputs/eval/eval_${LAB01_MUJOCO_GL}.log}"
 LAB01_N_ACTION_STEPS="${LAB01_N_ACTION_STEPS:-}"
 
 # -----------------------------------------------------------------------------
-# 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd
+# 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
+#    push_act_state6_model.cmd
 # -----------------------------------------------------------------------------
 LAB01_SMOLVLA_HF_REPO_ID="${LAB01_SMOLVLA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-smolvla}"
 LAB01_ACT_HF_REPO_ID="${LAB01_ACT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act}"
+LAB01_ACT_STATE6_HF_REPO_ID="${LAB01_ACT_STATE6_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act-state6}"
+LAB01_ACT_STATE6_CKPT_STEP="${LAB01_ACT_STATE6_CKPT_STEP:-050000}"
 LAB01_MOLMO_HF_REPO_ID="${LAB01_MOLMO_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-molmoact2}"
 LAB01_MOLMO_CKPT_STEP="${LAB01_MOLMO_CKPT_STEP:-010000}"
+LAB01_JEPA_HF_REPO_ID="${LAB01_JEPA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-vla-jepa}"
+LAB01_JEPA_CKPT_STEP="${LAB01_JEPA_CKPT_STEP:-020000}"
 # Checkpoint step name under LAB01_TRAIN_OUTPUT when push_smolvla_model does not
 # get an explicit LAB01_POLICY_PATH.
 LAB01_SMOLVLA_CKPT_STEP="${LAB01_SMOLVLA_CKPT_STEP:-050000}"

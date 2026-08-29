@@ -20,11 +20,9 @@ _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
 source "$_LAB01_DIR/_env.sh"
 
-LEROBOT_TRAIN="$(dirname "$PYTHON")/lerobot-train"
-if [[ ! -x "$LEROBOT_TRAIN" ]]; then
-    echo "lerobot-train not found. Run: make rocm-sync" >&2
-    exit 1
-fi
+# Optional LAB01_STATE_DIM=6 slices observation.state after parquet load
+# (same wrapper as ACT; dataset on disk stays 15-D).
+LEROBOT_TRAIN=("$PYTHON" -m simstudio.scripts.train_act)
 
 if [[ ! -d "$LAB01_DATASET_ROOT" ]]; then
     echo "Dataset root not found: $LAB01_DATASET_ROOT" >&2
@@ -114,10 +112,14 @@ echo "LoRA VLM: $LAB01_MOLMO_ENABLE_LORA_VLM"
 echo "Rename:   $LAB01_MOLMO_RENAME_MAP"
 echo "Joints:   signs=$LAB01_MOLMO_JOINT_SIGNS  offsets=$LAB01_MOLMO_JOINT_OFFSETS (identity for Lab01 radians)"
 echo "Log:      $LAB01_MOLMO_LOG"
+if [[ -n "${LAB01_STATE_DIM:-}" ]]; then
+    echo "State:    first $LAB01_STATE_DIM dims of observation.state"
+    export LAB01_STATE_DIM
+fi
 echo ""
 
 set +e
-"$LEROBOT_TRAIN" \
+"${LEROBOT_TRAIN[@]}" \
     --policy.path="$LAB01_MOLMO_BASE" \
     --policy.push_to_hub=false \
     --policy.device=cuda \

@@ -37,7 +37,8 @@ For recording setup, validation, replay, and training commands, see **Lab 01** i
 
 Policies trained on this dataset:
 
-- ACT: [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act)
+- ACT 15-D (pos+vel+ee): [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act)
+- ACT 6-D (joint pos, real-robot IL layout): [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6)
 - SmolVLA (MI300X bs64 @ 50K): [alexhegit/so101-simstudio-lab01-pnp-smolvla](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla)
 
 ## Quick load

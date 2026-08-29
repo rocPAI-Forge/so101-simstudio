@@ -35,4 +35,6 @@ from lerobot.policies.act.modeling_act import ACTPolicy
 policy = ACTPolicy.from_pretrained("alexhegit/so101-simstudio-lab01-pnp-act")
 ```
 
-Sim2sim eval in MuJoCo: follow **§6 Policy eval** in [lab01_pnp.md](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp/lab01_pnp.md) (ACT configs under `labs/lab01_pnp/configs/rollout_act*.yaml`).
+The 15-D ACT reference (same 50K schedule; policy trained on pos+vel+ee) lives in this repo.
+
+For **joint-position-only** ACT (6-D state, aligned with real SO-101 IL / sim2real), use [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6).
