@@ -43,7 +43,11 @@ from lerobot.utils.robot_utils import precise_sleep  # noqa: E402
 from lerobot.utils.utils import init_logging, log_say  # noqa: E402
 from lerobot.utils.visualization_utils import init_visualization, shutdown_visualization  # noqa: E402
 
-from simstudio.common.eval_success import check_pick_success  # noqa: E402
+from simstudio.common.eval_success import (  # noqa: E402
+    check_pick_success,
+    cube_over_container,
+    gripper_near_cube,
+)
 from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401,E402
 from simstudio.robots.so101_mujoco.robot_so101_mujoco import SO101MujocoRobot  # noqa: E402
 
@@ -231,12 +235,165 @@ def _fitted_state_dim(step: Any) -> int | None:
     return None
 
 
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
+def _install_gripper_snap(ctx: Any) -> None:
+    """Optionally snap the predicted gripper command to open/closed at eval time.
+
+    Lab 01 grasps only hold when the jaws reach the safe closed value (~-0.1 rad);
+    intermediate commands look like the arm hesitating over the cube. Flow-matching
+    heads (VLA-JEPA) regress the leader's continuous open->close sweep and can settle
+    mid-range. This is a diagnostic knob, not a training fix: quote it next to any
+    success rate measured with it on.
+
+    LIBERO's own ``binarize_gripper_action`` cannot be reused — it targets dim 6 of a
+    7-D action and maps to {-1, +1}, while SO-101 is dim 5 of 6 in radians.
+    """
+    import torch
+    from lerobot.processor import EnvTransition, ProcessorStep, TransitionKey
+
+    threshold = float(os.environ.get("LAB01_GRIPPER_SNAP_THRESHOLD", "0.45"))
+    closed = float(os.environ.get("LAB01_GRIPPER_SNAP_CLOSED", "-0.1"))
+    open_raw = os.environ.get("LAB01_GRIPPER_SNAP_OPEN", "").strip()
+    open_value = float(open_raw) if open_raw else None
+    latch = _env_flag("LAB01_GRIPPER_SNAP_LATCH")
+
+    class _SO101GripperSnapStep(ProcessorStep):
+        def __init__(self) -> None:
+            self._seen_open = False
+            self._latched = False
+
+        def __call__(self, transition: EnvTransition) -> EnvTransition:
+            action = transition.get(TransitionKey.ACTION)
+            if action is None or not isinstance(action, torch.Tensor):
+                return transition
+            if action.shape[-1] < 6:
+                return transition
+            a = action.clone()
+            wants_close = bool((a[..., -1] < threshold).all())
+            if not wants_close:
+                self._seen_open = True
+            # Episodes start with the jaws near closed, so latching before the
+            # policy has opened once would freeze the arm shut for the whole run.
+            if wants_close and self._seen_open and latch:
+                self._latched = True
+            if wants_close or self._latched:
+                a[..., -1] = closed
+            elif open_value is not None:
+                a[..., -1] = open_value
+            transition = dict(transition)
+            transition[TransitionKey.ACTION] = a
+            return transition
+
+        def reset(self) -> None:
+            self._seen_open = False
+            self._latched = False
+
+        def transform_features(self, features):
+            return features
+
+    ctx.policy.postprocessor.steps.append(_SO101GripperSnapStep())
+    logger.info(
+        "Gripper snap enabled: threshold=%.3f closed=%.3f open=%s latch=%s",
+        threshold,
+        closed,
+        open_value if open_value is not None else "<predicted>",
+        latch,
+    )
+
+
+class _GripperProximityOracle:
+    """Force-close when the wrist is over the cube; open over the container.
+
+    Diagnostic only: proves whether the policy's arm trajectory is enough if the
+    gripper channel is replaced by geometry. Quote it next to any success rate.
+    """
+
+    def __init__(self, robot: SO101MujocoRobot) -> None:
+        self.robot = robot
+        self.radius_m = float(os.environ.get("LAB01_GRIPPER_ORACLE_RADIUS", "0.04"))
+        self.closed_val = float(os.environ.get("LAB01_GRIPPER_ORACLE_CLOSED", "-0.1"))
+        self.open_val = float(os.environ.get("LAB01_GRIPPER_ORACLE_OPEN", "0.9"))
+        site = os.environ.get("LAB01_GRIPPER_ORACLE_SITE", "gripperframe")
+        import mujoco as mj
+
+        self.site_id = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_SITE, site)
+        if self.site_id < 0:
+            logger.warning("Gripper oracle site %r missing; falling back to wrist_site", site)
+            self.site_id = robot.ee_site_id
+        self.reset()
+
+    def reset(self) -> None:
+        self.holding = False
+        self.released = False
+        self.min_dist = float("inf")
+
+    def _site_xyz(self) -> tuple[float, float, float]:
+        p = self.robot.data.site_xpos[self.site_id]
+        return (float(p[0]), float(p[1]), float(p[2]))
+
+    def override(self, action: dict[str, Any], robot: SO101MujocoRobot) -> dict[str, Any]:
+        block = robot.get_block_position()
+        if check_pick_success(block):
+            return action
+        ee_xyz = self._site_xyz()
+        if block is not None:
+            dx = ee_xyz[0] - block[0]
+            dy = ee_xyz[1] - block[1]
+            dz = ee_xyz[2] - block[2]
+            dist = (dx * dx + dy * dy + dz * dz) ** 0.5
+            if dist < self.min_dist:
+                self.min_dist = dist
+        near = gripper_near_cube(ee_xyz, block, radius_m=self.radius_m)
+        over_box = cube_over_container(block)
+        if self.holding and over_box:
+            self.holding = False
+            self.released = True
+            logger.info("Gripper oracle: open over container (ee=%s cube=%s)", ee_xyz, block)
+        elif near and not self.holding and not self.released:
+            self.holding = True
+            logger.info(
+                "Gripper oracle: close (dist<=%.3f ee=%s cube=%s)",
+                self.radius_m,
+                ee_xyz,
+                block,
+            )
+        out = dict(action)
+        if self.holding:
+            out["gripper.pos"] = self.closed_val
+        elif self.released:
+            out["gripper.pos"] = self.open_val
+        return out
+
+
+def _install_gripper_oracle(robot: SO101MujocoRobot) -> _GripperProximityOracle:
+    oracle = _GripperProximityOracle(robot)
+    orig = robot.send_action
+
+    def wrapped(action: dict[str, Any]) -> Any:
+        return orig(oracle.override(action, robot))
+
+    robot.send_action = wrapped  # type: ignore[method-assign]
+    logger.info(
+        "Gripper oracle enabled: radius=%.3f close=%.3f open=%.3f site_id=%d",
+        oracle.radius_m,
+        oracle.closed_val,
+        oracle.open_val,
+        oracle.site_id,
+    )
+    return oracle
+
+
 def _preserve_vla_jepa_finetune_dims() -> None:
     """Keep Lab01 VLA-JEPA ``state_dim`` when LIBERO ``input_features`` still say 8.
 
-    Fine-tunes store ``state_dim=15`` (and a 15-col state encoder) but leave the
-    base LIBERO ``observation.state`` shape at 8. ``validate_features`` would
-    clobber that, build an 8-d encoder, then skip the 15-d weights (strict=False).
+    Fine-tunes store ``state_dim`` 6 or 15 (and a matching state encoder) but
+    leave the base LIBERO ``observation.state`` shape at 8. ``validate_features``
+    would clobber that, build an 8-d encoder, then skip the fine-tune weights
+    (``strict=False``). Restore whenever the saved dim differs — not only when
+    it is larger than 8 (6-D Lab 01 slice is smaller).
     """
     from lerobot.policies.vla_jepa.configuration_vla_jepa import VLAJEPAConfig
 
@@ -246,7 +403,7 @@ def _preserve_vla_jepa_finetune_dims() -> None:
         saved_state = int(self.state_dim)
         saved_action = int(self.action_dim)
         orig(self)
-        if saved_state > self.state_dim:
+        if saved_state != self.state_dim:
             logger.info(
                 "Keeping VLA-JEPA state_dim=%d (input_features had %s)",
                 saved_state,
@@ -345,7 +502,7 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
     root = eval_settings.get("stats_dataset_root")
     state_dim = _policy_state_dim(ctx) or int(eval_settings.get("state_dim", 6))
     fitted_dim = _checkpoint_normalizer_fitted_state_dim(ctx)
-    if fitted_dim is not None and fitted_dim > state_dim:
+    if fitted_dim is not None and fitted_dim != state_dim:
         logger.info(
             "Using checkpoint normalizer state dim %d instead of policy config %d",
             fitted_dim,
@@ -402,9 +559,12 @@ def eval_main(cfg: RolloutConfig) -> None:
     inner_robot = getattr(robot, "inner", robot)
     _expand_rollout_state_features(ctx, inner_robot)
     _fix_preprocessor_normalizer_stats(ctx, eval_settings, cfg.rename_map)
+    if _env_flag("LAB01_GRIPPER_SNAP"):
+        _install_gripper_snap(ctx)
     inner = getattr(robot, "inner", robot)
     if not isinstance(inner, SO101MujocoRobot):
         raise TypeError(f"eval.py expects so101_mujoco robot, got {type(inner)}")
+    gripper_oracle = _install_gripper_oracle(inner) if _env_flag("LAB01_GRIPPER_ORACLE") else None
 
     strategy = BaseStrategy(cfg.strategy)
     results: list[dict[str, Any]] = []
@@ -428,9 +588,20 @@ def eval_main(cfg: RolloutConfig) -> None:
             if getattr(inner.config, "reset_mode", "manual") == "auto":
                 inner.reset_episode(ep)
 
+            if gripper_oracle is not None:
+                gripper_oracle.reset()
             strategy._engine.reset()
             strategy._interpolator.reset()
             _run_episode(strategy, ctx, episode_time_s)
+
+            if gripper_oracle is not None:
+                logger.info(
+                    "Gripper oracle ep %d: holding=%s released=%s min_dist=%.3f",
+                    ep,
+                    gripper_oracle.holding,
+                    gripper_oracle.released,
+                    gripper_oracle.min_dist,
+                )
 
             block_pos = inner.get_block_position()
             success = check_pick_success(block_pos)

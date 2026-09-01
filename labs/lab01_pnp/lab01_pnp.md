@@ -596,6 +596,8 @@ Recording / full-range box (leader teleop):
 | `labs/lab01_pnp/configs/rollout_act_demo_fixed.yaml` | ACT | `fixed` | `follow` | Same pose as SmolVLA fixed demo | Fixed-pose ACT demo |
 | `labs/lab01_pnp/configs/rollout_molmoact2.yaml` | MolmoAct2 | `random` | `home` | Full record box | Honest MolmoAct2 benchmark (`top→cam0`, `wrist→cam1`) |
 | `labs/lab01_pnp/configs/rollout_molmoact2_demo_fixed.yaml` | MolmoAct2 | `fixed` | `home` | Always `(0.27, 0.20, yaw −8°)` | Fixed-pose MolmoAct2 demo |
+| `labs/lab01_pnp/configs/rollout_vla_jepa_demo_fixed.yaml` | VLA-JEPA | `fixed` | keyboard `home` | Same cube; arm at `[0,-0.3,0.6,1.2,…]` | Historical 0/10 protocol |
+| `labs/lab01_pnp/configs/rollout_vla_jepa_demo_start.yaml` | VLA-JEPA | `fixed` | `home_joints` = demo mean | Same cube; arm at leader-start mean | Isolates home-OOD vs policy failure |
 
 **`reset_arm` rule of thumb** (same meanings as in §1 recording):
 
@@ -639,18 +641,33 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | ACT 50K (6-D state) | Full-range random | `follow` | Sync | EGL | 50 | **29/50 (58%)** | Joint `.pos` only (`LAB01_ACT_STATE_DIM=6`); same protocol as 15-D 64% row; Hub [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 | ACT 50K | Full-range random | `follow` | Sync | — | 50 | **23/50 (46%)** | Same checkpoint with `n_action_steps=100` (historical log) |
 | ACT 50K | Fixed `(0.27,0.20,−8°)` | `follow` | Sync | GLFW | 10 | **8/10 (80%)** | `n_action_steps=100`, `rollout_act_demo_fixed.yaml` |
-| MolmoAct2 10K | Full-range random | `home` | Sync | EGL | 50 | **15/50 (30%)** | `n_action_steps=30`, `rollout_molmoact2.yaml`; CUDA graphs off (gfx1151) |
-| MolmoAct2 10K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | EGL | 10 | **7/10 (70%)** | `n_action_steps=30`, `rollout_molmoact2_demo_fixed.yaml`; CUDA graphs off |
+| MolmoAct2 10K (15-D state) | Full-range random | `home` | Sync | EGL | 50 | **15/50 (30%)** | `n_action_steps=30`, `rollout_molmoact2.yaml`; CUDA graphs off (gfx1151) |
+| MolmoAct2 10K (6-D state) | Full-range random | `home` | Sync | EGL | 50 | **27/50 (54%)** | Joint `.pos` only (`LAB01_STATE_DIM=6`); same protocol as 15-D 30% row; `outputs/train/lab01_pnp_molmoact2_state6/checkpoints/010000/` |
+| MolmoAct2 10K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | EGL | 10 | **7/10 (70%)** | `n_action_steps=30`, `rollout_molmoact2_demo_fixed.yaml`; CUDA graphs off (15-D) |
+| VLA-JEPA 20K (15-D / 6-D) | Fixed `(0.27,0.20,−8°)` | keyboard `home` | Sync | EGL | 10 | **0/10 (0%)** | `n_action_steps=7`; cube never leaves spawn. 6-D 20K same as 15-D 10K. Keyboard home is ~1.7 rad from leader-demo starts |
+| VLA-JEPA 6-D BC 10K | Fixed cube; demo-mean `home_joints` | `home` | Sync | EGL | 10 | **1/10 (10%)** | freeze Qwen, no world model, chunk 30; `rollout_vla_jepa_demo_start.yaml` |
+| VLA-JEPA 6-D BC 10K | Fixed cube; demo-mean `home_joints` | `home` | Sync | GLFW | 10 | **0/10 (0%)** | Same checkpoint; `eval_vla_jepa_gui.cmd`; failures at grasp (approach, no commit) |
+| VLA-JEPA 6-D BC 10K | Fixed cube; keyboard `home` | `home` | Sync | EGL | 10 | **1/10 (10%)** | same checkpoint; `rollout_vla_jepa_demo_fixed.yaml` |
+| VLA-JEPA 6-D BC 20K | demo-mean start **and** keyboard `home` | `home` | Sync | EGL | 10+10 | **0/10 (0%)** | same recipe; train loss ~0.02; worse than 10K on this n=10 |
+| VLA-JEPA 6-D BC 10K + act-head 3K | Fixed cube; demo-mean `home_joints` | `home` | Sync | EGL | 10 | **1/10 (10%)** | freeze all but `action_model`; init 010000 BC; `n_action_steps=30`; `outputs/eval/vla_jepa_state6_bc_acthead_003000_demostart.log` |
+| VLA-JEPA 6-D BC 10K + act-head 3K | Fixed cube; keyboard `home` | `home` | Sync | EGL | 10 | **0/10 (0%)** | same checkpoint; `rollout_vla_jepa_demo_fixed.yaml`; no gain vs 10K BC 1/10 |
+| VLA-JEPA 6-D BC 10K + gripper oracle | Fixed cube; demo-mean `home_joints` | `home` | Sync | EGL | 10 | **0/10 (0%)** | `LAB01_GRIPPER_ORACLE=1` (close when `gripperframe` within 4 cm); close fired every episode, cube never lifted. Log `outputs/eval/vla_jepa_state6_bc_010000_demostart_oracle.log` |
 
 **Reading the table**
 
 - `reset_arm` matches the intentional §6.2 contrast (SmolVLA and MolmoAct2 eval YAMLs → `home`, ACT → `follow`). Do not mix rows when claiming a single protocol.
-- On this 50-episode dataset, under the measured setups: **ACT full-range (15-D 64% / 6-D 58%, same level at n=50) > MolmoAct2 10K full-range (30%) > SmolVLA 50K full-range (22%)**. Quote `state=15` vs `state=6` when citing ACT; do not collapse them into one “ACT 50K” number.
+- On this 50-episode dataset, under the measured setups: **ACT full-range (15-D 64% / 6-D 58%, same level at n=50) > MolmoAct2 10K 6-D (54%) > MolmoAct2 10K 15-D (30%) > SmolVLA 50K full-range (22%)**. Quote `state=15` vs `state=6` when citing ACT or MolmoAct2; do not collapse them into one number.
 - 6-D ACT matches real SO-101 joint-pos IL. The 6-point gap vs 15-D is within n=50 noise; choose 6-D for sim2real alignment, not for a sim-success gain.
+- MolmoAct2 6-D vs 15-D is a **different** story than ACT. The SO100/101 base discretizes proprio into a **language state string** pretrained on **6 joint tokens**. Lab 01 15-D fine-tune fitted quantile stats on 15 channels (pos+vel+EE) and eval expanded rollout to match; 6-D keeps the pretrained layout. Train recipe was otherwise identical (bs32 × 10K, LoRA). The 24-point full-range gap is unlikely n=50 noise (two-proportion z≈2.5); failure mode is still mostly missed grasps at spawn, just fewer of them. Do not copy this Molmo gap onto ACT.
 - Fixed spawn raises ACT (80%) and MolmoAct2 (70%) more than SmolVLA (≈30–50%). SmolVLA is not classroom-stable even at a known-good pose.
 - For SmolVLA, spawn tightening helped less than expected: failure analysis pointed to **grasp instability** and **yaw polarity** (positive yaw often knocks the cube) more than XY coverage alone.
 - RTC lag on iGPU (≈8–9 control frames) changes *how* SmolVLA fails; switching to sync did not turn fixed-pose eval into a high success rate.
 - MolmoAct2 10K eval requires loading the fine-tune processor JSON (not rebuilding from the SO100/SO101 degree `norm_tag`) and feeding the 15-dim dataset state the normalizer was fitted on. Apply `patches/lerobot-molmoact2-eval.patch` to the local `lerobot/` checkout (`git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch`); do not commit that edit inside the submodule.
+- VLA-JEPA is a **closed transfer-failure case** on this 50-ep set, not a classroom policy. World-model 20K (chunk 7) is **0/10**. Freeze-Qwen / no-WM / chunk-30 6-D BC is **1/10 EGL** at 10K (demo-mean and keyboard home) and **0/10 GLFW** on the same 10K checkpoint; 20K BC is **0/10**. Action-head-only 3K from 10K BC did not improve. n=10 is noisy; do not treat any JEPA row as classroom-ready. Hub artifact is the 10K BC weights: [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa).
+
+- **Where VLA-JEPA BC actually fails: the gripper channel never commits.** Logging predicted joint commands (`LAB01_DEBUG_ACTIONS=400`, BC 10K, demo-mean start, 45 s) shows the arm reaching the cube while the gripper opens to ~**0.85–0.93 rad** and stays there. Demo data is near-bimodal (closed ≈ `-0.07`, open ≈ `0.94`, median `0.17`), so the policy locks into the open mode and only makes brief aborted dips (`0.89 → 0.68`) that look like hesitation over the cube. It is not stuck half-way between open and closed; it never issues the close. A plain threshold snap therefore cannot fix it: at `n_action_steps=30` only 7 of ~350 post-open frames fall below the `0.45` midpoint, and any threshold high enough to catch `0.85` would clamp the jaws during approach.
+- **Shorter action chunks do not recover the grasp** (1 episode each, indicative only). Same checkpoint and start pose: `n_action_steps=30` opens at frame 54 with a few closing attempts; `10` opens later (frame 129) with none; `5` never opens at all (max `0.56`) and issues ~306 commands in the same 45 s versus 400 at `30`, since sync inference re-plans every 0.25 s. Keep `30` for JEPA; the missing piece is the visual trigger for closing, not chunk latency.
+- **Oracle close does not turn near-misses into grasps.** `LAB01_GRIPPER_ORACLE=1` closes when `gripperframe` is within 4 cm of the cube (and would open over the container). On BC 10K, demo-mean start, n=10: the oracle **closed every episode** (min distance 1.9–3.6 cm) and **lifted the cube zero times** (**0/10**). Close pose is consistently ~4 cm off in Y (`gripperframe` y≈0.16 vs cube y=0.20). So “the arm already found the cube; only the gripper hesitated” is not enough: the approach is not a centered grasp. Quote the oracle flag next to this row; it is an ablation, not a policy score. Independent GLFW GUI on the same 10K BC checkpoint was **0/10**, also failing at grasp. This lab **stops iterating JEPA recipes** here; classroom demos use ACT 6-D or MolmoAct2 6-D.
 
 **Adding a new policy:** measure full-range (`n=50`) and optionally fixed-pose (`n=10`) with the matching `labs/lab01_pnp/configs/rollout_*.yaml`. Add one row per (policy, spawn, `reset_arm`, inference) tuple. Keep Success as `k/n (p%)`.
 
@@ -707,6 +724,23 @@ LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_molmoact2.yaml \
 LAB01_N_ACTION_STEPS=30 LAB01_EVAL_EPISODES=20 \
 LAB01_EVAL_LOG=./outputs/eval/molmoact2_full.log \
   ./labs/lab01_pnp/eval.cmd
+
+# VLA-JEPA GLFW (transfer-failure case). Default: 6-D BC 10K, demo-mean start, 3 eps.
+./labs/lab01_pnp/eval_vla_jepa_gui.cmd
+LAB01_EVAL_EPISODES=10 ./labs/lab01_pnp/eval_vla_jepa_gui.cmd
+# LAB01_JEPA_EVAL_VARIANT=acthead|bc20k|wm|15d  LAB01_JEPA_EVAL_START=home
+
+# Log predicted vs current joint commands for the first N control ticks (any policy).
+LAB01_DEBUG_ACTIONS=400 ./labs/lab01_pnp/eval_vla_jepa_gui.cmd
+
+# Snap the gripper command to open/closed at eval time (diagnostic; off by default).
+# Threshold 0.45 rad is the midpoint of the demo closed/open modes; latch arms only
+# after the policy has opened once. Quote snap on/off next to any success rate.
+LAB01_GRIPPER_SNAP=1 ./labs/lab01_pnp/eval_vla_jepa_gui.cmd
+
+# Proximity oracle: close when gripperframe is within 4 cm of the cube, open over the box.
+# Ablates the gripper channel; do not quote as a policy success rate.
+LAB01_GRIPPER_ORACLE=1 ./labs/lab01_pnp/eval_vla_jepa_gui.cmd
 ```
 
 | Override | Example |
@@ -731,7 +765,7 @@ There is no single prescribed fix in this lab. The rates above are a baseline on
 3. **Inference knobs in sim** — RTC vs sync; ACT `n_action_steps` (50 vs 100 vs train default); confirm wall-clock delay does not dominate on your GPU.
 4. **Spawn curriculum vs honest eval** — Use demo/fixed configs for demos; always report **full-range** numbers when claiming generalization. Do not tune the eval box alone and call it a better policy.
 5. **Failure taxonomy** — Log initial spawn vs final cube pose; separate “never grasped”, “dropped in transfer”, and “near-miss on rim”. Different failure modes suggest different next experiments.
-6. **Policy choice for demos** — If the goal is a reliable classroom pick-and-place, ACT + fixed (or narrowed) spawn is currently stronger on this dataset; keep SmolVLA if the learning goal is VLA fine-tuning and analysis of its failure modes.
+6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA-LIBERO on this 50-ep set is a **closed transfer-failure case** (grasp never commits; see §6.4), not a candidate demo policy.
 
 When you change any axis, re-run with a fixed episode count and the same `MUJOCO_GL` / inference settings, and record config path + checkpoint step next to the success fraction.
 
@@ -754,6 +788,7 @@ Hugging Face user/org** for personal upload/download by overriding the env vars 
 | SmolVLA model repo | `LAB01_SMOLVLA_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-smolvla` |
 | ACT model repo (15-D) | `LAB01_ACT_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act` |
 | ACT model repo (6-D) | `LAB01_ACT_STATE6_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act-state6` |
+| VLA-JEPA model repo | `LAB01_JEPA_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-vla-jepa` |
 
 Published Lab 01 reference assets (`alexhegit`):
 
@@ -763,6 +798,7 @@ Published Lab 01 reference assets (`alexhegit`):
 | SmolVLA policy | [alexhegit/so101-simstudio-lab01-pnp-smolvla](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla) |
 | ACT policy (15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
 | ACT policy (6-D joint pos) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
+| VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) |
 
 Commands in §7.1–7.2 keep `alexhegit/...` as copy-paste examples; replace the namespace with yours when working under your own Hub account.
 
@@ -806,6 +842,10 @@ hf download alexhegit/so101-simstudio-lab01-pnp-act \
 # ACT 6-D (joint pos; real-robot IL layout)
 hf download alexhegit/so101-simstudio-lab01-pnp-act-state6 \
   --local-dir ./outputs/hub/lab01_pnp_act_state6
+
+# VLA-JEPA 6-D BC 10K (transfer-failure artifact; not a demo policy)
+hf download alexhegit/so101-simstudio-lab01-pnp-vla-jepa \
+  --local-dir ./outputs/hub/lab01_pnp_vla_jepa
 ```
 
 **Eval with downloaded weights** (same `eval.cmd`; see §6):
@@ -850,6 +890,7 @@ export LAB01_DATASET_HF_USER=your-hf-id
 export LAB01_SMOLVLA_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-smolvla
 export LAB01_ACT_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act
 export LAB01_ACT_STATE6_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act-state6
+export LAB01_JEPA_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-vla-jepa
 
 # Dataset
 ./labs/lab01_pnp/push_dataset.cmd
@@ -862,9 +903,12 @@ export LAB01_ACT_STATE6_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act-stat
 
 # ACT 6-D weights + card
 LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_act_state6_model.cmd
+
+# VLA-JEPA 6-D BC 10K weights + card (transfer-failure artifact)
+LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_vla_jepa_model.cmd
 ```
 
-Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`.
+Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`, `hf_model_card_vla_jepa.md`.
 
 ## Troubleshooting
 
@@ -893,13 +937,16 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `train_smolvla_resume.cmd` | Resume SmolVLA from a checkpoint |
 | `train_act.cmd` | ACT imitation learning (`LAB01_ACT_STATE_DIM=6` for joint-pos-only) |
 | `train_molmoact2.cmd` | MolmoAct2 fine-tune (MI300X / DORobot defaults) |
+| `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
+| `eval_vla_jepa_gui.cmd` | GLFW wrapper for local VLA-JEPA checkpoints |
 | `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
 | `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |
 | `push_smolvla_model.cmd` / `hf_model_card_smolvla.md` | Upload SmolVLA 50K weights + Hub README |
 | `push_act_model_card.cmd` / `hf_model_card_act.md` | Upload ACT 15-D Hub README |
 | `push_act_state6_model.cmd` / `hf_model_card_act_state6.md` | Upload ACT 6-D weights + Hub README |
+| `push_vla_jepa_model.cmd` / `hf_model_card_vla_jepa.md` | Upload VLA-JEPA 6-D BC 10K + Hub README (failure case) |
 | `loss_curve_run1.*` | SmolVLA Run 1 training loss (reference) |
 | `loss_curve_act_mi300x_50k.*` | ACT 50K training loss (reference) |
 | `lab01_pnp.md` | This runbook |

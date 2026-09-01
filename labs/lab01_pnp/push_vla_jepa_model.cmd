@@ -1,16 +1,13 @@
 #!/bin/bash
-# Create/upload the Lab 01 VLA-JEPA Hub repo (MI300X 20K pretrained_model).
+# Create/upload the Lab 01 VLA-JEPA Hub repo (6-D BC 10K transfer-failure artifact).
 #
 # Usage (from repo root, after hf auth login):
-#   ./labs/lab01_pnp/push_vla_jepa_model.cmd
-#   ./labs/lab01_pnp/push_vla_jepa_model.cmd --card-only
-#
-# Force official Hub (recommended if HF_ENDPOINT is a mirror):
 #   LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_vla_jepa_model.cmd
+#   ./labs/lab01_pnp/push_vla_jepa_model.cmd --card-only
 #
 # Override:
 #   LAB01_JEPA_HF_REPO_ID=your-user/your-repo ./labs/lab01_pnp/push_vla_jepa_model.cmd
-#   LAB01_POLICY_PATH=./outputs/train/.../pretrained_model ./labs/lab01_pnp/push_vla_jepa_model.cmd
+#   LAB01_JEPA_POLICY_PATH=./outputs/train/.../pretrained_model ./labs/lab01_pnp/push_vla_jepa_model.cmd
 set -euo pipefail
 _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
@@ -22,8 +19,9 @@ fi
 
 CARD="$_LAB01_DIR/hf_model_card_vla_jepa.md"
 REPO_ID="${LAB01_JEPA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-vla-jepa}"
-CKPT_STEP="${LAB01_JEPA_CKPT_STEP:-020000}"
-POLICY_PATH="${LAB01_POLICY_PATH:-$LAB01_JEPA_OUTPUT/checkpoints/${CKPT_STEP}/pretrained_model}"
+CKPT_STEP="${LAB01_JEPA_CKPT_STEP:-010000}"
+# Do not reuse LAB01_POLICY_PATH from _env.sh (that default is SmolVLA eval).
+POLICY_PATH="${LAB01_JEPA_POLICY_PATH:-./outputs/train/lab01_pnp_vla_jepa_state6_bc/checkpoints/${CKPT_STEP}/pretrained_model}"
 
 CARD_ONLY=false
 for arg in "$@"; do
@@ -68,7 +66,7 @@ if [[ "$CARD_ONLY" != true ]]; then
     echo "=== Upload pretrained_model/ ==="
     "$HF" upload "$REPO_ID" "$POLICY_PATH" . \
         --repo-type model \
-        --commit-message "Add VLA-JEPA MI300X 20K pretrained_model"
+        --commit-message "Add VLA-JEPA 6-D BC 10K transfer-failure pretrained_model"
 fi
 
 echo "=== Upload model card ==="
