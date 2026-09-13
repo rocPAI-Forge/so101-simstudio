@@ -230,15 +230,29 @@ class SO101MujocoRobot(Robot):
         if self.ee_site_id < 0:
             raise RuntimeError(f"Site '{self.config.ee_site_name}' not found in model")
 
+    def _home_joint_targets(self) -> dict[str, float]:
+        """Return the 6 joint targets used for connect/reset home."""
+        custom = getattr(self.config, "home_joints", None)
+        if custom is not None:
+            if len(custom) != len(self.JOINT_NAMES):
+                raise ValueError(
+                    f"home_joints must have {len(self.JOINT_NAMES)} values, got {len(custom)}"
+                )
+            return dict(zip(self.JOINT_NAMES, (float(v) for v in custom), strict=True))
+        return {
+            "shoulder_pan": 0.0,
+            "shoulder_lift": -0.3,
+            "elbow_flex": 0.6,
+            "wrist_flex": 1.2,
+            "wrist_roll": 0.0,
+            "gripper": float(self.config.home_gripper),
+        }
+
     def _initialize_home_position(self):
         """Set a good home position with tool pointing down."""
         q_home = self.data.qpos.copy()
-        q_home[self.dof_ids["shoulder_pan"]] = 0.0
-        q_home[self.dof_ids["shoulder_lift"]] = -0.3
-        q_home[self.dof_ids["elbow_flex"]] = 0.6
-        q_home[self.dof_ids["wrist_flex"]] = 1.2
-        q_home[self.dof_ids["wrist_roll"]] = 0.0
-        q_home[self.dof_ids["gripper"]] = self.config.home_gripper
+        for name, value in self._home_joint_targets().items():
+            q_home[self.dof_ids[name]] = value
 
         self.data.qpos[:] = q_home
         self.data.qvel[:] = 0.0
@@ -571,12 +585,8 @@ class SO101MujocoRobot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected")
 
-        self.data.qpos[self.dof_ids["shoulder_pan"]] = 0.0
-        self.data.qpos[self.dof_ids["shoulder_lift"]] = -0.3
-        self.data.qpos[self.dof_ids["elbow_flex"]] = 0.6
-        self.data.qpos[self.dof_ids["wrist_flex"]] = 1.2
-        self.data.qpos[self.dof_ids["wrist_roll"]] = 0.0
-        self.data.qpos[self.dof_ids["gripper"]] = self.config.home_gripper
+        for name, value in self._home_joint_targets().items():
+            self.data.qpos[self.dof_ids[name]] = value
 
         for joint_name in self.JOINT_NAMES:
             self.data.qvel[self.dof_ids[joint_name]] = 0.0

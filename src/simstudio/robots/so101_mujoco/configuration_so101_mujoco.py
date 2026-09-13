@@ -77,6 +77,10 @@ class SO101MujocoConfig(RobotConfig):
     # roughly (-0.17, 1.75): lower bound = fully closed, upper = fully open.
     # Leader arm starts fully closed, so leader configs set this to the closed bound.
     home_gripper: float = 0.8
+    # Optional 6-D joint home [pan, lift, elbow, wrist_flex, wrist_roll, gripper].
+    # When set, overrides the built-in keyboard home (and ``home_gripper``).
+    # Use a dataset-mean start when evaluating a policy trained on leader ``follow`` demos.
+    home_joints: list[float] | None = None
 
     # Episode reset: "auto" resets arm + block before each recorded episode (sim);
     # "manual" leaves state unchanged (LeRobot real-robot style).

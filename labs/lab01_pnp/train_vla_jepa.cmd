@@ -107,7 +107,8 @@ echo "Output:   $LAB01_JEPA_OUTPUT"
 echo "Steps:    $LAB01_JEPA_STEPS  batch_size: $LAB01_JEPA_BATCH_SIZE"
 echo "Workers:  $LAB01_JEPA_NUM_WORKERS  save_freq: $LAB01_JEPA_SAVE_FREQ"
 echo "Chunk:    $LAB01_JEPA_CHUNK_SIZE / n_action_steps=$LAB01_JEPA_N_ACTION_STEPS"
-echo "World:    enable=$LAB01_JEPA_ENABLE_WORLD_MODEL  freeze_qwen=$LAB01_JEPA_FREEZE_QWEN"
+echo "Warmup:   $LAB01_JEPA_WARMUP_STEPS"
+echo "World:    enable=$LAB01_JEPA_ENABLE_WORLD_MODEL  freeze_qwen=$LAB01_JEPA_FREEZE_QWEN freeze_except_action=${LAB01_JEPA_FREEZE_EXCEPT_ACTION:-false}"
 echo "Rename:   $LAB01_JEPA_RENAME_MAP"
 echo "Reinit:   $LAB01_JEPA_REINIT_MODULES"
 echo "State:    policy.state_dim=$LAB01_JEPA_STATE_DIM"
@@ -151,7 +152,7 @@ else
         --policy.pre_snap_gripper_action=false \
         --policy.resize_images_to='[224,224]' \
         --policy.reinit_modules="$LAB01_JEPA_REINIT_MODULES" \
-        --policy.scheduler_warmup_steps=1000 \
+        --policy.scheduler_warmup_steps="$LAB01_JEPA_WARMUP_STEPS" \
         --policy.scheduler_decay_steps="$LAB01_JEPA_STEPS" \
         "${WM_ARGS[@]}" \
         --dataset.repo_id="$LAB01_DATASET_REPO_ID" \

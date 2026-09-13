@@ -141,6 +141,7 @@ LAB01_JEPA_SAVE_FREQ="${LAB01_JEPA_SAVE_FREQ:-2000}"
 LAB01_JEPA_NUM_WORKERS="${LAB01_JEPA_NUM_WORKERS:-8}"
 LAB01_JEPA_CHUNK_SIZE="${LAB01_JEPA_CHUNK_SIZE:-7}"
 LAB01_JEPA_N_ACTION_STEPS="${LAB01_JEPA_N_ACTION_STEPS:-7}"
+LAB01_JEPA_WARMUP_STEPS="${LAB01_JEPA_WARMUP_STEPS:-1000}"
 # Keep world-model co-training (the point of VLA-JEPA). Set false if VRAM/OOM.
 LAB01_JEPA_ENABLE_WORLD_MODEL="${LAB01_JEPA_ENABLE_WORLD_MODEL:-true}"
 LAB01_JEPA_FREEZE_QWEN="${LAB01_JEPA_FREEZE_QWEN:-false}"
@@ -168,7 +169,7 @@ LAB01_N_ACTION_STEPS="${LAB01_N_ACTION_STEPS:-}"
 
 # -----------------------------------------------------------------------------
 # 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
-#    push_act_state6_model.cmd
+#    push_act_state6_model.cmd / push_vla_jepa_model.cmd
 # -----------------------------------------------------------------------------
 LAB01_SMOLVLA_HF_REPO_ID="${LAB01_SMOLVLA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-smolvla}"
 LAB01_ACT_HF_REPO_ID="${LAB01_ACT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act}"
@@ -177,7 +178,7 @@ LAB01_ACT_STATE6_CKPT_STEP="${LAB01_ACT_STATE6_CKPT_STEP:-050000}"
 LAB01_MOLMO_HF_REPO_ID="${LAB01_MOLMO_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-molmoact2}"
 LAB01_MOLMO_CKPT_STEP="${LAB01_MOLMO_CKPT_STEP:-010000}"
 LAB01_JEPA_HF_REPO_ID="${LAB01_JEPA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-vla-jepa}"
-LAB01_JEPA_CKPT_STEP="${LAB01_JEPA_CKPT_STEP:-020000}"
+LAB01_JEPA_CKPT_STEP="${LAB01_JEPA_CKPT_STEP:-010000}"
 # Checkpoint step name under LAB01_TRAIN_OUTPUT when push_smolvla_model does not
 # get an explicit LAB01_POLICY_PATH.
 LAB01_SMOLVLA_CKPT_STEP="${LAB01_SMOLVLA_CKPT_STEP:-050000}"

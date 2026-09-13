@@ -57,6 +57,26 @@ def test_reset_episode_headless(episode_index: int):
         robot.disconnect()
 
 
+def test_reset_episode_honors_home_joints():
+    target = [-0.18, -1.642, 1.577, 1.081, 0.079, -0.045]
+    cfg = SO101MujocoConfig(
+        render_window=False,
+        camera_names=["front"],
+        reset_mode="auto",
+        home_joints=target,
+    )
+    robot = SO101MujocoRobot(cfg)
+    robot.connect()
+    try:
+        robot.reset_episode(0)
+        obs = robot.get_observation()
+        got = [float(obs[f"{name}.pos"]) for name in SO101MujocoRobot.JOINT_NAMES]
+        # Contact with the table can settle a few milliradians; the override must still land near target.
+        assert got == pytest.approx(target, abs=2e-2)
+    finally:
+        robot.disconnect()
+
+
 def test_skip_empty_episode_save_patch():
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
