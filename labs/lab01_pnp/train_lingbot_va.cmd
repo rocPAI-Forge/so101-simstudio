@@ -1,7 +1,7 @@
 #!/bin/bash
 # Lab 01 — LingBot-VA stuffed-joint fine-tune (NOT a fair EEF transfer).
 # Joints occupy used_action_channel_ids 0–5. Official LIBERO layout is EEF
-# Δ + gripper on channels 0–6. See runbook §6.4.2 and lingbot_va_eef_adapt.md.
+# Δ + gripper on channels 0–6. See runbook §6.4.2 and labs/lab01_pnp/lingbot_va_eef_adapt.md.
 #
 # Defaults target DORobot / single Instinct MI300X (192 GB HBM). Knobs:
 # labs/lab01_pnp/_env.sh (section 5c). Override via LAB01_LINGBOT_* env vars.
