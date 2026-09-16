@@ -33,15 +33,22 @@ def _preselect_mujoco_gl_eval(argv: list[str]) -> None:
 
 _preselect_mujoco_gl_eval(sys.argv[1:])
 
-from lerobot.configs import parser  # noqa: E402
-from lerobot.rollout import BaseStrategyConfig, RolloutConfig, build_rollout_context  # noqa: E402
-from lerobot.rollout.strategies.base import BaseStrategy  # noqa: E402
-from lerobot.rollout.strategies.core import send_next_action  # noqa: E402
-from lerobot.utils.import_utils import register_third_party_plugins  # noqa: E402
-from lerobot.utils.process import ProcessSignalHandler  # noqa: E402
-from lerobot.utils.robot_utils import precise_sleep  # noqa: E402
-from lerobot.utils.utils import init_logging, log_say  # noqa: E402
-from lerobot.utils.visualization_utils import init_visualization, shutdown_visualization  # noqa: E402
+# Rollout imports DAgger → pynput → python-xlib. Display() can block forever on
+# GNOME Xwayland even when GLFW/xset work. Hide DISPLAY only during import.
+_eval_display = os.environ.pop("DISPLAY", None)
+try:
+    from lerobot.configs import parser  # noqa: E402
+    from lerobot.rollout import BaseStrategyConfig, RolloutConfig, build_rollout_context  # noqa: E402
+    from lerobot.rollout.strategies.base import BaseStrategy  # noqa: E402
+    from lerobot.rollout.strategies.core import send_next_action  # noqa: E402
+    from lerobot.utils.import_utils import register_third_party_plugins  # noqa: E402
+    from lerobot.utils.process import ProcessSignalHandler  # noqa: E402
+    from lerobot.utils.robot_utils import precise_sleep  # noqa: E402
+    from lerobot.utils.utils import init_logging, log_say  # noqa: E402
+    from lerobot.utils.visualization_utils import init_visualization, shutdown_visualization  # noqa: E402
+finally:
+    if _eval_display is not None:
+        os.environ["DISPLAY"] = _eval_display
 
 from simstudio.common.eval_success import (  # noqa: E402
     check_pick_success,
@@ -139,54 +146,171 @@ def _prepare_argv_for_rollout_parser() -> None:
     sys.argv = new_argv
 
 
+class _EpisodeStageTracker:
+    """Track where a pick-and-place rollout stops making progress.
+
+    Distances use the fingertip ``gripperframe`` site. Thresholds are diagnostic
+    and deliberately looser than final success: reach <=8 cm, near <=4 cm,
+    lift >=2 cm above the episode's initial cube height.
+    """
+
+    def __init__(self, robot: SO101MujocoRobot) -> None:
+        import mujoco as mj
+
+        self.robot = robot
+        site_name = "gripperframe"
+        self.site_id = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_SITE, site_name)
+        if self.site_id < 0:
+            self.site_id = robot.ee_site_id
+        block = robot.get_block_position()
+        self.initial_z = block[2] if block is not None else 0.015
+        self.min_gripper_cube_m = float("inf")
+        self.max_cube_z_m = self.initial_z
+        self.min_container_xy_m = float("inf")
+        self.seen_open = False
+        self.stages = {
+            "reach_8cm": False,
+            "near_4cm": False,
+            "close_after_open": False,
+            "lift_2cm": False,
+            "over_box": False,
+            "released_after_lift": False,
+            "placed_at_any_tick": False,
+            "dropped_after_lift": False,
+        }
+
+    def update(self, sent: dict[str, Any] | None) -> None:
+        from simstudio.common.eval_success import CONTAINER_XY
+
+        block = self.robot.get_block_position()
+        if block is None:
+            return
+        site = self.robot.data.site_xpos[self.site_id]
+        dist = (
+            (float(site[0]) - block[0]) ** 2
+            + (float(site[1]) - block[1]) ** 2
+            + (float(site[2]) - block[2]) ** 2
+        ) ** 0.5
+        self.min_gripper_cube_m = min(self.min_gripper_cube_m, dist)
+        self.max_cube_z_m = max(self.max_cube_z_m, block[2])
+        box_xy = ((block[0] - CONTAINER_XY[0]) ** 2 + (block[1] - CONTAINER_XY[1]) ** 2) ** 0.5
+        self.min_container_xy_m = min(self.min_container_xy_m, box_xy)
+        self.stages["reach_8cm"] |= dist <= 0.08
+        self.stages["near_4cm"] |= dist <= 0.04
+        self.stages["lift_2cm"] |= (
+            self.stages["close_after_open"] and block[2] >= self.initial_z + 0.02
+        )
+        self.stages["over_box"] |= self.stages["lift_2cm"] and cube_over_container(block)
+        self.stages["placed_at_any_tick"] |= (
+            self.stages["released_after_lift"] and check_pick_success(block)
+        )
+        if (
+            self.stages["lift_2cm"]
+            and block[2] <= self.initial_z + 0.005
+            and not cube_over_container(block)
+        ):
+            self.stages["dropped_after_lift"] = True
+
+        if sent is None:
+            return
+        gripper = sent.get("gripper.pos")
+        if gripper is None:
+            return
+        gripper = float(gripper)
+        if gripper >= 0.45:
+            if self.stages["lift_2cm"] and self.stages["over_box"]:
+                self.stages["released_after_lift"] = True
+            self.seen_open = True
+        elif self.seen_open and self.stages["near_4cm"] and gripper <= 0.15:
+            self.stages["close_after_open"] = True
+
+    def result(self) -> dict[str, Any]:
+        return {
+            **self.stages,
+            "min_gripper_cube_m": self.min_gripper_cube_m,
+            "max_cube_z_m": self.max_cube_z_m,
+            "min_container_xy_m": self.min_container_xy_m,
+        }
+
+
 def _run_episode(
     strategy: BaseStrategy,
     ctx: Any,
     episode_time_s: float,
-) -> None:
+) -> dict[str, Any]:
     cfg = ctx.runtime.cfg
     robot = ctx.hardware.robot_wrapper
     engine = strategy._engine
     interpolator = strategy._interpolator
     control_interval = interpolator.get_control_interval(cfg.fps)
     inner = getattr(robot, "inner", robot)
+    stage_tracker = _EpisodeStageTracker(inner)
     try:
         debug_n = int(os.environ.get("LAB01_DEBUG_ACTIONS", "0") or "0")
     except ValueError:
         debug_n = 0
     debug_left = [debug_n]
 
+    infer_n = 0
+    infer_s = 0.0
+    tick_n = 0
+    tick_s = 0.0
+    orig_get_action = engine.get_action
+
+    def timed_get_action(obs_frame: dict | None):
+        nonlocal infer_n, infer_s
+        t0 = time.perf_counter()
+        out = orig_get_action(obs_frame)
+        infer_s += time.perf_counter() - t0
+        infer_n += 1
+        return out
+
+    engine.get_action = timed_get_action  # type: ignore[method-assign]
     start = time.perf_counter()
     engine.resume()
-    while not ctx.runtime.shutdown_event.is_set():
-        if time.perf_counter() - start >= episode_time_s:
-            break
+    try:
+        while not ctx.runtime.shutdown_event.is_set():
+            if time.perf_counter() - start >= episode_time_s:
+                break
 
-        loop_start = time.perf_counter()
-        obs = robot.get_observation()
-        obs_processed = strategy._process_observation_and_notify(ctx.processors, obs)
+            loop_start = time.perf_counter()
+            obs = robot.get_observation()
+            obs_processed = strategy._process_observation_and_notify(ctx.processors, obs)
 
-        if strategy._handle_warmup(cfg.use_torch_compile, loop_start, control_interval):
-            continue
+            if strategy._handle_warmup(cfg.use_torch_compile, loop_start, control_interval):
+                continue
 
-        sent = send_next_action(obs_processed, obs, ctx, interpolator)
-        if debug_left[0] > 0 and sent is not None:
-            debug_left[0] -= 1
-            names = list(getattr(inner, "JOINT_NAMES", []))
-            current = [float(obs.get(f"{n}.pos", float("nan"))) for n in names]
-            pred = [float(sent.get(f"{n}.pos", sent.get(n, float("nan")))) for n in names]
-            delta = [p - q for p, q in zip(pred, current, strict=False)]
-            logger.info(
-                "debug action[%d] pred=%s current=%s delta=%s",
-                debug_n - debug_left[0],
-                [round(v, 4) for v in pred],
-                [round(v, 4) for v in current],
-                [round(v, 4) for v in delta],
-            )
+            sent = send_next_action(obs_processed, obs, ctx, interpolator)
+            stage_tracker.update(sent)
+            if debug_left[0] > 0 and sent is not None:
+                debug_left[0] -= 1
+                names = list(getattr(inner, "JOINT_NAMES", []))
+                current = [float(obs.get(f"{n}.pos", float("nan"))) for n in names]
+                pred = [float(sent.get(f"{n}.pos", sent.get(n, float("nan")))) for n in names]
+                delta = [p - q for p, q in zip(pred, current, strict=False)]
+                logger.info(
+                    "debug action[%d] pred=%s current=%s delta=%s",
+                    debug_n - debug_left[0],
+                    [round(v, 4) for v in pred],
+                    [round(v, 4) for v in current],
+                    [round(v, 4) for v in delta],
+                )
 
-        dt = time.perf_counter() - loop_start
-        if (sleep_t := control_interval - dt) > 0:
-            precise_sleep(sleep_t)
+            dt = time.perf_counter() - loop_start
+            tick_n += 1
+            tick_s += dt
+            if (sleep_t := control_interval - dt) > 0:
+                precise_sleep(sleep_t)
+    finally:
+        engine.get_action = orig_get_action  # type: ignore[method-assign]
+
+    return {
+        "infer_n": float(infer_n),
+        "infer_s": infer_s,
+        "tick_n": float(tick_n),
+        "tick_s": tick_s,
+        "funnel": stage_tracker.result(),
+    }
 
 
 def _reset_pause(robot: SO101MujocoRobot, reset_time_s: float, fps: float) -> None:
@@ -592,7 +716,7 @@ def eval_main(cfg: RolloutConfig) -> None:
                 gripper_oracle.reset()
             strategy._engine.reset()
             strategy._interpolator.reset()
-            _run_episode(strategy, ctx, episode_time_s)
+            timing = _run_episode(strategy, ctx, episode_time_s)
 
             if gripper_oracle is not None:
                 logger.info(
@@ -605,11 +729,38 @@ def eval_main(cfg: RolloutConfig) -> None:
 
             block_pos = inner.get_block_position()
             success = check_pick_success(block_pos)
-            results.append({"episode": ep, "success": success, "block_pos": block_pos})
+            infer_hz = (timing["infer_n"] / timing["infer_s"]) if timing["infer_s"] > 0 else 0.0
+            funnel = timing.pop("funnel")
+            funnel["final_success"] = success
+            results.append(
+                {
+                    "episode": ep,
+                    "success": success,
+                    "block_pos": block_pos,
+                    "funnel": funnel,
+                    **timing,
+                }
+            )
             status = "SUCCESS" if success else "fail"
             pos_str = f"{block_pos}" if block_pos else "unknown"
-            logger.info("Episode %d: %s (block=%s)", ep, status, pos_str)
-            print(f"Episode {ep + 1}/{num_episodes}: {status}  block={pos_str}")
+            logger.info(
+                "Episode %d: %s (block=%s) policy_infer=%.2f Hz (%d calls, %.1fs)",
+                ep,
+                status,
+                pos_str,
+                infer_hz,
+                int(timing["infer_n"]),
+                timing["infer_s"],
+            )
+            logger.info(
+                "Episode %d funnel: %s",
+                ep,
+                yaml.safe_dump(funnel, default_flow_style=True).strip(),
+            )
+            print(
+                f"Episode {ep + 1}/{num_episodes}: {status}  block={pos_str}  "
+                f"infer={infer_hz:.2f} Hz"
+            )
 
             if ep < num_episodes - 1 and reset_time_s > 0:
                 _reset_pause(inner, reset_time_s, cfg.fps)
@@ -621,14 +772,59 @@ def eval_main(cfg: RolloutConfig) -> None:
     if results:
         n_success = sum(1 for r in results if r["success"])
         rate = 100.0 * n_success / len(results)
-        summary = f"Eval complete: {n_success}/{len(results)} success ({rate:.0f}%)"
+        infer_n = sum(float(r.get("infer_n", 0.0)) for r in results)
+        infer_s = sum(float(r.get("infer_s", 0.0)) for r in results)
+        tick_n = sum(float(r.get("tick_n", 0.0)) for r in results)
+        tick_s = sum(float(r.get("tick_s", 0.0)) for r in results)
+        infer_hz = (infer_n / infer_s) if infer_s > 0 else 0.0
+        tick_hz = (tick_n / tick_s) if tick_s > 0 else 0.0
+        summary = (
+            f"Eval complete: {n_success}/{len(results)} success ({rate:.0f}%) | "
+            f"policy infer {infer_hz:.2f} Hz ({int(infer_n)} calls, {infer_s:.1f}s) | "
+            f"control compute {tick_hz:.1f} Hz (excl. fps sleep)"
+        )
         logger.info(summary)
         print(summary)
+        funnel_keys = [
+            "reach_8cm",
+            "near_4cm",
+            "close_after_open",
+            "lift_2cm",
+            "over_box",
+            "released_after_lift",
+            "placed_at_any_tick",
+            "final_success",
+            "dropped_after_lift",
+        ]
+        funnel_counts = {
+            key: sum(bool(result["funnel"][key]) for result in results) for key in funnel_keys
+        }
+        funnel_summary = (
+            f"Stage funnel ({len(results)} ep): "
+            + " → ".join(
+                f"{key}={funnel_counts[key]}/{len(results)}"
+                for key in funnel_keys
+                if key != "dropped_after_lift"
+            )
+            + f" | dropped_after_lift={funnel_counts['dropped_after_lift']}/{len(results)}"
+        )
+        logger.info(funnel_summary)
+        print(funnel_summary)
+
+
+def _patch_fastwam_pad_before_config_load() -> None:
+    """Apply channel-pad hooks before RolloutConfig parses the policy JSON."""
+    if not _env_flag("LAB01_FASTWAM_PAD_ACTION"):
+        return
+    from simstudio.policies.fastwam_pad import patch_fastwam_pad_action_channels
+
+    patch_fastwam_pad_action_channels(int(os.environ.get("LAB01_FASTWAM_REAL_ACTION_DIM", "6")))
 
 
 def main() -> None:
     register_third_party_plugins()
     init_logging()
+    _patch_fastwam_pad_before_config_load()
     eval_main()
 
 

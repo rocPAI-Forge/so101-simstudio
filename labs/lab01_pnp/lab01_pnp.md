@@ -552,6 +552,96 @@ LAB01_EVAL_LOG=./outputs/eval/molmoact2_full.log \
 
 **Deps:** `policy.type=molmoact2` lives in the editable `lerobot/` submodule. Install extras with `./scripts/install-molmoact2-deps.sh` (`transformers` 5.4, `peft`, `scipy`). **Do not** `uv pip install 'lerobot[molmoact2]'` — that extra re-resolves torch onto CUDA and `nvidia-*` wheels. If that already happened: `./scripts/install-molmoact2-deps.sh --repair-torch` (or `make rocm-sync`). `peft` is required when `LAB01_MOLMO_ENABLE_LORA_VLM=true`.
 
+### LingBot-VA training (lab01-pnp, MI300X) — DORobot
+
+Fine-tune [`lerobot/lingbot_va_libero_long`](https://huggingface.co/lerobot/lingbot_va_libero_long) on the Lab 01 dataset. Knobs: `_env.sh` section 5c; run `train_lingbot_va.cmd`.
+
+The LIBERO checkpoint is an **end-effector delta** policy with a fixed 30-d action layout and **two** cameras (`observation.images.image` = 3rd-person, `image2` = wrist). Lab 01 is **6-D joint position** with three cameras. This lab does **not** convert joints to Cartesian poses; it maps:
+
+| Lab 01 | LingBot-VA |
+|--------|------------|
+| `camera_top` | `observation.images.image` |
+| `camera_wrist` | `observation.images.image2` |
+| `camera_front` | unused |
+| 6 joint channels | `used_action_channel_ids=[0,1,2,3,4,5]` (LIBERO used 0–6) |
+
+Closed-loop eval still sends those six numbers as SO-101 `*.pos`. Quote this mapping next to any success rate: it is a **joint-space stuffing** of an EEF-pretrained stack, not a fair LIBERO transfer. The 10 h campaign stopped at **600 / 8000** steps (~0.11 epoch); the 20-ep eval failed on an import error, so the §6.4 row stays *pending* (not a measured 0%). **Do not treat this recipe as the LingBot-VA Lab 01 path.** The intended adaptation (reuse teleop videos, FK→EEF labels, 7 channels, eval IK) is specified in a follow-up PR / `labs/lab01_pnp/lingbot_va_eef_adapt.md` once that lands. Mechanism: **§6.4.2**.
+
+**Defaults (single MI300X 192 GB):** `batch_size=32`, `steps=20000`, `save_freq=2000`, `attn_mode=flex` (required for the block-causal train masks), LoRA via `--peft.*` (`use_peft` on the policy config stays false so the Hub checkpoint loads as a full model). Frozen UMT5 stays on CPU. Action postprocessor uses QUANTILES — `train_lingbot_va.cmd` augments `meta/stats.json` with `q01`/`q99` if missing.
+
+```bash
+source .venv-rocm/bin/activate
+# Never: pip install -e '.[lingbot_va]'  (CUDA torch)
+./scripts/install-lingbot-va-deps.sh
+./labs/lab01_pnp/train_lingbot_va.cmd
+```
+
+Log prints wall-clock seconds at exit. Checkpoints: `outputs/train/lab01_pnp_lingbot_va/checkpoints/` (or `/mnt/doscratch/outputs/train/...` when the repo volume is full).
+
+```bash
+# Headless 20-ep eval (EGL). Inference Hz is logged by eval.py.
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_lingbot_va/checkpoints/020000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_lingbot_va.yaml \
+LAB01_EVAL_EPISODES=20 \
+LAB01_RENDER_WINDOW=false \
+LAB01_MUJOCO_GL=egl \
+LAB01_EVAL_LOG=./outputs/eval/lingbot_va_egl20.log \
+  ./labs/lab01_pnp/eval.cmd
+```
+
+Leave `LAB01_N_ACTION_STEPS` empty (chunk size is `frame_chunk_size * action_per_frame` = 16).
+
+### FastWAM training (lab01-pnp, MI300X) — DORobot
+
+Fine-tune [`lerobot/fastwam_base`](https://huggingface.co/lerobot/fastwam_base) on the same dataset. Knobs: `_env.sh` section 5d; run `train_fastwam.cmd`.
+
+The base model concatenates two 224-wide views into `image_size=[224,448]`, with `action_dim=7` and `proprio_dim=8`. Lab 01 mapping:
+
+| Lab 01 | FastWAM |
+|--------|---------|
+| `camera_top` | `observation.images.image` |
+| `camera_wrist` | `observation.images.image2` |
+| `camera_front` | unused |
+| 6-D joints + 6-D state | `action_dim=6`, `proprio_dim=6` (`LAB01_STATE_DIM=6`) |
+
+Shape-mismatched action/proprio tensors are reinitialized (FastWAM's cross-embodiment loader). Defaults freeze the ~5B Wan **video** expert (`freeze_video_expert=true`, `lambda_video=0`) and train the action expert with gradient checkpointing so batch 32 fits MI300X.
+
+```bash
+source .venv-rocm/bin/activate
+./scripts/install-fastwam-deps.sh
+./labs/lab01_pnp/train_fastwam.cmd
+```
+
+```bash
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_fastwam/checkpoints/020000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_fastwam.yaml \
+LAB01_N_ACTION_STEPS=32 \
+LAB01_EVAL_EPISODES=20 \
+LAB01_RENDER_WINDOW=false \
+LAB01_MUJOCO_GL=egl \
+LAB01_EVAL_LOG=./outputs/eval/fastwam_egl20.log \
+  ./labs/lab01_pnp/eval.cmd
+```
+
+Resume from `004000` (do **not** `rm` the output dir). Keep bs4; 4K was ~0.75 epoch on the action head.
+
+```bash
+LAB01_FASTWAM_KEEP_OUTPUT=1 \
+LAB01_FASTWAM_OUTPUT=/mnt/doscratch/outputs/train/lab01_pnp_fastwam \
+LAB01_FASTWAM_LOG=/mnt/doscratch/outputs/train_fastwam_resume20k.log \
+LAB01_FASTWAM_STEPS=20000 \
+LAB01_FASTWAM_BATCH_SIZE=4 \
+LAB01_FASTWAM_SAVE_FREQ=2000 \
+LAB01_FASTWAM_NUM_WORKERS=4 \
+  ./labs/lab01_pnp/train_fastwam.cmd --resume true
+```
+
+Resume 4K→20K on MI300X: **4 h 19 min** remaining steps, last log **loss ~0.111**, **~3.8 epochs** (`smpl:80K`, bs4). Checkpoints every 2K under `/mnt/doscratch/outputs/train/lab01_pnp_fastwam/checkpoints/`.
+
+20K closed-loop is still **0%** (keyboard `home` and demo-mean start). Debug dump (`LAB01_DEBUG_ACTIONS=80`) shows the arm is **not** frozen at home (`shoulder_pan` command range ~0.39 rad in the first 80 ticks) but the cube never leaves spawn (`z≈0.015`). Do not unfreeze the 5B video expert as the next cheap lever until a shorter action-head recipe is tried. On MI300X, if EGL `EGL_BAD_ALLOC`, use `LAB01_MUJOCO_GL=osmesa`.
+
+**ROCm extras:** both policies use `./scripts/install-lerobot-extra-deps.sh`, which pins the current `torch==…+rocm` / `torchvision` via `--constraints` and never re-resolves CUDA wheels. If a CUDA leak already happened, add `--repair-torch`.
+
 ---
 
 ## 6. Policy eval in MuJoCo (sim2sim)
@@ -595,6 +685,9 @@ Recording / full-range box (leader teleop):
 | `labs/lab01_pnp/configs/rollout_act.yaml` | ACT | `random` | `follow` | Full record box | Honest ACT benchmark |
 | `labs/lab01_pnp/configs/rollout_act_demo_fixed.yaml` | ACT | `fixed` | `follow` | Same pose as SmolVLA fixed demo | Fixed-pose ACT demo |
 | `labs/lab01_pnp/configs/rollout_molmoact2.yaml` | MolmoAct2 | `random` | `home` | Full record box | Honest MolmoAct2 benchmark (`top→cam0`, `wrist→cam1`) |
+| `labs/lab01_pnp/configs/rollout_lingbot_va.yaml` | LingBot-VA | `random` | `home` | Full record box | `top→image`, `wrist→image2` (LIBERO 2-cam layout) |
+| `labs/lab01_pnp/configs/rollout_fastwam.yaml` | FastWAM | `random` | keyboard `home` | Full record box | same 2-cam rename as LingBot-VA / JEPA |
+| `labs/lab01_pnp/configs/rollout_fastwam_demo_start.yaml` | FastWAM | `random` | `home_joints` = demo mean | Full record box | If cube never leaves keyboard-home spawn |
 | `labs/lab01_pnp/configs/rollout_molmoact2_demo_fixed.yaml` | MolmoAct2 | `fixed` | `home` | Always `(0.27, 0.20, yaw −8°)` | Fixed-pose MolmoAct2 demo |
 | `labs/lab01_pnp/configs/rollout_vla_jepa_demo_fixed.yaml` | VLA-JEPA | `fixed` | keyboard `home` | Same cube; arm at `[0,-0.3,0.6,1.2,…]` | Historical 0/10 protocol |
 | `labs/lab01_pnp/configs/rollout_vla_jepa_demo_start.yaml` | VLA-JEPA | `fixed` | `home_joints` = demo mean | Same cube; arm at leader-start mean | Isolates home-OOD vs policy failure |
@@ -652,6 +745,14 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | VLA-JEPA 6-D BC 10K + act-head 3K | Fixed cube; demo-mean `home_joints` | `home` | Sync | EGL | 10 | **1/10 (10%)** | freeze all but `action_model`; init 010000 BC; `n_action_steps=30`; `outputs/eval/vla_jepa_state6_bc_acthead_003000_demostart.log` |
 | VLA-JEPA 6-D BC 10K + act-head 3K | Fixed cube; keyboard `home` | `home` | Sync | EGL | 10 | **0/10 (0%)** | same checkpoint; `rollout_vla_jepa_demo_fixed.yaml`; no gain vs 10K BC 1/10 |
 | VLA-JEPA 6-D BC 10K + gripper oracle | Fixed cube; demo-mean `home_joints` | `home` | Sync | EGL | 10 | **0/10 (0%)** | `LAB01_GRIPPER_ORACLE=1` (close when `gripperframe` within 4 cm); close fired every episode, cube never lifted. Log `outputs/eval/vla_jepa_state6_bc_010000_demostart_oracle.log` |
+| VLA-JEPA 6-D BC 10K → unfreeze Qwen 10K | Fixed cube; demo-mean `home_joints` | `home` | Sync | OSMesa | 3 | **0/3 (0%)** | Continue from BC 010000; `freeze_qwen=false`, WM off, lr 3e-5, chunk 30. Funnel: `reach_8cm=3/3 → near_4cm=3/3 → close_after_open=0/3`. Log `/mnt/doscratch/outputs/eval/jepa_bc_unfreeze_funnel_matched3.log` |
+| VLA-JEPA 6-D BC 10K → unfreeze Qwen 10K | Fixed cube; demo-mean `home_joints` | `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same ckpt; worse than freeze-Qwen BC 1/10. Funnel: `reach_8cm=10/10 → near_4cm=6/10 → close=0/10`. Log `.../jepa_bc_unfreeze_demostart10.log` |
+| VLA-JEPA 6-D BC 10K → unfreeze Qwen 10K | Fixed cube; keyboard `home` | `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same ckpt; `near_4cm=0/10`. Log `.../jepa_bc_unfreeze_fixed10.log`. Intervention ledger: §6.4.2 |
+| LingBot-VA 20K LoRA (joints in ch 0–5) | Full-range random | `home` | Sync | EGL | 20 | *pending* | **Not a fair EEF transfer.** Campaign stopped at 600/8000; eval ImportError. Same 50-ep joint dataset stuffed into LIBERO EEF channels. See §6.4.2; adaptation spec is a follow-up PR. |
+| FastWAM 4K 6-D (freeze video expert, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 20 | **0/20 (0%)** | MI300X; `n_action_steps=32`, `rollout_fastwam.yaml`; cube never leaves spawn (`z≈0.015`). Policy infer **33.5 Hz** (2631 calls). EGL `EGL_BAD_ALLOC` — OSMesa. Log `/mnt/doscratch/outputs/eval/fastwam_osmesa20.log`; ckpt `.../004000/` |
+| FastWAM 20K 6-D (resume 4K, freeze video, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same YAML / `n_action_steps=32`; cube still `z≈0.015`. Infer **35.8 Hz** (1207 calls). Log `/mnt/doscratch/outputs/eval/fastwam_osmesa10_20k.log`; ckpt `.../020000/` |
+| FastWAM 20K 6-D | Full-range random | demo-mean `home_joints` | Sync | OSMesa | 10 | **0/10 (0%)** | `rollout_fastwam_demo_start.yaml`, `n_action_steps=10`; cube still `z≈0.015`. Infer **18.1 Hz** (1133 calls; shorter chunks). Log `.../fastwam_osmesa10_20k_demo.log` |
+| FastWAM pad7 unfreeze-4 8K | Full-range random | keyboard `home` | Sync | **GLFW (GUI)** | 5 | **0/5 (0%)** | `.43` iGPU visual confirmation of the OSMesa 0/10; cube `z≈0.0149` all 5 episodes. Infer **13.9 Hz** (2665 calls). Arm sweeps wide but not toward the cube. Log `outputs/eval/fastwam_pad7_unfreeze4_glfw5.log`. Closed Lab 01 case: §6.4.2 |
 
 **Reading the table**
 
@@ -663,13 +764,160 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 - For SmolVLA, spawn tightening helped less than expected: failure analysis pointed to **grasp instability** and **yaw polarity** (positive yaw often knocks the cube) more than XY coverage alone.
 - RTC lag on iGPU (≈8–9 control frames) changes *how* SmolVLA fails; switching to sync did not turn fixed-pose eval into a high success rate.
 - MolmoAct2 10K eval requires loading the fine-tune processor JSON (not rebuilding from the SO100/SO101 degree `norm_tag`) and feeding the 15-dim dataset state the normalizer was fitted on. Apply `patches/lerobot-molmoact2-eval.patch` to the local `lerobot/` checkout (`git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch`); do not commit that edit inside the submodule.
-- VLA-JEPA is a **closed transfer-failure case** on this 50-ep set, not a classroom policy. World-model 20K (chunk 7) is **0/10**. Freeze-Qwen / no-WM / chunk-30 6-D BC is **1/10 EGL** at 10K (demo-mean and keyboard home) and **0/10 GLFW** on the same 10K checkpoint; 20K BC is **0/10**. Action-head-only 3K from 10K BC did not improve. n=10 is noisy; do not treat any JEPA row as classroom-ready. Hub artifact is the 10K BC weights: [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa).
+- FastWAM and VLA-JEPA on this 50-ep set are **closed joint-space cross-embodiment transfer-failure cases**, not classroom policies. Classroom pick-and-place still uses ACT 6-D or MolmoAct2 6-D. **LingBot-VA is a different gap** (official output is EEF Δ + gripper, not all six joint angles); stuffing Lab 01 joints into LIBERO channels 0–5 is not a fair eval. Family split: **§6.4.2**.
+- **FastWAM** fails *before approach* (`reach_8cm=0`; cube never leaves spawn). Best Lab 01 recipe (LIBERO pad7 + unfreeze last 4 video MoT layers) still **0/10** with open-loop RMSE **0.136 rad** (~3.8× ACT). Lab 01 recipes kept `lambda_video=0` (not the paper's video co-training). Full intervention ledger: **§6.4.2**. Mechanism numbers: **§6.4.1**.
+- **VLA-JEPA** fails *at / after grasp*. Best measured run is freeze-Qwen BC 10K (**1/10** fixed-pose EGL). Unfreezing Qwen from that checkpoint for 10K steps made closed-loop **worse** (**0/10**; approach without close). Hub artifact remains the BC 10K weights: [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa). Do not iterate more JEPA/FastWAM long trains on this dataset — see **§6.4.2**.
 
-- **Where VLA-JEPA BC actually fails: the gripper channel never commits.** Logging predicted joint commands (`LAB01_DEBUG_ACTIONS=400`, BC 10K, demo-mean start, 45 s) shows the arm reaching the cube while the gripper opens to ~**0.85–0.93 rad** and stays there. Demo data is near-bimodal (closed ≈ `-0.07`, open ≈ `0.94`, median `0.17`), so the policy locks into the open mode and only makes brief aborted dips (`0.89 → 0.68`) that look like hesitation over the cube. It is not stuck half-way between open and closed; it never issues the close. A plain threshold snap therefore cannot fix it: at `n_action_steps=30` only 7 of ~350 post-open frames fall below the `0.45` midpoint, and any threshold high enough to catch `0.85` would clamp the jaws during approach.
-- **Shorter action chunks do not recover the grasp** (1 episode each, indicative only). Same checkpoint and start pose: `n_action_steps=30` opens at frame 54 with a few closing attempts; `10` opens later (frame 129) with none; `5` never opens at all (max `0.56`) and issues ~306 commands in the same 45 s versus 400 at `30`, since sync inference re-plans every 0.25 s. Keep `30` for JEPA; the missing piece is the visual trigger for closing, not chunk latency.
-- **Oracle close does not turn near-misses into grasps.** `LAB01_GRIPPER_ORACLE=1` closes when `gripperframe` is within 4 cm of the cube (and would open over the container). On BC 10K, demo-mean start, n=10: the oracle **closed every episode** (min distance 1.9–3.6 cm) and **lifted the cube zero times** (**0/10**). Close pose is consistently ~4 cm off in Y (`gripperframe` y≈0.16 vs cube y=0.20). So “the arm already found the cube; only the gripper hesitated” is not enough: the approach is not a centered grasp. Quote the oracle flag next to this row; it is an ablation, not a policy score. Independent GLFW GUI on the same 10K BC checkpoint was **0/10**, also failing at grasp. This lab **stops iterating JEPA recipes** here; classroom demos use ACT 6-D or MolmoAct2 6-D.
+#### 6.4.1 Protocol-aligned causal audit (2026-09-15)
+
+This audit separates reference success rates from mechanism probes. Full-range rows below are still not one perfectly controlled benchmark: ACT uses `reset_arm: follow`, SmolVLA/MolmoAct2 use `home`, and each policy keeps its native camera/state/action interface. Wilson intervals show sampling uncertainty; architecture rankings must not be inferred when intervals and protocols overlap.
+
+| Policy / recipe | Cameras | State / action norm | Chunk | Training sample updates | Reused / frozen path | Full-range result (95% Wilson CI) |
+|---|---:|---|---:|---:|---|---|
+| ACT 6-D 50K | 3 | 6 / MEAN_STD | 100 | 6.40M | ResNet-18; Lab 01 policy trained end-to-end | 29/50 = 58% (44–71%) |
+| ACT 15-D 50K | 3 | 15 / MEAN_STD | 100 | 6.40M | same recipe | 32/50 = 64% (50–76%) |
+| SmolVLA 50K | 3 | 6 / MEAN_STD | 50 | 3.20M | SmolVLM base | 11/50 = 22% (13–35%) |
+| MolmoAct2 6-D 10K | 2 | 6 / QUANTILES | 30 | 0.32M | SO100/101 6-joint base, VLM LoRA + action expert | 27/50 = 54% (40–67%) |
+| MolmoAct2 15-D 10K | 2 | 15 / QUANTILES | 30 | 0.32M | same, but 15 tokens break the pretrained 6-joint state layout | 15/50 = 30% (19–44%) |
+| VLA-JEPA BC 10K | 2 | 6 / MIN_MAX | 30 | 0.16M | LIBERO base; Qwen frozen; state/action projections reinitialized; WM off | fixed only: 1/10 = 10% (2–40%) |
+| VLA-JEPA BC→unfreeze Qwen 10K | 2 | 6 / MIN_MAX | 30 | +0.16M | Continue from BC 010000; Qwen trainable; WM off; lr 3e-5 | fixed only: 0/10 = 0% (0–28%); worse than BC |
+| FastWAM pad7 + unfreeze-4 | 2 | 6→8 / 6→7, MEAN_STD | 32 | 0.448M | LIBERO action path; Wan video expert frozen except last 4 MoT layers in final 8K | 0/10 = 0% (0–28%) |
+
+Matched state ablations support embodiment alignment, not a generic “less state is better” rule: ACT 6-D vs 15-D differs by only 6 points with heavily overlapping intervals, while MolmoAct2 gains 24 points because 6-D restores the SO100/101 base model's pretrained six-token proprio layout. ACT and MolmoAct2 6-D are statistically indistinguishable at n=50 (58% vs 54%); SmolVLA is clearly less reliable despite 10× MolmoAct2's fine-tuning sample updates.
+
+**Dataset audit.** The dataset has 50 episodes / 21,218 frames; episode length is 267–1,057 frames (median 406.5). Episode-start arm pose is not fixed (largest joint std 0.180 rad), which invalidates the old “only cube pixels vary” interpretation of first-frame cross-episode probes. Gripper supervision is also not binary: 50.3% of frames are `<0.15` rad, 25.0% are `>0.75`, and 24.7% are in transition. Median close ramp is 15 frames / 0.75 s; replacing it with two modes has **0.209 rad RMSE**. The current JEPA BC recipe correctly sets `binarize_gripper_action=false`; binarization is therefore a hypothetical ablation, not its failure cause.
+
+**Unified in-sample open-loop diagnostic.** All checkpoints trained on all 50 episodes, so no honest held-out action test exists without retraining. The probe samples four episodes at start / 25% / 50% / 75%, uses each model's native horizon, raw-radian actions and deterministic seed, and compares with holding the current pose. Horizon differences mean absolute RMSE is diagnostic rather than a fair score.
+
+| Policy | Horizon | RMSE | Hold RMSE | Improvement over hold | RMSE after cross-episode image shuffle | Start RMSE | Pred/demo travel |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ACT 6-D | 100 | **0.040** | 0.579 | **93%** | 0.410 | 0.047 | 1.01× |
+| SmolVLA | 50 | 0.160 | 0.354 | 55% | 0.255 | 0.251 | 0.93× |
+| MolmoAct2 6-D | 30 | 0.113 | 0.204 | 44% | 0.216 | 0.103 | 1.01× |
+| VLA-JEPA BC 10K | 30 | 0.187 | 0.204 | **8%** | **0.172 (improves)** | 0.245 | 1.00× |
+| VLA-JEPA WM 20K | 7 | 0.080 | 0.084 | **4%** | 0.204 | 0.094 | 1.27× |
+| VLA-JEPA unfreeze Qwen 10K | 30 | **0.204** | 0.230 | **11%** | 0.204 (≈unchanged) | 0.273 | 1.12× |
+| FastWAM unfreeze-4 | 32 | 0.127 | 0.215 | 41% | 0.192 | 0.193 | 0.99× |
+
+ACT is the only checkpoint that strongly beats a hold baseline at every phase and whose error explodes when images are mismatched. JEPA BC barely beats hold and shuffled images improve RMSE, direct evidence that its visual conditioning is often mapped in the wrong direction. Unfreezing Qwen from BC 10K made RMSE **worse** (0.187 → 0.204) and start-phase RMSE (0.273) still beats hold the wrong way (hold 0.159 at start); shuffle leaves RMSE flat — features moved, but not into a better demo-aligned map. JEPA WM's 0.080 must not be compared naively with 30–100-step rows: over its 7-step horizon hold already scores 0.084. It uses images (shuffle hurts), but the next intervention shows that the encoded variation is barely about cube XY.
+
+**Controlled cube grounding and camera ablation.** `probe_visual_grounding.py` renders a 3×3 cube grid with arm, 6-D proprio and background fixed. A counterfactual hides only the cube geometry and disables the block-targeted light so no cube position leaks through illumination. At 640×480 the green cube is large enough to see (equivalent width: top 31 px, front 44 px, wrist mean 55 px), so poor sensitivity is not a sub-pixel problem.
+
+| Policy | Cube-driven action spread | Pairwise cube-XY/action-distance ρ | Top-only spread | Wrist-only spread | First-chunk FK min cube distance | Fixed-image proprio-driven spread |
+|---|---:|---:|---:|---:|---:|---:|
+| ACT 6-D | 0.131 | **0.481** | 0.064 | 0.104 | **4.7 cm** (3/9 within 4 cm) | **0.038** |
+| SmolVLA | 0.231 | 0.322 | 0.101 | 0.015 | 9.8 cm | 0.145 |
+| MolmoAct2 6-D | 0.060 | **0.553** | 0.063 (ρ=0.717) | 0.187 (ρ=0.163) | 8.6 cm | 0.259 |
+| VLA-JEPA BC 10K | 0.028 | 0.275 | 0.038 | 0.057 | 11.6 cm | 0.189 |
+| VLA-JEPA WM 20K | **0.006** | 0.163 | 0.006 | 0.005 | **20.7 cm** | 0.106 |
+| VLA-JEPA unfreeze Qwen 10K | — | — | — | — | — | — |
+| FastWAM unfreeze-4 | 0.123 | 0.397 | 0.187 (ρ≈0) | 0.158 (ρ≈0.02) | **12.8 cm** | **0.284** |
+
+The no-cube control has effectively zero spread, proving that the reported variation is caused by cube pixels. ACT's closest FK point tracks target X/Y with correlations 0.946/0.972. FastWAM sees cube displacement at a similar amplitude, but its closest-point X correlation is only 0.216 (Y 0.673), no grid point comes within 4 cm, and the proprio intervention drives 2.3× more action spread than moving the cube. Its defect is therefore not a disconnected camera; it is inaccurate cross-embodiment coordinate/action grounding. JEPA WM is a different failure: the auxiliary objective makes the final checkpoint **4.4× less cube-sensitive than BC** and its first chunk remains about 21 cm away. **Controlled grounding for the unfreeze-Qwen checkpoint was not obtained on MI300X** (`EGL_BAD_ALLOC`, then OSMesa segfault in `probe_visual_grounding.py`); open-loop + closed-loop funnel below still close the case.
+
+**Matched closed-loop funnel (exploratory n=3).** All policies below use the same fixed cube `(0.27, 0.20, −8°)`, demo-mean arm home, sync inference, 30 executed actions and 35 s. This is a mechanism probe, not a replacement for full-range n=50.
+
+| Policy | Reach ≤8 cm | Near ≤4 cm | Close near cube | Lift ≥2 cm | Over box | Place | Final |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ACT 6-D | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **3/3** |
+| SmolVLA | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **3/3** |
+| MolmoAct2 6-D | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **3/3** |
+| VLA-JEPA BC 10K | 3/3 | 3/3 | 3/3 | 3/3 | **0/3** | 0/3 | **0/3** |
+| VLA-JEPA unfreeze Qwen 10K | 3/3 | 3/3 | **0/3** | 0/3 | 0/3 | 0/3 | **0/3** |
+| FastWAM unfreeze-4 | **0/3** | 0/3 | 0/3 | 0/3 | 0/3 | 0/3 | **0/3** |
+
+JEPA BC's matched failure is localized after grasp: all three runs reach, close and lift, then drop before reaching the box (`dropped_after_lift=3/3`). Unfreezing Qwen **regresses** that funnel: still reaches / gets near, but **`close_after_open=0/3`** (demo-mean 10-ep: `near_4cm=6/10`, close still 0). FastWAM fails before approach (`reach_8cm=0/3`; cube never moves). SmolVLA's 3/3 versus its earlier fixed sync 3/10 from keyboard home demonstrates that arm-start protocol is a large confound; n=3 does not establish a new success rate.
+
+**What “world model” means in these actual recipes.**
+
+- The [Fast-WAM paper](https://arxiv.org/abs/2603.16666) concludes that video co-training, not test-time imagination, provides most of the WAM gain. The Lab 01 recipe sets `lambda_video=0` and freezes the video expert for 20K, then unfreezes only four MoT layers for 8K while the video loss remains zero. It therefore removes the paper's claimed causal ingredient. Inference intentionally uses only first-frame video tokens, as the paper specifies.
+- VLA-JEPA BC 10K has `enable_world_model=false`. WM 20K adds a 0.1-weight auxiliary prediction of frozen V-JEPA future latents; the predictor is not called by `predict_action`, and can affect actions only indirectly through shared Qwen weights. The [official paper](https://arxiv.org/abs/2602.10098) first trains on 220K human videos and 76K robot trajectories and fine-tunes with about 2K LIBERO demos; 50 SO-101 demonstrations with reinitialized action/state projections are not an equivalent learning regime.
+- The falsifiable result is stronger than naming: WM 20K has lower cube sensitivity and no better closed-loop result than BC. FastWAM has adequate pixel sensitivity but wrong robot-space grounding. Unfreezing JEPA's Qwen also failed the gate and **regressed** closed-loop vs freeze-Qwen BC.
+- **Gate status (closed):** no Lab 01 JEPA/FastWAM checkpoint passes start RMSE `<0.08`, cube/action correlation `>0.5`, and useful first-chunk approach. Subsequent long interventions (pad7, unfreeze-4 MoT, unfreeze Qwen) did not pass either. **This lab does not open further large world-model training runs on the 50-ep set** for classroom success; see the intervention ledger in **§6.4.2**. Paper-level video co-training (`lambda_video>0`) remains an out-of-scope experiment on larger / same-embodiment data, not a Lab 01 success path.
+
+Reproduce the durable JSON bundle and offline probes:
+
+```bash
+source .venv-rocm/bin/activate
+python labs/lab01_pnp/analyze_model_gap.py
+python labs/lab01_pnp/probe_open_loop.py \
+  --checkpoint outputs/train/lab01_pnp_act_state6/checkpoints/050000/pretrained_model \
+  --episodes 4 --output .tmp/openloop_act6.json
+python labs/lab01_pnp/probe_visual_grounding.py \
+  --checkpoint outputs/train/lab01_pnp_act_state6/checkpoints/050000/pretrained_model \
+  --output .tmp/grounding_act6.json
+```
+
+`eval.py` now emits per-episode funnel maps and a final `Stage funnel` line for every sim eval. Matched logs are `outputs/eval/funnel_matched_{act6,smolvla,molmo6,jepa_bc10k,fastwam}.log`. Machine-readable aggregate: `.tmp/model_gap_analysis.json`.
 
 **Adding a new policy:** measure full-range (`n=50`) and optionally fixed-pose (`n=10`) with the matching `labs/lab01_pnp/configs/rollout_*.yaml`. Add one row per (policy, spawn, `reset_arm`, inference) tuple. Keep Success as `k/n (p%)`.
+
+#### 6.4.2 Same 50-ep set: joint-space transfer failures vs EEF policies (2026-09-16)
+
+**Verdict.** On the same 50 expert episodes, ACT 6-D (~58%) and MolmoAct2 6-D (~54%) show the task is learnable as **joint-position IL**. VLA-JEPA (0–10%) and FastWAM (0%) are **joint-space LIBERO→SO-101 transfer failures**, not evidence that Lab 01 pick-and-place is too hard. LingBot-VA is **not** in that bucket: it is pretrained to emit **end-effector pose deltas + gripper**, so Lab 01 joint labels need an extra adapter (FK train / IK eval). Classroom demos stay on ACT 6-D / MolmoAct2 6-D. Mechanism probes: §6.4.1; JEPA/FastWAM interventions below; action-language split at the end of this section.
+
+##### VLA-JEPA intervention ledger
+
+| Recipe | Closed-loop (fixed cube) | Funnel / symptom | Hypothesis tested → outcome |
+|--------|--------------------------|------------------|-----------------------------|
+| WM 20K (chunk 7, Qwen trainable, WM weight 0.1) | 0/10 | Cube never leaves spawn | “World-model co-training helps” → **no**; cube sensitivity **worse** than BC |
+| Freeze-Qwen BC 10K (chunk 30, WM off) | **1/10** (best JEPA) | Approach; grasp often fails; matched n=3: lift then drop before box | “Simplify to frozen VLM + action head” → **partial** only |
+| Same BC 20K | 0/10 | Worse than 10K | “More steps on frozen features” → **overfit / regress** |
+| Action-head-only 3K from BC 10K | 1/10 / 0/10 | No gain | “Bottleneck is action head” → **no** |
+| Shorter `n_action_steps` 10 / 5 | worse | Open later or absent | “Replan too late” → **no** |
+| Gripper threshold snap | no recovery | Close never issued | “Ambiguous gripper modes” → **no** (binarize already off) |
+| Gripper proximity oracle | 0/10 | Close every ep; never lift; ~4 cm Y miss | “Only the jaws hesitate” → **no**; approach not centered |
+| **Unfreeze Qwen 10K from BC 010000** (lr 3e-5, WM off, bs16) | **0/10** demo-mean and keyboard-home | Matched: `near_4cm` OK, **`close_after_open=0`**; open-loop RMSE 0.187→**0.204** | “Frozen LIBERO vision is the bottleneck; thaw Qwen” → **regress** |
+
+**Why unfreeze regressed.** Freeze-Qwen BC fitted the action head to a **fixed** feature space (LIBERO-ish, weakly cube-sensitive) and produced a fragile average approach that sometimes closed. Thawing ~2.3B Qwen parameters on 50 demos (~7.5 epochs) **moved the features** while the action head’s calibration stayed in the old space. Train loss fell to ~0.011 without improving demo-aligned open-loop; the weakest channel (close) disappeared first. This is representation drift / catastrophic interference on a tiny dataset — not “unfreeze failed to run.”
+
+Hub publish stays at freeze-Qwen BC 10K. Unfreeze weights are **not** a Hub artifact.
+
+##### FastWAM intervention ledger
+
+| Recipe | Closed-loop | Funnel / open-loop | Hypothesis → outcome |
+|--------|-------------|--------------------|----------------------|
+| `fastwam_base` 4K/20K, freeze video, `lambda_video=0`, reinit 6-D action path | 0/20, 0/10 | Cube `z≈0.015`; RMSE ~0.23 rad | “Train action DiT on frozen Wan” → underfit; base **has no action pathway tensors** |
+| Demo-mean start + shorter chunks | 0/10 | Still never leave spawn | “Keyboard home OOD” → **not sufficient** |
+| LIBERO pad7 20K (inherit 7-D/8-D path, pad 6 joints) | 0/10 | RMSE 0.198 rad | “Inherit action pathway” → better open-loop, still 0% |
+| Unfreeze last 4 video MoT + 8K | 0/10 (also 0/5 GLFW) | RMSE **0.136** rad; matched `reach_8cm=0/3`; FK min ~12.8 cm | “Frozen video features bottleneck” → open-loop helps, **closed-loop still 0%** |
+
+Lab 01 FastWAM recipes **never enabled video co-training** (`lambda_video=0`). That is a documented gap vs the [Fast-WAM paper](https://arxiv.org/abs/2603.16666), not a remaining “cheap lever” for Lab 01 success: JEPA already showed that adding the marketed world-model ingredient on this 50-ep SO-101 set does not produce a classroom policy, and FastWAM still fails **before** the grasp stage JEPA sometimes reaches.
+
+##### Contrast and stop boundary
+
+| | VLA-JEPA (best / last) | FastWAM (best) |
+|--|------------------------|----------------|
+| Stage of death | At / after grasp (BC); after unfreeze: approach without close | Before approach |
+| Open-loop vs ACT | ~5× worse RMSE; barely beats hold | ~3.8× worse after unfreeze-4 |
+| Pass gate RMSE&lt;0.08 / r&gt;0.5? | No | No |
+
+**Stop.** Do not open further Lab 01 long trains for JEPA (full unfreeze, more BC steps, WM weight sweeps) or FastWAM (`lambda_video>0`, more MoT layers, more pad7 steps) aimed at classroom success on this dataset. If a future experiment wants to test paper-level video co-training, do it on larger or same-embodiment data and keep it out of the classroom path.
+
+##### Same dataset, two failure families
+
+Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that emit the same language can train and eval without a converter:
+
+| Family | Lab 01 examples | Fine-tune on this dataset | Typical Lab 01 outcome |
+|--------|-----------------|---------------------------|------------------------|
+| **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints) | Direct: `action` = robot command | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). Ledger above. |
+| **End-effector** | LingBot-VA (`lingbot_va_libero_long`) | **Not** direct. Official LIBERO channels 0–6 are Δxyz + rotation + gripper; joints must be remapped, eval needs IK. | Current `used_action_channel_ids=[0–5]` **stuffs joints into EEF slots**. Campaign 600 steps, eval never completed. This is a **missing adapter**, not the same diagnosis as JEPA/FastWAM. |
+
+Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
+
+**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative). **Not** on Hub: FastWAM (pad7 unfreeze-4 lives on DORobot only), LingBot-VA, Molmo 6-D as a separate repo, JEPA unfreeze.
+
+**Follow-up (not this analysis).** Document and implement the LingBot-VA EEF adapter separately (`lingbot_va_eef_adapt.md`): reuse teleop videos, convert joints→EEF labels, train 7 used channels, eval with IK back to SO-101 `*.pos`. Do not treat `train_lingbot_va.cmd` (joints in 0–5) as that path.
+
+##### Log index (durable)
+
+| Artifact | Path |
+|----------|------|
+| JEPA unfreeze train | `/mnt/doscratch/outputs/train/lab01_pnp_vla_jepa_state6_bc_unfreeze/` (010000) |
+| JEPA unfreeze open-loop | `/mnt/doscratch/outputs/eval/jepa_bc_unfreeze_open_loop.json` |
+| JEPA unfreeze closed-loop | `.../jepa_bc_unfreeze_{funnel_matched3,demostart10,fixed10}.log` |
+| Matched funnel (causal audit) | `outputs/eval/funnel_matched_{act6,smolvla,molmo6,jepa_bc10k,fastwam}.log` |
+| Aggregate JSON | `.tmp/model_gap_analysis.json` (regenerate via `analyze_model_gap.py`) |
 
 ### 6.5 How to run
 
@@ -765,7 +1013,7 @@ There is no single prescribed fix in this lab. The rates above are a baseline on
 3. **Inference knobs in sim** — RTC vs sync; ACT `n_action_steps` (50 vs 100 vs train default); confirm wall-clock delay does not dominate on your GPU.
 4. **Spawn curriculum vs honest eval** — Use demo/fixed configs for demos; always report **full-range** numbers when claiming generalization. Do not tune the eval box alone and call it a better policy.
 5. **Failure taxonomy** — Log initial spawn vs final cube pose; separate “never grasped”, “dropped in transfer”, and “near-miss on rim”. Different failure modes suggest different next experiments.
-6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA-LIBERO on this 50-ep set is a **closed transfer-failure case** (grasp never commits; see §6.4), not a candidate demo policy.
+6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA and FastWAM on this 50-ep set are **closed joint-space transfer-failure cases** (§6.4 / §6.4.2). LingBot-VA is a **different** gap (EEF policy vs joint teleop); the stuffed-joint recipe is not the delivery path — see the dedicated adaptation PR.
 
 When you change any axis, re-run with a fixed episode count and the same `MUJOCO_GL` / inference settings, and record config path + checkpoint step next to the success fraction.
 
@@ -799,6 +1047,8 @@ Published Lab 01 reference assets (`alexhegit`):
 | ACT policy (15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
 | ACT policy (6-D joint pos) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 | VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) |
+| MolmoAct2 | [alexhegit/so101-simstudio-lab01-pnp-molmoact2](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2) |
+| FastWAM / LingBot-VA | **Not published.** FastWAM pad7 unfreeze-4 is DORobot-only (0% closed-loop). LingBot-VA has no fair EEF checkpoint. |
 
 Commands in §7.1–7.2 keep `alexhegit/...` as copy-paste examples; replace the namespace with yours when working under your own Hub account.
 
@@ -938,6 +1188,9 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `train_act.cmd` | ACT imitation learning (`LAB01_ACT_STATE_DIM=6` for joint-pos-only) |
 | `train_molmoact2.cmd` | MolmoAct2 fine-tune (MI300X / DORobot defaults) |
 | `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
+| `train_lingbot_va.cmd` | LingBot-VA stuffed-joint recipe (not a fair EEF transfer; §6.4.2) |
+| `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |
+| `campaign_lingbot_fastwam_10h.cmd` | Time-boxed LingBot-VA + FastWAM train (bs4) then 20-ep EGL eval |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
 | `eval_vla_jepa_gui.cmd` | GLFW wrapper for local VLA-JEPA checkpoints |

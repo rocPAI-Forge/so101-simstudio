@@ -10,7 +10,10 @@ import functools
 import logging
 import os
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
+
 
 def _preselect_mujoco_gl_rollout(argv: list[str]) -> None:
     """Use EGL when GLFW window is disabled or DISPLAY is missing."""
@@ -33,6 +36,22 @@ _preselect_mujoco_gl_rollout(sys.argv[1:])
 from simstudio.robots.so101_mujoco import SO101MujocoConfig  # noqa: F401,E402
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _hide_display_for_pynput_import() -> Iterator[None]:
+    """Hide DISPLAY while importing LeRobot rollout (DAgger → pynput → Xlib).
+
+    python-xlib ``Display()`` can block forever on GNOME Xwayland even when
+    GLFW/xset work. Restore DISPLAY afterwards so the MuJoCo window still opens.
+    See ``llm-wiki/platform-quirks/input-listeners.md``.
+    """
+    display = os.environ.pop("DISPLAY", None)
+    try:
+        yield
+    finally:
+        if display is not None:
+            os.environ["DISPLAY"] = display
 
 
 def _robot_inner(robot: Any) -> Any:
@@ -92,14 +111,16 @@ def _patch_rollout_sim_reset() -> None:
     base_mod.BaseStrategy.setup = _patched_base_setup
 
 
-_patch_rollout_sim_reset()
+with _hide_display_for_pynput_import():
+    _patch_rollout_sim_reset()
 
 
 def main() -> None:
     argv = ["lerobot_rollout.py", *sys.argv[1:]]
     sys.argv = argv
 
-    from lerobot.scripts.lerobot_rollout import main as lerobot_rollout_main
+    with _hide_display_for_pynput_import():
+        from lerobot.scripts.lerobot_rollout import main as lerobot_rollout_main
 
     lerobot_rollout_main()
 
