@@ -167,7 +167,7 @@ fi
 #    **unfair stuffed-joint recipe**, not a fair EEF transfer (runbook §6.4.2).
 #    Do not treat a pending/failed campaign eval as LingBot-VA Lab 01 success.
 #    Fair path: convert teleop joints→EEF labels, 7 channels, eval IK
-#    (follow-up adaptation PR / lingbot_va_eef_adapt.md).
+#    (labs/lab01_pnp/lingbot_va_eef_adapt.md).
 #    Extras: ./scripts/install-lingbot-va-deps.sh  (not pip install -e '.[lingbot_va]')
 #    20K@32 fits MI300X VRAM (~155 GB) but ~200 s/step. For a ~10 h window use
 #    labs/lab01_pnp/campaign_lingbot_fastwam_10h.cmd (bs4, 4 h cap, save every 200).
