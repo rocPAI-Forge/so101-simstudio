@@ -552,6 +552,10 @@ LAB01_EVAL_LOG=./outputs/eval/molmoact2_full.log \
 
 **Deps:** `policy.type=molmoact2` lives in the editable `lerobot/` submodule. Install extras with `./scripts/install-molmoact2-deps.sh` (`transformers` 5.4, `peft`, `scipy`). **Do not** `uv pip install 'lerobot[molmoact2]'` — that extra re-resolves torch onto CUDA and `nvidia-*` wheels. If that already happened: `./scripts/install-molmoact2-deps.sh --repair-torch` (or `make rocm-sync`). `peft` is required when `LAB01_MOLMO_ENABLE_LORA_VLM=true`.
 
+### GR00T N1.7 training (planned)
+
+Post-train [`nvidia/GR00T-N1.7-3B`](https://huggingface.co/nvidia/GR00T-N1.7-3B) on the Lab 01 **6-D joint** dataset (`embodiment_tag=new_embodiment`). This is a joint-space VLA (pad to `max_action_dim`), not LingBot EEF and not the removed **N1.5** checkpoint. Delivery spec: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). Do not `uv pip install 'lerobot[groot]'` on `.venv-rocm`.
+
 ### LingBot-VA training (lab01-pnp, MI300X) — DORobot
 
 Fine-tune [`lerobot/lingbot_va_libero_long`](https://huggingface.co/lerobot/lingbot_va_libero_long) on the Lab 01 dataset. Knobs: `_env.sh` section 5c; run `train_lingbot_va.cmd`.
@@ -753,6 +757,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | FastWAM 20K 6-D (resume 4K, freeze video, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same YAML / `n_action_steps=32`; cube still `z≈0.015`. Infer **35.8 Hz** (1207 calls). Log `/mnt/doscratch/outputs/eval/fastwam_osmesa10_20k.log`; ckpt `.../020000/` |
 | FastWAM 20K 6-D | Full-range random | demo-mean `home_joints` | Sync | OSMesa | 10 | **0/10 (0%)** | `rollout_fastwam_demo_start.yaml`, `n_action_steps=10`; cube still `z≈0.015`. Infer **18.1 Hz** (1133 calls; shorter chunks). Log `.../fastwam_osmesa10_20k_demo.log` |
 | FastWAM pad7 unfreeze-4 8K | Full-range random | keyboard `home` | Sync | **GLFW (GUI)** | 5 | **0/5 (0%)** | `.43` iGPU visual confirmation of the OSMesa 0/10; cube `z≈0.0149` all 5 episodes. Infer **13.9 Hz** (2665 calls). Arm sweeps wide but not toward the cube. Log `outputs/eval/fastwam_pad7_unfreeze4_glfw5.log`. Closed Lab 01 case: §6.4.2 |
+| GR00T N1.7-3B (`new_embodiment`, 6-D joints) | — | — | — | — | — | *not trained* | Planned joint VLA on the same 50-ep set. **Not** N1.5. Spec: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
 
 **Reading the table**
 
@@ -900,14 +905,14 @@ Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that e
 
 | Family | Lab 01 examples | Fine-tune on this dataset | Typical Lab 01 outcome |
 |--------|-----------------|---------------------------|------------------------|
-| **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints) | Direct: `action` = robot command | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). Ledger above. |
+| **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints), **GR00T N1.7** (`new_embodiment`, planned) | Direct: `action` = robot command (GR00T zero-pads to `max_action_dim`) | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). Ledger above. GR00T: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
 | **End-effector** | LingBot-VA (`lingbot_va_libero_long`) | **Not** direct. Official LIBERO channels 0–6 are Δxyz + rotation + gripper; joints must be remapped, eval needs IK. | Current `used_action_channel_ids=[0–5]` **stuffs joints into EEF slots**. Campaign 600 steps, eval never completed. This is a **missing adapter**, not the same diagnosis as JEPA/FastWAM. |
 
 Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
 
 **Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative). **Not** on Hub: FastWAM (pad7 unfreeze-4 lives on DORobot only), LingBot-VA, Molmo 6-D as a separate repo, JEPA unfreeze.
 
-**Follow-up (not this analysis).** Document and implement the LingBot-VA EEF adapter separately (`lingbot_va_eef_adapt.md`): reuse teleop videos, convert joints→EEF labels, train 7 used channels, eval with IK back to SO-101 `*.pos`. Do not treat `train_lingbot_va.cmd` (joints in 0–5) as that path.
+**Follow-up (not this analysis).** LingBot-VA EEF adapter: `lingbot_va_eef_adapt.md` (separate PR if not merged). GR00T N1.7 on the same joint dataset: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). Do not treat `train_lingbot_va.cmd` (joints in 0–5) as a fair LingBot path; do not load GR00T N1.5 on this LeRobot pin.
 
 ##### Log index (durable)
 
@@ -1013,7 +1018,7 @@ There is no single prescribed fix in this lab. The rates above are a baseline on
 3. **Inference knobs in sim** — RTC vs sync; ACT `n_action_steps` (50 vs 100 vs train default); confirm wall-clock delay does not dominate on your GPU.
 4. **Spawn curriculum vs honest eval** — Use demo/fixed configs for demos; always report **full-range** numbers when claiming generalization. Do not tune the eval box alone and call it a better policy.
 5. **Failure taxonomy** — Log initial spawn vs final cube pose; separate “never grasped”, “dropped in transfer”, and “near-miss on rim”. Different failure modes suggest different next experiments.
-6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA and FastWAM on this 50-ep set are **closed joint-space transfer-failure cases** (§6.4 / §6.4.2). LingBot-VA is a **different** gap (EEF policy vs joint teleop); the stuffed-joint recipe is not the delivery path — see the dedicated adaptation PR.
+6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA and FastWAM on this 50-ep set are **closed joint-space transfer-failure cases** (§6.4 / §6.4.2). LingBot-VA is a **different** gap (EEF vs joints). GR00T on Lab 01 is **N1.7 + `new_embodiment`**, not N1.5 — [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md).
 
 When you change any axis, re-run with a fixed episode count and the same `MUJOCO_GL` / inference settings, and record config path + checkpoint step next to the success fraction.
 
@@ -1187,6 +1192,7 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `train_smolvla_resume.cmd` | Resume SmolVLA from a checkpoint |
 | `train_act.cmd` | ACT imitation learning (`LAB01_ACT_STATE_DIM=6` for joint-pos-only) |
 | `train_molmoact2.cmd` | MolmoAct2 fine-tune (MI300X / DORobot defaults) |
+| `groot_n1_7_adapt.md` | Spec to fine-tune GR00T **N1.7-3B** on Lab 01 joints (`new_embodiment`; not implemented yet) |
 | `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
 | `train_lingbot_va.cmd` | LingBot-VA stuffed-joint recipe (not a fair EEF transfer; §6.4.2) |
 | `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |

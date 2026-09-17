@@ -19,6 +19,7 @@
 #   5b) Train VLA-JEPA — train_vla_jepa.cmd (DORobot / MI300X)
 #   5c) Train LingBot-VA — train_lingbot_va.cmd (DORobot / MI300X)
 #   5d) Train FastWAM — train_fastwam.cmd (DORobot / MI300X)
+#   5e) Train GR00T N1.7 — planned (groot_n1_7_adapt.md; not wired)
 #   6) Eval     — eval.cmd (any LeRobot policy)
 #   7) Hub      — push_*.cmd
 # =============================================================================
@@ -249,6 +250,16 @@ fi
 if [[ -z "${LAB01_FASTWAM_RENAME_MAP:-}" ]]; then
   LAB01_FASTWAM_RENAME_MAP='{"observation.images.camera_top":"observation.images.image","observation.images.camera_wrist":"observation.images.image2"}'
 fi
+
+# -----------------------------------------------------------------------------
+# 5e) Train (GR00T N1.7) — not wired yet (labs/lab01_pnp/groot_n1_7_adapt.md)
+#    Base: nvidia/GR00T-N1.7-3B. Do NOT use GR00T-N1.5-3B (removed in LeRobot
+#    v0.6). Embodiment: new_embodiment (SO-101), not libero_sim.
+#    Never: uv pip install 'lerobot[groot]'  (CUDA torch)
+# -----------------------------------------------------------------------------
+# LAB01_GROOT_OUTPUT="${LAB01_GROOT_OUTPUT:-./outputs/train/lab01_pnp_groot_n17}"
+# LAB01_GROOT_BASE="${LAB01_GROOT_BASE:-nvidia/GR00T-N1.7-3B}"
+# LAB01_GROOT_EMBODIMENT_TAG="${LAB01_GROOT_EMBODIMENT_TAG:-new_embodiment}"
 
 # -----------------------------------------------------------------------------
 # 6) Eval — eval.cmd (policy-agnostic)
