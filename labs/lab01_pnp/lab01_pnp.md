@@ -752,7 +752,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | FastWAM 4K 6-D (freeze video expert, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 20 | **0/20 (0%)** | MI300X; `n_action_steps=32`, `rollout_fastwam.yaml`; cube never leaves spawn (`z≈0.015`). Policy infer **33.5 Hz** (2631 calls). EGL `EGL_BAD_ALLOC` — OSMesa. Log `/mnt/doscratch/outputs/eval/fastwam_osmesa20.log`; ckpt `.../004000/` |
 | FastWAM 20K 6-D (resume 4K, freeze video, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same YAML / `n_action_steps=32`; cube still `z≈0.015`. Infer **35.8 Hz** (1207 calls). Log `/mnt/doscratch/outputs/eval/fastwam_osmesa10_20k.log`; ckpt `.../020000/` |
 | FastWAM 20K 6-D | Full-range random | demo-mean `home_joints` | Sync | OSMesa | 10 | **0/10 (0%)** | `rollout_fastwam_demo_start.yaml`, `n_action_steps=10`; cube still `z≈0.015`. Infer **18.1 Hz** (1133 calls; shorter chunks). Log `.../fastwam_osmesa10_20k_demo.log` |
-| FastWAM pad7 unfreeze-4 8K | Full-range random | keyboard `home` | Sync | **GLFW (GUI)** | 5 | **0/5 (0%)** | `.43` iGPU visual confirmation of the OSMesa 0/10; cube `z≈0.0149` all 5 episodes. Infer **13.9 Hz** (2665 calls). Arm sweeps wide but not toward the cube. Log `outputs/eval/fastwam_pad7_unfreeze4_glfw5.log`. Closed Lab 01 case: §6.4.2 |
+| FastWAM pad7 unfreeze-4 8K | Full-range random | keyboard `home` | Sync | **GLFW (GUI)** | 5 | **0/5 (0%)** | `.43` iGPU visual confirmation of the OSMesa 0/10; cube `z≈0.0149` all 5 episodes. Infer **13.9 Hz** (2665 calls). Arm sweeps wide but not toward the cube. Log `outputs/eval/fastwam_pad7_unfreeze4_glfw5.log`. Hub negative artifact: [alexhegit/so101-simstudio-lab01-pnp-fastwam](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-fastwam). Closed Lab 01 case: §6.4.2 |
 
 **Reading the table**
 
@@ -765,7 +765,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 - RTC lag on iGPU (≈8–9 control frames) changes *how* SmolVLA fails; switching to sync did not turn fixed-pose eval into a high success rate.
 - MolmoAct2 10K eval requires loading the fine-tune processor JSON (not rebuilding from the SO100/SO101 degree `norm_tag`) and feeding the 15-dim dataset state the normalizer was fitted on. Apply `patches/lerobot-molmoact2-eval.patch` to the local `lerobot/` checkout (`git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch`); do not commit that edit inside the submodule.
 - FastWAM and VLA-JEPA on this 50-ep set are **closed joint-space cross-embodiment transfer-failure cases**, not classroom policies. Classroom pick-and-place still uses ACT 6-D or MolmoAct2 6-D. **LingBot-VA is a different gap** (official output is EEF Δ + gripper, not all six joint angles); stuffing Lab 01 joints into LIBERO channels 0–5 is not a fair eval. Family split: **§6.4.2**.
-- **FastWAM** fails *before approach* (`reach_8cm=0`; cube never leaves spawn). Best Lab 01 recipe (LIBERO pad7 + unfreeze last 4 video MoT layers) still **0/10** with open-loop RMSE **0.136 rad** (~3.8× ACT). Lab 01 recipes kept `lambda_video=0` (not the paper's video co-training). Full intervention ledger: **§6.4.2**. Mechanism numbers: **§6.4.1**.
+- **FastWAM** fails *before approach* (`reach_8cm=0`; cube never leaves spawn). Best Lab 01 recipe (LIBERO pad7 + unfreeze last 4 video MoT layers) still **0/10** with open-loop RMSE **0.136 rad** (~3.8× ACT). Hub negative artifact: [alexhegit/so101-simstudio-lab01-pnp-fastwam](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-fastwam). Lab 01 recipes kept `lambda_video=0` (not the paper's video co-training). Full intervention ledger: **§6.4.2**. Mechanism numbers: **§6.4.1**.
 - **VLA-JEPA** fails *at / after grasp*. Best measured run is freeze-Qwen BC 10K (**1/10** fixed-pose EGL). Unfreezing Qwen from that checkpoint for 10K steps made closed-loop **worse** (**0/10**; approach without close). Hub artifact remains the BC 10K weights: [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa). Do not iterate more JEPA/FastWAM long trains on this dataset — see **§6.4.2**.
 
 #### 6.4.1 Protocol-aligned causal audit (2026-09-15)
@@ -905,7 +905,7 @@ Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that e
 
 Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
 
-**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative). **Not** on Hub: FastWAM (pad7 unfreeze-4 lives on DORobot only), LingBot-VA, Molmo 6-D as a separate repo, JEPA unfreeze.
+**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative), FastWAM pad7 unfreeze-4 (negative). **Not** on Hub: LingBot-VA, Molmo 15-D as a separate repo, JEPA unfreeze.
 
 **Follow-up (not this analysis).** Document and implement the LingBot-VA EEF adapter separately (`lingbot_va_eef_adapt.md`): reuse teleop videos, convert joints→EEF labels, train 7 used channels, eval with IK back to SO-101 `*.pos`. Do not treat `train_lingbot_va.cmd` (joints in 0–5) as that path.
 
@@ -1037,6 +1037,7 @@ Hugging Face user/org** for personal upload/download by overriding the env vars 
 | ACT model repo (15-D) | `LAB01_ACT_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act` |
 | ACT model repo (6-D) | `LAB01_ACT_STATE6_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act-state6` |
 | VLA-JEPA model repo | `LAB01_JEPA_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-vla-jepa` |
+| FastWAM model repo | `LAB01_FASTWAM_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-fastwam` |
 
 Published Lab 01 reference assets (`alexhegit`):
 
@@ -1047,8 +1048,9 @@ Published Lab 01 reference assets (`alexhegit`):
 | ACT policy (15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
 | ACT policy (6-D joint pos) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 | VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) |
+| FastWAM (pad7 unfreeze-4; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-fastwam](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-fastwam) |
 | MolmoAct2 | [alexhegit/so101-simstudio-lab01-pnp-molmoact2](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2) |
-| FastWAM / LingBot-VA | **Not published.** FastWAM pad7 unfreeze-4 is DORobot-only (0% closed-loop). LingBot-VA has no fair EEF checkpoint. |
+| LingBot-VA | **Not published.** No fair EEF checkpoint (stuffed-joint recipe is not Hub-worthy). |
 
 Commands in §7.1–7.2 keep `alexhegit/...` as copy-paste examples; replace the namespace with yours when working under your own Hub account.
 
@@ -1096,6 +1098,10 @@ hf download alexhegit/so101-simstudio-lab01-pnp-act-state6 \
 # VLA-JEPA 6-D BC 10K (transfer-failure artifact; not a demo policy)
 hf download alexhegit/so101-simstudio-lab01-pnp-vla-jepa \
   --local-dir ./outputs/hub/lab01_pnp_vla_jepa
+
+# FastWAM pad7 unfreeze-4 (transfer-failure artifact; ~12 GB; not a demo policy)
+hf download alexhegit/so101-simstudio-lab01-pnp-fastwam \
+  --local-dir ./outputs/hub/lab01_pnp_fastwam
 ```
 
 **Eval with downloaded weights** (same `eval.cmd`; see §6):
@@ -1141,6 +1147,7 @@ export LAB01_SMOLVLA_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-smolvla
 export LAB01_ACT_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act
 export LAB01_ACT_STATE6_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-act-state6
 export LAB01_JEPA_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-vla-jepa
+export LAB01_FASTWAM_HF_REPO_ID=your-hf-id/so101-simstudio-lab01-pnp-fastwam
 
 # Dataset
 ./labs/lab01_pnp/push_dataset.cmd
@@ -1156,9 +1163,12 @@ LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_act_state6
 
 # VLA-JEPA 6-D BC 10K weights + card (transfer-failure artifact)
 LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_vla_jepa_model.cmd
+
+# FastWAM pad7 unfreeze-4 weights + card (transfer-failure artifact; ~12 GB)
+LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_fastwam_model.cmd
 ```
 
-Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`, `hf_model_card_vla_jepa.md`.
+Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`, `hf_model_card_vla_jepa.md`, `hf_model_card_fastwam.md`.
 
 ## Troubleshooting
 
@@ -1200,6 +1210,7 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `push_act_model_card.cmd` / `hf_model_card_act.md` | Upload ACT 15-D Hub README |
 | `push_act_state6_model.cmd` / `hf_model_card_act_state6.md` | Upload ACT 6-D weights + Hub README |
 | `push_vla_jepa_model.cmd` / `hf_model_card_vla_jepa.md` | Upload VLA-JEPA 6-D BC 10K + Hub README (failure case) |
+| `push_fastwam_model.cmd` / `hf_model_card_fastwam.md` | Upload FastWAM pad7 unfreeze-4 + Hub README (failure case) |
 | `loss_curve_run1.*` | SmolVLA Run 1 training loss (reference) |
 | `loss_curve_act_mi300x_50k.*` | ACT 50K training loss (reference) |
 | `lab01_pnp.md` | This runbook |
