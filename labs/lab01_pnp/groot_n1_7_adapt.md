@@ -32,7 +32,7 @@ Relative actions require RTC (`execution_horizon=8`). Log figures of 10k+ Hz are
 
 Split eval — GLFW on halo, GR00T on DORobot via LeRobot async `policy_server` — was a **WAN experiment**, not shipped edge-cloud inference. Link ~**300 ms RTT** / ~15 Mbit/s; control fell to **5–12 Hz**. Local RTC on the same 10K weights is the reference (control ~20 Hz). Do not quote WAN rollouts in §6.4.
 
-Keep the measurement; do not add this path to QUICKSTART. Overnight `campaign_groot_*.cmd` scripts are disposable (10K already trained). Follow-up / revival gate (LAN, ≥20 Hz): [issue #10](https://github.com/rocPAI-Forge/so101-simstudio/issues/10).
+Keep the measurement; do not add this path to QUICKSTART. Overnight `campaign_groot_*.cmd` scripts are disposable (10K already trained). Prototype server/client YAML is **archived on [issue #10](https://github.com/rocPAI-Forge/so101-simstudio/issues/10)**, not in the repo. Revival gate (LAN, ≥20 Hz): same issue.
 
 ## Goal
 
