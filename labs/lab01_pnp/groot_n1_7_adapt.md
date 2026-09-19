@@ -1,6 +1,34 @@
 # Lab 01 — GR00T N1.7-3B (joint VLA, not N1.5)
 
-**Status:** specification for delivery. No `train_groot.cmd` / eval YAML in this change. Classroom demo policy remains ACT 6-D / MolmoAct2 6-D until a measured §6.4 row exists.
+**Status (2026-09-19):** **Keep the 10K checkpoint only.** MI300X train 10K (bs4, ~35 min) is the Lab 01 reference. Closed-loop is **0/10** with working approach (`reach_8cm≈9–10/10`) and no lift. Continuation 30K and visual-unfreeze 20K are **worse** — do not use for eval or Hub. Classroom demo remains ACT 6-D / MolmoAct2 6-D.
+
+**Keeper path:** `outputs/train/lab01_pnp_groot_n17/checkpoints/010000/pretrained_model`  
+(DORobot copy: `/mnt/doscratch/outputs/train/lab01_pnp_groot_n17/checkpoints/010000/pretrained_model`)
+
+## Measured comparison (same 50-ep joint set)
+
+Relative actions require RTC (`execution_horizon=8`). Log figures of 10k+ Hz are RTC queue pops; **chunk Hz** is `predict_action_chunk`.
+
+| Run | Train | Keep? | Full-range n=10 | Approach / near / close / lift | Chunk Hz |
+|-----|-------|-------|-----------------|--------------------------------|----------|
+| **10K from NVIDIA N1.7** | Frozen LLM+vis, cosine → lr=0, loss ~0.03–0.1 | **Yes** | **0/10** | EGL 9/10 → 7/10 → 5/10 → **0/10**; OSMesa 10/10 → 6/10 → 1/10 → 0/10 | **2.53** (8060S EGL); OSMesa control ~2 Hz is render |
+| 10K same, fixed cube | — | Yes (same weights) | **0/10** | 9/10 → 6/10 → 2/10 → 0/10 | 2.51 (8060S) |
+| 10K → **cont 30K** | Fresh optimizer, 10K as `base_model_path` | **No** | **0/10** | 2/10 → 0 → 0 → 0 | ~5.8 (MI300X OSMesa) |
+| cont30K → **vis 20K** | `tune_visual=true` | **No** | **0/10** | 1/10 → 0 → 0 → 0 (fixed: **0/10** reach) | ~5.4–5.8 |
+
+**Do not keep / do not resume from:**  
+`/mnt/doscratch/outputs/train/lab01_pnp_groot_n17_cont30k/`  
+`/mnt/doscratch/outputs/train/lab01_pnp_groot_n17_vis20k/`
+
+### Conclusions
+
+1. **Decode is not garbage.** 10K reaches the cube on almost every episode — 6-D `*.pos` + `new_embodiment` works.
+2. **Failure is grasp/lift on 50 expert episodes**, not inference FPS. Halo EGL keeps a 20 Hz control loop (compute ~57 Hz) while chunk is ~2.5 Hz via RTC.
+3. **More steps on this set, with the 10K-as-base resume, hurt.** Cosine had already reached lr=0; reopening the optimizer left train loss ~1.1 and collapsed approach. Continuation checkpoints also stored `num_inference_timesteps: null` (eval must patch to 4).
+4. **Unfreezing vision on 50 episodes hurt** (same family as JEPA unfreeze-Qwen): fixed-cube `reach_8cm` went 9/10 → 0/10.
+5. **To raise k/n:** collect more successful grasp→lift→place demos, then fine-tune from NVIDIA N1.7 (or 10K) with a **live** lr schedule. Do not stack vis-unfreeze or 30K-style continuation first.
+
+Async policy_server (MI300X) + halo GUI is **not** a fair eval on this WAN (~300 ms RTT): control dropped to 5–12 Hz. Prefer local RTC eval.
 
 ## Goal
 
@@ -30,6 +58,7 @@ Same-dataset family (runbook §6.4.2): GR00T N1.7 is **joint-space**, like ACT /
 - Renaming cameras to LIBERO `image` / `image2` “because other VLAs did”
 - 15-D state (pos+vel+ee) as the default GR00T recipe — keep **6-D joint pos**, `LAB01_STATE_DIM=6`
 - Unfreezing the full 3B backbone as the first lever if open-loop is dead (JEPA unfreeze lesson)
+- Blocking train on gated [`nvidia/Cosmos-Reason2-2B`](https://huggingface.co/nvidia/Cosmos-Reason2-2B) when the public Qwen3-VL-2B-Instruct tokenizer files are enough for the N1.7 processor (override with `LAB01_GROOT_PROCESSOR_MODEL`)
 
 ## Delivery steps
 
@@ -62,7 +91,7 @@ Short smoke: `LAB01_GROOT_STEPS=20 LAB01_GROOT_BATCH_SIZE=1`. Reference train: d
 
 `labs/lab01_pnp/configs/rollout_groot.yaml` (full-range) and optional `rollout_groot_demo_fixed.yaml`. `action_mode: position`. No IK. `eval.cmd` + `LAB01_POLICY_PATH`.
 
-Watch RTC: SmolVLA iGPU lag was material; start **sync**. If LeRobot groot rollout defaults RTC on, set it off for the first Lab 01 numbers.
+Relative actions **cannot** use `inference.type=sync` (`GrootPolicy.select_action` raises). Lab 01 `rollout_groot.yaml` uses the official SO-101 RTC path (`execution_horizon=8`, `queue_threshold=0`). Set `inference.rtc.enabled=false` only if RTC itself is unstable; you still need `type=rtc` to run `predict_action_chunk`.
 
 ### 4. Measure
 
@@ -73,7 +102,7 @@ Watch RTC: SmolVLA iGPU lag was material; start **sync**. If LeRobot groot rollo
 | n=10 fixed cube | Report k/10 + stage funnel |
 | n=20 or n=50 full-range | Same spawn box as other VLAs |
 
-Hub card + `LAB01_GROOT_HF_REPO_ID` only after a fair eval. License: NVIDIA Open Model on the card.
+Hub card + `LAB01_GROOT_HF_REPO_ID` (`alexhegit/so101-simstudio-lab01-pnp-groot-n17`) documents this **negative** 10K result (NVIDIA Open Model License). Do not Hub the 30K / vis-20K runs. Follow-up: [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6).
 
 ## Out of scope
 
@@ -93,7 +122,7 @@ Hub card + `LAB01_GROOT_HF_REPO_ID` only after a fair eval. License: NVIDIA Open
 | Runbook | § train GR00T + §6.4 row |
 | Hub | `push_groot_model.cmd` / `hf_model_card_groot.md` when publishing |
 
-## Knobs (not wired until the implementation PR)
+## Knobs (wired)
 
 ```bash
 # sketches
@@ -102,5 +131,7 @@ LAB01_GROOT_BASE=nvidia/GR00T-N1.7-3B
 LAB01_GROOT_EMBODIMENT_TAG=new_embodiment
 LAB01_GROOT_STEPS=20
 LAB01_GROOT_BATCH_SIZE=1
+# optional: nvidia/Cosmos-Reason2-2B if Hub access is granted
+# LAB01_GROOT_PROCESSOR_MODEL=Qwen/Qwen3-VL-2B-Instruct
 LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_groot.yaml
 ```

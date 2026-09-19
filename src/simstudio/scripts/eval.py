@@ -253,9 +253,13 @@ def _run_episode(
 
     infer_n = 0
     infer_s = 0.0
+    chunk_n = 0
+    chunk_s = 0.0
     tick_n = 0
     tick_s = 0.0
     orig_get_action = engine.get_action
+    policy = getattr(getattr(ctx, "policy", None), "policy", None)
+    orig_predict = getattr(policy, "predict_action_chunk", None) if policy is not None else None
 
     def timed_get_action(obs_frame: dict | None):
         nonlocal infer_n, infer_s
@@ -265,7 +269,17 @@ def _run_episode(
         infer_n += 1
         return out
 
+    def timed_predict_chunk(*args, **kwargs):
+        nonlocal chunk_n, chunk_s
+        t0 = time.perf_counter()
+        out = orig_predict(*args, **kwargs)
+        chunk_s += time.perf_counter() - t0
+        chunk_n += 1
+        return out
+
     engine.get_action = timed_get_action  # type: ignore[method-assign]
+    if orig_predict is not None:
+        policy.predict_action_chunk = timed_predict_chunk  # type: ignore[method-assign]
     start = time.perf_counter()
     engine.resume()
     try:
@@ -303,10 +317,14 @@ def _run_episode(
                 precise_sleep(sleep_t)
     finally:
         engine.get_action = orig_get_action  # type: ignore[method-assign]
+        if orig_predict is not None:
+            policy.predict_action_chunk = orig_predict  # type: ignore[method-assign]
 
     return {
         "infer_n": float(infer_n),
         "infer_s": infer_s,
+        "chunk_n": float(chunk_n),
+        "chunk_s": chunk_s,
         "tick_n": float(tick_n),
         "tick_s": tick_s,
         "funnel": stage_tracker.result(),
@@ -556,6 +574,36 @@ def _checkpoint_normalizer_fitted_state_dim(ctx: Any) -> int | None:
     return None
 
 
+def _fix_groot_inference_timesteps(ctx: Any) -> None:
+    """LeRobot GrootConfig stores ``num_inference_timesteps: null``.
+
+    Loading a Lab 01 continuation checkpoint as ``base_model_path`` can copy
+    that null onto the inner N1.7 model, which then crashes in
+    ``dt = 1.0 / self.num_inference_timesteps``. NVIDIA's N1.7 default is 4.
+    """
+    policy = getattr(getattr(ctx, "policy", None), "policy", None)
+    if policy is None:
+        return
+    groot = getattr(policy, "_groot_model", None)
+    if groot is None:
+        return
+    head = getattr(groot, "action_head", None)
+    patched = []
+    for obj in (head, groot, getattr(head, "config", None) if head else None, getattr(groot, "config", None)):
+        if obj is None:
+            continue
+        n = getattr(obj, "num_inference_timesteps", "missing")
+        if n in (None, 0, "missing") and (hasattr(obj, "num_inference_timesteps") or obj is head):
+            obj.num_inference_timesteps = 4
+            patched.append(type(obj).__name__)
+        horizon = getattr(obj, "action_horizon", "missing")
+        if horizon in (None, 0) and hasattr(obj, "action_horizon"):
+            obj.action_horizon = 16
+            patched.append(f"{type(obj).__name__}.action_horizon")
+    if patched:
+        logger.info("Patched GR00T inference knobs on %s", patched)
+
+
 def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     """Include vel/ee in rollout ``observation.state`` when the policy expects them.
 
@@ -679,6 +727,7 @@ def eval_main(cfg: RolloutConfig) -> None:
     signal_handler = ProcessSignalHandler(use_threads=True, display_pid=False)
     _preserve_vla_jepa_finetune_dims()
     ctx = build_rollout_context(cfg, signal_handler.shutdown_event)
+    _fix_groot_inference_timesteps(ctx)
     robot = ctx.hardware.robot_wrapper
     inner_robot = getattr(robot, "inner", robot)
     _expand_rollout_state_features(ctx, inner_robot)
@@ -730,6 +779,7 @@ def eval_main(cfg: RolloutConfig) -> None:
             block_pos = inner.get_block_position()
             success = check_pick_success(block_pos)
             infer_hz = (timing["infer_n"] / timing["infer_s"]) if timing["infer_s"] > 0 else 0.0
+            chunk_hz = (timing["chunk_n"] / timing["chunk_s"]) if timing.get("chunk_s", 0.0) > 0 else 0.0
             funnel = timing.pop("funnel")
             funnel["final_success"] = success
             results.append(
@@ -744,13 +794,18 @@ def eval_main(cfg: RolloutConfig) -> None:
             status = "SUCCESS" if success else "fail"
             pos_str = f"{block_pos}" if block_pos else "unknown"
             logger.info(
-                "Episode %d: %s (block=%s) policy_infer=%.2f Hz (%d calls, %.1fs)",
+                "Episode %d: %s (block=%s) policy_infer=%.2f Hz (%d calls, %.1fs) "
+                "chunk=%.2f Hz (%d calls, %.1fs, mean %.0fms)",
                 ep,
                 status,
                 pos_str,
                 infer_hz,
                 int(timing["infer_n"]),
                 timing["infer_s"],
+                chunk_hz,
+                int(timing.get("chunk_n", 0.0)),
+                float(timing.get("chunk_s", 0.0)),
+                (1000.0 * timing["chunk_s"] / timing["chunk_n"]) if timing.get("chunk_n", 0.0) else 0.0,
             )
             logger.info(
                 "Episode %d funnel: %s",
@@ -759,7 +814,7 @@ def eval_main(cfg: RolloutConfig) -> None:
             )
             print(
                 f"Episode {ep + 1}/{num_episodes}: {status}  block={pos_str}  "
-                f"infer={infer_hz:.2f} Hz"
+                f"infer={infer_hz:.2f} Hz  chunk={chunk_hz:.2f} Hz"
             )
 
             if ep < num_episodes - 1 and reset_time_s > 0:
@@ -774,13 +829,18 @@ def eval_main(cfg: RolloutConfig) -> None:
         rate = 100.0 * n_success / len(results)
         infer_n = sum(float(r.get("infer_n", 0.0)) for r in results)
         infer_s = sum(float(r.get("infer_s", 0.0)) for r in results)
+        chunk_n = sum(float(r.get("chunk_n", 0.0)) for r in results)
+        chunk_s = sum(float(r.get("chunk_s", 0.0)) for r in results)
         tick_n = sum(float(r.get("tick_n", 0.0)) for r in results)
         tick_s = sum(float(r.get("tick_s", 0.0)) for r in results)
         infer_hz = (infer_n / infer_s) if infer_s > 0 else 0.0
+        chunk_hz = (chunk_n / chunk_s) if chunk_s > 0 else 0.0
         tick_hz = (tick_n / tick_s) if tick_s > 0 else 0.0
+        chunk_ms = (1000.0 * chunk_s / chunk_n) if chunk_n else 0.0
         summary = (
             f"Eval complete: {n_success}/{len(results)} success ({rate:.0f}%) | "
             f"policy infer {infer_hz:.2f} Hz ({int(infer_n)} calls, {infer_s:.1f}s) | "
+            f"chunk {chunk_hz:.2f} Hz ({int(chunk_n)} calls, mean {chunk_ms:.0f}ms) | "
             f"control compute {tick_hz:.1f} Hz (excl. fps sleep)"
         )
         logger.info(summary)
@@ -821,10 +881,26 @@ def _patch_fastwam_pad_before_config_load() -> None:
     patch_fastwam_pad_action_channels(int(os.environ.get("LAB01_FASTWAM_REAL_ACTION_DIM", "6")))
 
 
+def _patch_groot_processor_before_config_load() -> None:
+    """Use public Qwen3-VL tokenizer files when Cosmos-Reason2-2B is gated."""
+    argv = " ".join(sys.argv).lower()
+    if not (
+        _env_flag("LAB01_GROOT")
+        or "groot" in argv
+        or "groot" in os.environ.get("LAB01_EVAL_CONFIG", "").lower()
+        or "groot" in os.environ.get("LAB01_POLICY_PATH", "").lower()
+    ):
+        return
+    from simstudio.policies.groot_n17 import patch_groot_n17_vlm_processor_source
+
+    patch_groot_n17_vlm_processor_source()
+
+
 def main() -> None:
     register_third_party_plugins()
     init_logging()
     _patch_fastwam_pad_before_config_load()
+    _patch_groot_processor_before_config_load()
     eval_main()
 
 

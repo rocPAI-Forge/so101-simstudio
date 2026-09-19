@@ -13,6 +13,7 @@ Build a MuJoCo expert dataset with the real SO-101 leader arm, validate it, insp
 | SmolVLA (Hub) | [alexhegit/so101-simstudio-lab01-pnp-smolvla](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla) (MI300X bs64 @ 50K) |
 | ACT (Hub, 15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) (MI300X 50K, pos+vel+ee) |
 | ACT (Hub, 6-D state) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) (MI300X 50K, joint pos; real-robot IL layout) |
+| GR00T (Hub, N1.7 10K, negative) | [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17) |
 | Episodes | 50 |
 | Episode length | 90 s max (save early with `N` / `→`) |
 | Reset window | 5 s between episodes |
@@ -552,9 +553,26 @@ LAB01_EVAL_LOG=./outputs/eval/molmoact2_full.log \
 
 **Deps:** `policy.type=molmoact2` lives in the editable `lerobot/` submodule. Install extras with `./scripts/install-molmoact2-deps.sh` (`transformers` 5.4, `peft`, `scipy`). **Do not** `uv pip install 'lerobot[molmoact2]'` — that extra re-resolves torch onto CUDA and `nvidia-*` wheels. If that already happened: `./scripts/install-molmoact2-deps.sh --repair-torch` (or `make rocm-sync`). `peft` is required when `LAB01_MOLMO_ENABLE_LORA_VLM=true`.
 
-### GR00T N1.7 training (planned)
+### GR00T N1.7 training (lab01-pnp)
 
-Post-train [`nvidia/GR00T-N1.7-3B`](https://huggingface.co/nvidia/GR00T-N1.7-3B) on the Lab 01 **6-D joint** dataset (`embodiment_tag=new_embodiment`). This is a joint-space VLA (pad to `max_action_dim`), not LingBot EEF and not the removed **N1.5** checkpoint. Delivery spec: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). Do not `uv pip install 'lerobot[groot]'` on `.venv-rocm`.
+Post-train [`nvidia/GR00T-N1.7-3B`](https://huggingface.co/nvidia/GR00T-N1.7-3B) on the Lab 01 **6-D joint** dataset (`embodiment_tag=new_embodiment`). Joint VLA (pad to `max_action_dim`), not LingBot EEF, not **N1.5**. Spec: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md).
+
+```bash
+source .venv-rocm/bin/activate
+./scripts/install-groot-deps.sh          # never: uv pip install 'lerobot[groot]'
+./labs/lab01_pnp/train_groot.cmd         # 20 steps / bs1 smoke
+
+# Longer (e.g. MI300X); still measure before calling it a demo policy
+LAB01_GROOT_STEPS=10000 LAB01_GROOT_BATCH_SIZE=4 LAB01_GROOT_SAVE_FREQ=2000 \
+  ./labs/lab01_pnp/train_groot.cmd
+
+LAB01_POLICY_PATH=./outputs/train/lab01_pnp_groot_n17/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_groot.yaml \
+LAB01_EVAL_EPISODES=10 LAB01_MUJOCO_GL=egl LAB01_RENDER_WINDOW=false \
+  ./labs/lab01_pnp/eval.cmd
+```
+
+**Keep `checkpoints/010000`.** Continuation 30K and visual-unfreeze 20K are worse on n=10 (approach collapses). Do not init from `GR00T-N1.7-LIBERO` / `libero_sim`. Keep `tune_llm=false` and `tune_visual=false` on this 50-ep set. N1.7’s tokenizer wants gated [`nvidia/Cosmos-Reason2-2B`](https://huggingface.co/nvidia/Cosmos-Reason2-2B); `train_act` / `eval` default to public `Qwen/Qwen3-VL-2B-Instruct` processor files (`LAB01_GROOT_PROCESSOR_MODEL` to override if you have Cosmos access). Comparison: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md).
 
 ### LingBot-VA training (lab01-pnp, MI300X) — DORobot
 
@@ -569,7 +587,7 @@ The LIBERO checkpoint is an **end-effector delta** policy with a fixed 30-d acti
 | `camera_front` | unused |
 | 6 joint channels | `used_action_channel_ids=[0,1,2,3,4,5]` (LIBERO used 0–6) |
 
-Closed-loop eval still sends those six numbers as SO-101 `*.pos`. Quote this mapping next to any success rate: it is a **joint-space stuffing** of an EEF-pretrained stack, not a fair LIBERO transfer. The 10 h campaign stopped at **600 / 8000** steps (~0.11 epoch); the 20-ep eval failed on an import error, so the §6.4 row stays *pending* (not a measured 0%). **Do not treat this recipe as the LingBot-VA Lab 01 path.** The intended adaptation (reuse teleop videos, FK→EEF labels, 7 channels, eval IK) is specified in a follow-up PR / `labs/lab01_pnp/lingbot_va_eef_adapt.md` once that lands. Mechanism: **§6.4.2**.
+Closed-loop eval still sends those six numbers as SO-101 `*.pos`. Quote this mapping next to any success rate: it is a **joint-space stuffing** of an EEF-pretrained stack, not a fair LIBERO transfer. The 10 h campaign stopped at **600 / 8000** steps (~0.11 epoch); the 20-ep eval failed on an import error, so the §6.4 row stays *pending* (not a measured 0%). **Do not treat this recipe as the LingBot-VA Lab 01 path.** The intended adaptation (reuse teleop videos, FK→EEF labels, 7 channels, eval IK) is specified in a follow-up PR / `labs/lab01_pnp/lingbot_va_eef_adapt.md` once that lands. Mechanism: **§6.4.2**. Follow-up: [issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9).
 
 **Defaults (single MI300X 192 GB):** `batch_size=32`, `steps=20000`, `save_freq=2000`, `attn_mode=flex` (required for the block-causal train masks), LoRA via `--peft.*` (`use_peft` on the policy config stays false so the Hub checkpoint loads as a full model). Frozen UMT5 stays on CPU. Action postprocessor uses QUANTILES — `train_lingbot_va.cmd` augments `meta/stats.json` with `q01`/`q99` if missing.
 
@@ -757,7 +775,13 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | FastWAM 20K 6-D (resume 4K, freeze video, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same YAML / `n_action_steps=32`; cube still `z≈0.015`. Infer **35.8 Hz** (1207 calls). Log `/mnt/doscratch/outputs/eval/fastwam_osmesa10_20k.log`; ckpt `.../020000/` |
 | FastWAM 20K 6-D | Full-range random | demo-mean `home_joints` | Sync | OSMesa | 10 | **0/10 (0%)** | `rollout_fastwam_demo_start.yaml`, `n_action_steps=10`; cube still `z≈0.015`. Infer **18.1 Hz** (1133 calls; shorter chunks). Log `.../fastwam_osmesa10_20k_demo.log` |
 | FastWAM pad7 unfreeze-4 8K | Full-range random | keyboard `home` | Sync | **GLFW (GUI)** | 5 | **0/5 (0%)** | `.43` iGPU visual confirmation of the OSMesa 0/10; cube `z≈0.0149` all 5 episodes. Infer **13.9 Hz** (2665 calls). Arm sweeps wide but not toward the cube. Log `outputs/eval/fastwam_pad7_unfreeze4_glfw5.log`. Closed Lab 01 case: §6.4.2 |
-| GR00T N1.7-3B (`new_embodiment`, 6-D joints) | — | — | — | — | — | *not trained* | Planned joint VLA on the same 50-ep set. **Not** N1.5. Spec: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
+| GR00T N1.7-3B 10K (`new_embodiment`, 6-D joints, bs4) | Full-range random | `home` | RTC | OSMesa | 10 | **0/10 (0%)** | MI300X; `rollout_groot.yaml`. Funnel `reach_8cm=10/10 → near_4cm=6/10 → close=1/10 → lift_2cm=0/10`. Cube `z≈0.015`. EGL `EGL_BAD_ALLOC` — OSMesa. Log `/mnt/doscratch/outputs/eval/groot_full_010000_osmesa.log`. **Keeper** `outputs/train/lab01_pnp_groot_n17/checkpoints/010000/` (DORobot `/mnt/doscratch/outputs/train/lab01_pnp_groot_n17/checkpoints/010000/`). **Not** N1.5. Spec: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
+| GR00T N1.7-3B 10K | Full-range random | `home` | RTC | **EGL** | 10 | **0/10 (0%)** | **8060S / halo.** Same keeper 010000. Funnel `reach_8cm=9/10 → near_4cm=7/10 → close=5/10 → lift=0/10`. Real chunk **2.53 Hz** (~395 ms); control compute 56.8 Hz. Log `outputs/eval/groot_halo_full_010000.log`. |
+| GR00T N1.7-3B 10K | Fixed demo cube | `home` | RTC | EGL | 10 | **0/10 (0%)** | Same ckpt; `rollout_groot_demo_fixed.yaml`. Funnel `reach_8cm=9/10 → near_4cm=6/10 → close=2/10 → lift=0/10`. Chunk **2.51 Hz**. Log `outputs/eval/groot_halo_fixed_010000.log`. |
+| GR00T N1.7-3B 10K → cont 30K (fresh opt from 010000) | Full-range random | `home` | RTC | OSMesa | 10 | **0/10 (0%)** | **Do not keep.** Approach collapsed (`reach_8cm=2/10`). Chunk ~5.8 Hz. Ckpt `/mnt/doscratch/outputs/train/lab01_pnp_groot_n17_cont30k/checkpoints/030000/`. Log `.../groot_n10_cont30k_full.log`. |
+| GR00T N1.7-3B 10K → cont 30K | Fixed demo cube | `home` | RTC | OSMesa | 10 | **0/10 (0%)** | **Do not keep.** `reach_8cm=1/10`. Log `.../groot_n10_cont30k_fixed.log`. |
+| GR00T N1.7-3B cont30K → vis-unfreeze 20K | Full-range random | `home` | RTC | OSMesa | 10 | **0/10 (0%)** | **Do not keep.** `tune_visual=true` on 50-ep set; `reach_8cm=1/10`. Ckpt `.../lab01_pnp_groot_n17_vis20k/checkpoints/020000/`. Log `.../groot_n10_vis20k_full.log`. |
+| GR00T N1.7-3B vis-unfreeze 20K | Fixed demo cube | `home` | RTC | OSMesa | 10 | **0/10 (0%)** | **Do not keep.** `reach_8cm=0/10` (worse than 10K). Log `.../groot_n10_vis20k_fixed.log`. |
 
 **Reading the table**
 
@@ -769,9 +793,10 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 - For SmolVLA, spawn tightening helped less than expected: failure analysis pointed to **grasp instability** and **yaw polarity** (positive yaw often knocks the cube) more than XY coverage alone.
 - RTC lag on iGPU (≈8–9 control frames) changes *how* SmolVLA fails; switching to sync did not turn fixed-pose eval into a high success rate.
 - MolmoAct2 10K eval requires loading the fine-tune processor JSON (not rebuilding from the SO100/SO101 degree `norm_tag`) and feeding the 15-dim dataset state the normalizer was fitted on. Apply `patches/lerobot-molmoact2-eval.patch` to the local `lerobot/` checkout (`git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch`); do not commit that edit inside the submodule.
-- FastWAM and VLA-JEPA on this 50-ep set are **closed joint-space cross-embodiment transfer-failure cases**, not classroom policies. Classroom pick-and-place still uses ACT 6-D or MolmoAct2 6-D. **LingBot-VA is a different gap** (official output is EEF Δ + gripper, not all six joint angles); stuffing Lab 01 joints into LIBERO channels 0–5 is not a fair eval. Family split: **§6.4.2**.
-- **FastWAM** fails *before approach* (`reach_8cm=0`; cube never leaves spawn). Best Lab 01 recipe (LIBERO pad7 + unfreeze last 4 video MoT layers) still **0/10** with open-loop RMSE **0.136 rad** (~3.8× ACT). Lab 01 recipes kept `lambda_video=0` (not the paper's video co-training). Full intervention ledger: **§6.4.2**. Mechanism numbers: **§6.4.1**.
-- **VLA-JEPA** fails *at / after grasp*. Best measured run is freeze-Qwen BC 10K (**1/10** fixed-pose EGL). Unfreezing Qwen from that checkpoint for 10K steps made closed-loop **worse** (**0/10**; approach without close). Hub artifact remains the BC 10K weights: [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa). Do not iterate more JEPA/FastWAM long trains on this dataset — see **§6.4.2**.
+- FastWAM and VLA-JEPA on this 50-ep set are **closed joint-space cross-embodiment transfer-failure cases**, not classroom policies. Classroom pick-and-place still uses ACT 6-D or MolmoAct2 6-D. **LingBot-VA is a different gap** (official output is EEF Δ + gripper, not all six joint angles); stuffing Lab 01 joints into LIBERO channels 0–5 is not a fair eval. Family split: **§6.4.2**. Follow-up issues: [JEPA #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7), [FastWAM #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8), [LingBot #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9), [GR00T #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6).
+- **FastWAM** fails *before approach* (`reach_8cm=0`; cube never leaves spawn). Best Lab 01 recipe (LIBERO pad7 + unfreeze last 4 video MoT layers) still **0/10** with open-loop RMSE **0.136 rad** (~3.8× ACT). Lab 01 recipes kept `lambda_video=0` (not the paper's video co-training). Full intervention ledger: **§6.4.2**. Mechanism numbers: **§6.4.1**. Issue: [#8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8).
+- **VLA-JEPA** fails *at / after grasp*. Best measured run is freeze-Qwen BC 10K (**1/10** fixed-pose EGL). Unfreezing Qwen from that checkpoint for 10K steps made closed-loop **worse** (**0/10**; approach without close). Hub artifact remains the BC 10K weights: [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa). Do not iterate more JEPA/FastWAM long trains on this dataset — see **§6.4.2**. Issue: [#7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7).
+- **GR00T N1.7** on the same 50-ep joint set: **keep 10K only** (`checkpoints/010000`). Closed-loop **0/10** but approach works (`reach_8cm≈9–10/10`); grasp/lift does not. Continuing 30K from 10K (cosine already at lr=0) and unfreezing vision 20K both **hurt** approach. Real chunk Hz: **~2.5** on 8060S EGL, **~5.5–6** on MI300X (OSMesa control compute ~2 Hz is software render). Relative actions need RTC. To raise k/n, add more successful grasp/place demos — do not stack more steps on 010000 with the failed resume recipe. Ledger: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). Issue: [#6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6).
 
 #### 6.4.1 Protocol-aligned causal audit (2026-09-15)
 
@@ -859,7 +884,7 @@ python labs/lab01_pnp/probe_visual_grounding.py \
 
 #### 6.4.2 Same 50-ep set: joint-space transfer failures vs EEF policies (2026-09-16)
 
-**Verdict.** On the same 50 expert episodes, ACT 6-D (~58%) and MolmoAct2 6-D (~54%) show the task is learnable as **joint-position IL**. VLA-JEPA (0–10%) and FastWAM (0%) are **joint-space LIBERO→SO-101 transfer failures**, not evidence that Lab 01 pick-and-place is too hard. LingBot-VA is **not** in that bucket: it is pretrained to emit **end-effector pose deltas + gripper**, so Lab 01 joint labels need an extra adapter (FK train / IK eval). Classroom demos stay on ACT 6-D / MolmoAct2 6-D. Mechanism probes: §6.4.1; JEPA/FastWAM interventions below; action-language split at the end of this section.
+**Verdict.** On the same 50 expert episodes, ACT 6-D (~58%) and MolmoAct2 6-D (~54%) show the task is learnable as **joint-position IL**. VLA-JEPA (0–10%) and FastWAM (0%) are **joint-space LIBERO→SO-101 transfer failures**, not evidence that Lab 01 pick-and-place is too hard. LingBot-VA is **not** in that bucket: it is pretrained to emit **end-effector pose deltas + gripper**, so Lab 01 joint labels need an extra adapter (FK train / IK eval). Classroom demos stay on ACT 6-D / MolmoAct2 6-D. Mechanism probes: §6.4.1; JEPA/FastWAM interventions below; action-language split at the end of this section. Follow-up: [JEPA #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7), [FastWAM #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8), [LingBot #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9), [GR00T #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6).
 
 ##### VLA-JEPA intervention ledger
 
@@ -876,7 +901,7 @@ python labs/lab01_pnp/probe_visual_grounding.py \
 
 **Why unfreeze regressed.** Freeze-Qwen BC fitted the action head to a **fixed** feature space (LIBERO-ish, weakly cube-sensitive) and produced a fragile average approach that sometimes closed. Thawing ~2.3B Qwen parameters on 50 demos (~7.5 epochs) **moved the features** while the action head’s calibration stayed in the old space. Train loss fell to ~0.011 without improving demo-aligned open-loop; the weakest channel (close) disappeared first. This is representation drift / catastrophic interference on a tiny dataset — not “unfreeze failed to run.”
 
-Hub publish stays at freeze-Qwen BC 10K. Unfreeze weights are **not** a Hub artifact.
+Hub publish stays at freeze-Qwen BC 10K. Unfreeze weights are **not** a Hub artifact. Follow-up: [issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7).
 
 ##### FastWAM intervention ledger
 
@@ -887,7 +912,7 @@ Hub publish stays at freeze-Qwen BC 10K. Unfreeze weights are **not** a Hub arti
 | LIBERO pad7 20K (inherit 7-D/8-D path, pad 6 joints) | 0/10 | RMSE 0.198 rad | “Inherit action pathway” → better open-loop, still 0% |
 | Unfreeze last 4 video MoT + 8K | 0/10 (also 0/5 GLFW) | RMSE **0.136** rad; matched `reach_8cm=0/3`; FK min ~12.8 cm | “Frozen video features bottleneck” → open-loop helps, **closed-loop still 0%** |
 
-Lab 01 FastWAM recipes **never enabled video co-training** (`lambda_video=0`). That is a documented gap vs the [Fast-WAM paper](https://arxiv.org/abs/2603.16666), not a remaining “cheap lever” for Lab 01 success: JEPA already showed that adding the marketed world-model ingredient on this 50-ep SO-101 set does not produce a classroom policy, and FastWAM still fails **before** the grasp stage JEPA sometimes reaches.
+Lab 01 FastWAM recipes **never enabled video co-training** (`lambda_video=0`). That is a documented gap vs the [Fast-WAM paper](https://arxiv.org/abs/2603.16666), not a remaining “cheap lever” for Lab 01 success: JEPA already showed that adding the marketed world-model ingredient on this 50-ep SO-101 set does not produce a classroom policy, and FastWAM still fails **before** the grasp stage JEPA sometimes reaches. Follow-up: [issue #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8).
 
 ##### Contrast and stop boundary
 
@@ -905,14 +930,14 @@ Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that e
 
 | Family | Lab 01 examples | Fine-tune on this dataset | Typical Lab 01 outcome |
 |--------|-----------------|---------------------------|------------------------|
-| **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints), **GR00T N1.7** (`new_embodiment`, planned) | Direct: `action` = robot command (GR00T zero-pads to `max_action_dim`) | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). Ledger above. GR00T: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
+| **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints), **GR00T N1.7** (`new_embodiment`, 10K keeper) | Direct: `action` = robot command (GR00T zero-pads to `max_action_dim`) | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). **GR00T 10K: 0/10, approach yes / grasp no.** Extra 30K + vis-unfreeze 20K worse. Ledger: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
 | **End-effector** | LingBot-VA (`lingbot_va_libero_long`) | **Not** direct. Official LIBERO channels 0–6 are Δxyz + rotation + gripper; joints must be remapped, eval needs IK. | Current `used_action_channel_ids=[0–5]` **stuffs joints into EEF slots**. Campaign 600 steps, eval never completed. This is a **missing adapter**, not the same diagnosis as JEPA/FastWAM. |
 
 Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
 
-**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative). **Not** on Hub: FastWAM (pad7 unfreeze-4 lives on DORobot only), LingBot-VA, Molmo 6-D as a separate repo, JEPA unfreeze.
+**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative, [issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)), **GR00T N1.7 10K** (negative, [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17); [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6)). **Not** on Hub: FastWAM (pad7 unfreeze-4 lives on DORobot only; [issue #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8)), LingBot-VA ([issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)), Molmo 6-D as a separate repo, JEPA unfreeze, GR00T 30K / vis-20K.
 
-**Follow-up (not this analysis).** LingBot-VA EEF adapter: `lingbot_va_eef_adapt.md` (separate PR if not merged). GR00T N1.7 on the same joint dataset: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). Do not treat `train_lingbot_va.cmd` (joints in 0–5) as a fair LingBot path; do not load GR00T N1.5 on this LeRobot pin.
+**Follow-up (not this analysis).** LingBot-VA EEF adapter: `lingbot_va_eef_adapt.md` (separate PR if not merged) — [issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9). GR00T N1.7 on the same joint dataset: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md) — [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6). Do not treat `train_lingbot_va.cmd` (joints in 0–5) as a fair LingBot path; do not load GR00T N1.5 on this LeRobot pin.
 
 ##### Log index (durable)
 
@@ -1018,7 +1043,7 @@ There is no single prescribed fix in this lab. The rates above are a baseline on
 3. **Inference knobs in sim** — RTC vs sync; ACT `n_action_steps` (50 vs 100 vs train default); confirm wall-clock delay does not dominate on your GPU.
 4. **Spawn curriculum vs honest eval** — Use demo/fixed configs for demos; always report **full-range** numbers when claiming generalization. Do not tune the eval box alone and call it a better policy.
 5. **Failure taxonomy** — Log initial spawn vs final cube pose; separate “never grasped”, “dropped in transfer”, and “near-miss on rim”. Different failure modes suggest different next experiments.
-6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA and FastWAM on this 50-ep set are **closed joint-space transfer-failure cases** (§6.4 / §6.4.2). LingBot-VA is a **different** gap (EEF vs joints). GR00T on Lab 01 is **N1.7 + `new_embodiment`**, not N1.5 — [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md).
+6. **Policy choice for demos** — Classroom pick-and-place: ACT 6-D (or MolmoAct2 6-D). Keep SmolVLA if the goal is VLA fine-tuning. VLA-JEPA and FastWAM on this 50-ep set are **closed joint-space transfer-failure cases** (§6.4 / §6.4.2; [#7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7), [#8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8)). LingBot-VA is a **different** gap (EEF vs joints; [#9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)). GR00T N1.7 10K is the **kept** Lab 01 GR00T ckpt (**0/10**, approach yes / grasp no); not a classroom policy — [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md), [#6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6).
 
 When you change any axis, re-run with a fixed episode count and the same `MUJOCO_GL` / inference settings, and record config path + checkpoint step next to the success fraction.
 
@@ -1042,6 +1067,7 @@ Hugging Face user/org** for personal upload/download by overriding the env vars 
 | ACT model repo (15-D) | `LAB01_ACT_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act` |
 | ACT model repo (6-D) | `LAB01_ACT_STATE6_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-act-state6` |
 | VLA-JEPA model repo | `LAB01_JEPA_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-vla-jepa` |
+| GR00T N1.7 model repo | `LAB01_GROOT_HF_REPO_ID` | `your-hf-id/so101-simstudio-lab01-pnp-groot-n17` |
 
 Published Lab 01 reference assets (`alexhegit`):
 
@@ -1051,7 +1077,8 @@ Published Lab 01 reference assets (`alexhegit`):
 | SmolVLA policy | [alexhegit/so101-simstudio-lab01-pnp-smolvla](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla) |
 | ACT policy (15-D state) | [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
 | ACT policy (6-D joint pos) | [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
-| VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) |
+| VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) ([issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)) |
+| GR00T N1.7 (10K; negative result) | [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17) |
 | MolmoAct2 | [alexhegit/so101-simstudio-lab01-pnp-molmoact2](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2) |
 | FastWAM / LingBot-VA | **Not published.** FastWAM pad7 unfreeze-4 is DORobot-only (0% closed-loop). LingBot-VA has no fair EEF checkpoint. |
 
@@ -1161,9 +1188,12 @@ LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_act_state6
 
 # VLA-JEPA 6-D BC 10K weights + card (transfer-failure artifact)
 LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_vla_jepa_model.cmd
+
+# GR00T N1.7 10K weights + card (negative result; NVIDIA Open Model License)
+LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp/push_groot_model.cmd
 ```
 
-Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`, `hf_model_card_vla_jepa.md`.
+Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`, `hf_model_card_act_state6.md`, `hf_model_card_vla_jepa.md`, `hf_model_card_groot.md`.
 
 ## Troubleshooting
 
@@ -1192,7 +1222,9 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `train_smolvla_resume.cmd` | Resume SmolVLA from a checkpoint |
 | `train_act.cmd` | ACT imitation learning (`LAB01_ACT_STATE_DIM=6` for joint-pos-only) |
 | `train_molmoact2.cmd` | MolmoAct2 fine-tune (MI300X / DORobot defaults) |
-| `groot_n1_7_adapt.md` | Spec to fine-tune GR00T **N1.7-3B** on Lab 01 joints (`new_embodiment`; not implemented yet) |
+| `groot_n1_7_adapt.md` | GR00T N1.7 Lab 01 notes (`new_embodiment`, 6-D joints) |
+| `train_groot.cmd` | GR00T N1.7 fine-tune (smoke default 20 steps / bs1) |
+| `campaign_groot_7h.cmd` | 10K (opt. 16K) train + n=10 RTC evals on 8060S-sized budget |
 | `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
 | `train_lingbot_va.cmd` | LingBot-VA stuffed-joint recipe (not a fair EEF transfer; §6.4.2) |
 | `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |
@@ -1206,6 +1238,7 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `push_act_model_card.cmd` / `hf_model_card_act.md` | Upload ACT 15-D Hub README |
 | `push_act_state6_model.cmd` / `hf_model_card_act_state6.md` | Upload ACT 6-D weights + Hub README |
 | `push_vla_jepa_model.cmd` / `hf_model_card_vla_jepa.md` | Upload VLA-JEPA 6-D BC 10K + Hub README (failure case) |
+| `push_groot_model.cmd` / `hf_model_card_groot.md` | Upload GR00T N1.7 10K + Hub README (negative result) |
 | `loss_curve_run1.*` | SmolVLA Run 1 training loss (reference) |
 | `loss_curve_act_mi300x_50k.*` | ACT 50K training loss (reference) |
 | `lab01_pnp.md` | This runbook |

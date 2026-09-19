@@ -188,6 +188,14 @@ def main() -> None:
         logging.basicConfig(level=logging.INFO)
         patch_lingbot_action_feature_from_used_channels()
 
+    if any("groot" in arg.lower() for arg in sys.argv) or _truthy("LAB01_GROOT"):
+        # Register policy.type=groot. GrootConfig.__post_init__ rejects N1.5 paths.
+        from lerobot.policies.groot.configuration_groot import GrootConfig  # noqa: F401
+        from simstudio.policies.groot_n17 import patch_groot_n17_vlm_processor_source
+
+        logging.basicConfig(level=logging.INFO)
+        patch_groot_n17_vlm_processor_source()
+
     from lerobot.scripts.lerobot_train import main as lerobot_train_main
 
     lerobot_train_main()

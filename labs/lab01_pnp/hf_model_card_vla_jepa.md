@@ -45,6 +45,7 @@ LIBERO is 7-DoF / 8-D state / 2 cams. Fine-tune reinitializes action/state heads
 |----------|------|
 | SimStudio repo | [rocPAI-Forge/so101-simstudio](https://github.com/rocPAI-Forge/so101-simstudio) |
 | Lab 01 walkthrough §6.4 / §6.4.2 | [labs/lab01_pnp/lab01_pnp.md](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp/lab01_pnp.md) |
+| Follow-up issue | [#7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7) |
 
 ## Quick load
 
