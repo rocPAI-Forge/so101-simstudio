@@ -28,6 +28,11 @@ class SO101MujocoConfig(RobotConfig):
     # Live GLFW rendering window (disable for headless/CI)
     render_window: bool = True
 
+    # Frames drawn per position-mode action. One frame per action means the
+    # window refreshes at the action rate, which looks choppy when a policy
+    # runs below `record_fps` (e.g. remote inference over a slow link).
+    render_frames_per_action: int = 1
+
     # Control speeds
     lin_speed: float = 0.04
     yaw_speed: float = 1.20
