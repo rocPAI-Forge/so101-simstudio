@@ -1224,7 +1224,6 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `train_molmoact2.cmd` | MolmoAct2 fine-tune (MI300X / DORobot defaults) |
 | `groot_n1_7_adapt.md` | GR00T N1.7 Lab 01 notes (`new_embodiment`, 6-D joints) |
 | `train_groot.cmd` | GR00T N1.7 fine-tune (smoke default 20 steps / bs1) |
-| `campaign_groot_7h.cmd` | 10K (opt. 16K) train + n=10 RTC evals on 8060S-sized budget |
 | `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
 | `train_lingbot_va.cmd` | LingBot-VA stuffed-joint recipe (not a fair EEF transfer; §6.4.2) |
 | `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |
