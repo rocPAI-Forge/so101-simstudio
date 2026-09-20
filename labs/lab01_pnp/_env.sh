@@ -297,6 +297,8 @@ LAB01_EVAL_LOG="${LAB01_EVAL_LOG:-./outputs/eval/eval_${LAB01_MUJOCO_GL}.log}"
 # Empty = do not pass --policy.n_action_steps (use checkpoint default).
 # ACT full-range reference often uses 50; fixed-pose demos sometimes 100.
 LAB01_N_ACTION_STEPS="${LAB01_N_ACTION_STEPS:-}"
+# Headless Hz sweep (hz_bench.cmd). Logs stay gitignored; tables in hz_bench/.
+LAB01_HZ_BENCH_LOG="${LAB01_HZ_BENCH_LOG:-./outputs/eval/hz_bench}"
 
 # -----------------------------------------------------------------------------
 # 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /

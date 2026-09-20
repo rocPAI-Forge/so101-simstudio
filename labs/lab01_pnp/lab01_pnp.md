@@ -737,6 +737,7 @@ Fixed pose freezes **both** translation and yaw. Episode-to-episode outcomes can
 
 Optional **`LAB01_N_ACTION_STEPS`**: when set, passed as `--policy.n_action_steps`. Leave empty to use the value stored in the checkpoint (SmolVLA 50K: 50; ACT 50K train: 100). Lab ACT full-range reference used `50`.
 
+**Headless GPU Hz (sync vs RTC):** `./labs/lab01_pnp/hz_bench.cmd` (`HOST=halo GL=egl` or `HOST=dorobot GL=osmesa`). Fixed cube, 4 episodes, drop ep 1. Compare **replanning latency**, not RTC `get_action` Hz. Tables and RTC FAQ: [`hz_bench/COMPARISON.md`](hz_bench/COMPARISON.md); raw medians: [`hz_bench/RESULTS.md`](hz_bench/RESULTS.md). Logs: `outputs/eval/hz_bench/` (not committed).
 
 ### 6.4 Reference measurements (lab01-pnp)
 
@@ -1230,6 +1231,8 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `campaign_lingbot_fastwam_10h.cmd` | Time-boxed LingBot-VA + FastWAM train (bs4) then 20-ep EGL eval |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
+| `hz_bench.cmd` | Headless closed-loop Hz sweep across keepers (wraps `eval.cmd`) |
+| `hz_bench/` | `COMPARISON.md` (sync/RTC tables + FAQ), `RESULTS.md`, `summarize.py` |
 | `eval_vla_jepa_gui.cmd` | GLFW wrapper for local VLA-JEPA checkpoints |
 | `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
 | `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |
@@ -1245,8 +1248,8 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 Local scratch (not committed): project-root `.tmp/`.
 
 **Config layout (principle):** `labs/lab01_pnp/` holds only **lab-bound** artifacts
-(runbook, `*.cmd`, `_env.sh`, Hub cards, training curves, and eval spawn/demo YAMLs
-under `labs/lab01_pnp/configs/`). Foundational product features stay at repo root —
+(runbook, `*.cmd`, `_env.sh`, Hub cards, training curves, Hz-bench notes, and eval
+spawn/demo YAMLs under `labs/lab01_pnp/configs/`). Foundational product features stay at repo root —
 e.g. `configs/so101_mujoco_pick_leader.yaml` (leader PnP record),
 `configs/scenes/simple_pick/`, generic keyboard/joycon/leader templates — even when
 Lab 01 wraps them via `LAB01_*`. Shared lab conventions for future labs:
