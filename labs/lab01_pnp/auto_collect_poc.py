@@ -60,8 +60,8 @@ CONTACT_MOVE_M = 0.012
 DT = 0.05
 STEP_SLEEP_S = float(os.environ.get("LAB01_POC_SLEEP", "0.03"))
 # Close/hold: keep one crisp squeeze, but don't linger (old 70+25 felt sluggish).
-GRIPPER_SQUEEZE_STEPS = 40
-GRIPPER_HOLD_STEPS = 12
+GRIPPER_SQUEEZE_STEPS = 28
+GRIPPER_HOLD_STEPS = 8
 TASK = "Pick up the cube and place it in the box"
 
 # Optional per-tick recorder hook installed by main() when --record is set.
@@ -475,22 +475,21 @@ def run_episode(
     # Snap wrist to grasp posture; hold XY with a few servo steps if it drifts.
     q = _q_arm(robot)
     q[3:] = WRIST_GRASP
-    for _ in range(4):
+    for _ in range(3):
         _send_q(robot, q, GRIPPER_OPEN)
     print(f"    after-ready gf={np.round(_site_pos(robot), 4)}", flush=True)
 
     # 2) Short creep into soft wrap (already beside the cube — no long return).
-    # Slightly brisker than the first PoC (kp/dq/max_step were very cautious).
     status = servo_xyz(
         robot,
         grasp,
         gripper=GRIPPER_OPEN,
-        steps=80,
+        steps=70,
         phase="creep",
         xy_tol=XY_TOL_CREEP,
-        kp=1.4,
-        dq_lim=0.22,
-        max_step=0.012,
+        kp=1.7,
+        dq_lim=0.28,
+        max_step=0.015,
         prevent_overshoot=False,
     )
     ok = status == "reached"
