@@ -208,7 +208,7 @@ Agent 在这里的贡献：把键盘 teleop 的速度 IK 换成 **抓取专用�
 - 成功或 `--save-failures` 才 `save_episode`；否则 `clear_episode_buffer`
 - `spawns.jsonl`：每集 `episode / success / frames / spawn`（补 Phase 0 元数据缺口）
 
-无头冒烟（2026-09-20）：1 集成功，578 帧，v3 + 三路视频，根目录示例 `.tmp/lab01_scripted_poc_smoke`。
+无头冒烟（2026-09-20）：1 集成功，**473 帧**，v3 + 三路视频，根目录示例 `.tmp/lab01_scripted_poc_smoke`。
 
 ### 7. 入口
 
