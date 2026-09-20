@@ -1233,6 +1233,9 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
 | `hz_bench.cmd` | Headless closed-loop Hz sweep across keepers (wraps `eval.cmd`) |
 | `hz_bench/` | `COMPARISON.md` (sync/RTC tables + FAQ), `RESULTS.md`, `summarize.py` |
+| `data_improvement.md` | Agent-for-data chapter: Phase 0 audit + Phase 1 scripted grasp (privileged pose, joint lerp, Jacobian IK; Agent programs collector, not 20 Hz servo) |
+| `audit_teleop_quality.py` | Phase 0 teleop parquet quality proxies (path / jerk / duration) |
+| `auto_collect_poc.cmd` | GLFW PoC: scripted pick-place on .43 (`LAB01_POC_HEADLESS=1` for OSMesa) |
 | `eval_vla_jepa_gui.cmd` | GLFW wrapper for local VLA-JEPA checkpoints |
 | `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
 | `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |
