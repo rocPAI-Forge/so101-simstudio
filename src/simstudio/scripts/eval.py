@@ -168,6 +168,15 @@ class _EpisodeStageTracker:
         self.max_cube_z_m = self.initial_z
         self.min_container_xy_m = float("inf")
         self.seen_open = False
+        self.tick = 0
+        self.close_events = 0
+        self.first_close: dict[str, float] | None = None
+        self._close_tick: int | None = None
+        self._block_geom = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_GEOM, "block")
+        self._fixed_body = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_BODY, "gripper")
+        self._moving_body = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_BODY, "moving_jaw_so101_v1")
+        grip_joint = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_JOINT, "gripper")
+        self._grip_qadr = int(robot.model.jnt_qposadr[grip_joint]) if grip_joint >= 0 else None
         self.stages = {
             "reach_8cm": False,
             "near_4cm": False,
@@ -179,9 +188,80 @@ class _EpisodeStageTracker:
             "dropped_after_lift": False,
         }
 
+    # Post-close window over which jaw contact is sampled (ticks at the eval fps).
+    GRASP_WINDOW_TICKS = 30
+
+    def _jaw_forces(self) -> tuple[float, float]:
+        import mujoco as mj
+        import numpy as np
+
+        m, d = self.robot.model, self.robot.data
+        f = np.zeros(6)
+        out = [0.0, 0.0]
+        for i in range(d.ncon):
+            c = d.contact[i]
+            if self._block_geom not in (c.geom1, c.geom2):
+                continue
+            other = c.geom2 if c.geom1 == self._block_geom else c.geom1
+            body = m.geom_bodyid[other]
+            if body not in (self._fixed_body, self._moving_body):
+                continue
+            mj.mj_contactForce(m, d, i, f)
+            out[0 if body == self._fixed_body else 1] += abs(float(f[0]))
+        return out[0], out[1]
+
+    def _close_geometry(self) -> dict[str, float]:
+        """Fingertip pose relative to the cube face it approaches, as in the scripted expert probe."""
+        import numpy as np
+
+        d = self.robot.data
+        block_id = self._block_geom
+        cube = np.asarray(d.geom_xpos[block_id], dtype=float)
+        rot = np.asarray(d.geom_xmat[block_id], dtype=float).reshape(3, 3)
+        site = np.asarray(d.site_xpos[self.site_id], dtype=float)
+        rel = site - cube
+        axes = [rot[:2, 0], -rot[:2, 0], rot[:2, 1], -rot[:2, 1]]
+        axes = [a / (np.linalg.norm(a) + 1e-9) for a in axes]
+        normal = max(axes, key=lambda a: float(a @ rel[:2]))
+        tangent = np.array([-normal[1], normal[0]])
+        jaw = np.asarray(d.site_xmat[self.site_id], dtype=float).reshape(3, 3)[:2, 1]
+        jaw = jaw / (np.linalg.norm(jaw) + 1e-9)
+        return {
+            "jaw_vs_normal_deg": float(np.degrees(np.arccos(np.clip(abs(jaw @ normal), 0.0, 1.0)))),
+            "normal_mm": float(rel[:2] @ normal) * 1000.0,
+            "tangent_mm": float(rel[:2] @ tangent) * 1000.0,
+            "dz_mm": float(rel[2]) * 1000.0,
+            "cube_x": float(cube[0]),
+            "cube_y": float(cube[1]),
+        }
+
+    def _update_grasp(self, block: tuple[float, float, float], closing: bool) -> None:
+        if closing and self._close_tick is None:
+            self._close_tick = self.tick
+            self.first_close = {**self._close_geometry(), "max_min_jaw_n": 0.0}
+            self._close_block_xy = (block[0], block[1])
+        if self._close_tick is None or self.first_close is None:
+            return
+        if self.tick - self._close_tick > self.GRASP_WINDOW_TICKS or "window_end_tick" in self.first_close:
+            return
+        f_fixed, f_moving = self._jaw_forces()
+        self.first_close["max_min_jaw_n"] = max(self.first_close["max_min_jaw_n"], min(f_fixed, f_moving))
+        self.first_close["f_fixed_n"] = f_fixed
+        self.first_close["f_moving_n"] = f_moving
+        if self._grip_qadr is not None:
+            self.first_close["q_gripper"] = float(self.robot.data.qpos[self._grip_qadr])
+        self.first_close["cube_shift_mm"] = 1000.0 * (
+            (block[0] - self._close_block_xy[0]) ** 2 + (block[1] - self._close_block_xy[1]) ** 2
+        ) ** 0.5
+        lifted = block[2] >= self.initial_z + 0.02
+        if lifted or self.tick - self._close_tick == self.GRASP_WINDOW_TICKS:
+            self.first_close["window_end_tick"] = float(self.tick - self._close_tick)
+            self.first_close["lifted_in_window"] = float(lifted)
+
     def update(self, sent: dict[str, Any] | None) -> None:
         from simstudio.common.eval_success import CONTAINER_XY
 
+        self.tick += 1
         block = self.robot.get_block_position()
         if block is None:
             return
@@ -211,22 +291,31 @@ class _EpisodeStageTracker:
         ):
             self.stages["dropped_after_lift"] = True
 
-        if sent is None:
-            return
-        gripper = sent.get("gripper.pos")
-        if gripper is None:
-            return
-        gripper = float(gripper)
-        if gripper >= 0.45:
-            if self.stages["lift_2cm"] and self.stages["over_box"]:
-                self.stages["released_after_lift"] = True
-            self.seen_open = True
-        elif self.seen_open and self.stages["near_4cm"] and gripper <= 0.15:
-            self.stages["close_after_open"] = True
+        closing = False
+        gripper = sent.get("gripper.pos") if sent is not None else None
+        if gripper is not None:
+            gripper = float(gripper)
+            if gripper >= 0.45:
+                if self.stages["lift_2cm"] and self.stages["over_box"]:
+                    self.stages["released_after_lift"] = True
+                self.seen_open = True
+            elif self.seen_open and self.stages["near_4cm"] and gripper <= 0.15:
+                closing = True
+                if not self.stages["close_after_open"] or self._reopened:
+                    self.close_events += 1
+                self._reopened = False
+                self.stages["close_after_open"] = True
+            if gripper >= 0.45 and self.stages["close_after_open"]:
+                self._reopened = True
+        self._update_grasp(block, closing)
+
+    _reopened = False
 
     def result(self) -> dict[str, Any]:
         return {
             **self.stages,
+            "close_events": self.close_events,
+            "first_close": self.first_close,
             "min_gripper_cube_m": self.min_gripper_cube_m,
             "max_cube_z_m": self.max_cube_z_m,
             "min_container_xy_m": self.min_container_xy_m,
@@ -280,11 +369,25 @@ def _run_episode(
     engine.get_action = timed_get_action  # type: ignore[method-assign]
     if orig_predict is not None:
         policy.predict_action_chunk = timed_predict_chunk  # type: ignore[method-assign]
+    # Count control ticks, not wall time. OSMesa/CPU GL can run at ~2 Hz; a
+    # 60s wall-clock cap then only simulates ~6s (120 ticks) and truncates
+    # grasps. fps=20 × 60s → 1200 ticks on any backend.
+    fps = float(getattr(cfg, "fps", 20) or 20)
+    max_ticks = max(1, int(round(episode_time_s * fps)))
+    wall_cap_s = episode_time_s * 30.0
     start = time.perf_counter()
     engine.resume()
     try:
         while not ctx.runtime.shutdown_event.is_set():
-            if time.perf_counter() - start >= episode_time_s:
+            if tick_n >= max_ticks:
+                break
+            if time.perf_counter() - start >= wall_cap_s:
+                logger.warning(
+                    "Eval episode hit %.0fs wall cap after %d/%d ticks",
+                    wall_cap_s,
+                    tick_n,
+                    max_ticks,
+                )
                 break
 
             loop_start = time.perf_counter()
@@ -743,10 +846,11 @@ def eval_main(cfg: RolloutConfig) -> None:
     results: list[dict[str, Any]] = []
 
     logger.info(
-        "Starting sim2sim eval: %d episodes × %.0fs @ %.0f Hz | policy=%s",
+        "Starting sim2sim eval: %d episodes × %.0fs @ %.0f Hz (%d ticks/ep) | policy=%s",
         num_episodes,
         episode_time_s,
         cfg.fps,
+        max(1, int(round(episode_time_s * float(cfg.fps)))),
         cfg.policy.pretrained_path,
     )
     log_say(f"Sim2sim eval: {num_episodes} episodes", cfg.play_sounds)
@@ -816,6 +920,14 @@ def eval_main(cfg: RolloutConfig) -> None:
                 f"Episode {ep + 1}/{num_episodes}: {status}  block={pos_str}  "
                 f"infer={infer_hz:.2f} Hz  chunk={chunk_hz:.2f} Hz"
             )
+            if fc := funnel.get("first_close"):
+                print(
+                    f"  first close: jaw_vs_normal={fc['jaw_vs_normal_deg']:.1f}deg "
+                    f"normal={fc['normal_mm']:+.1f}mm tangent={fc['tangent_mm']:+.1f}mm dz={fc['dz_mm']:+.1f}mm "
+                    f"max_min_jaw={fc['max_min_jaw_n']:.2f}N q_grip={fc.get('q_gripper', float('nan')):+.3f} "
+                    f"shift={fc.get('cube_shift_mm', 0.0):.1f}mm lifted_in_window={int(fc.get('lifted_in_window', 0))} "
+                    f"closes={funnel['close_events']} cube=({fc['cube_x']:.3f},{fc['cube_y']:.3f})"
+                )
 
             if ep < num_episodes - 1 and reset_time_s > 0:
                 _reset_pause(inner, reset_time_s, cfg.fps)

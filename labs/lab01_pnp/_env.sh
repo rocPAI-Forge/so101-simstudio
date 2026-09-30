@@ -13,6 +13,7 @@
 # Sections:
 #   1) Shared   — lab identity / dataset (record, train, eval, push)
 #   2) Record   — record.cmd only
+#   2b) Scripted collect — collect_yaw.cmd (one-click) / auto_collect_yaw.cmd (smoke)
 #   3) Train    — train.cmd / train_smolvla_resume.cmd (SmolVLA)
 #   4) Train ACT — train_act.cmd
 #   5) Train MolmoAct2 — train_molmoact2.cmd (DORobot / MI300X)
@@ -56,6 +57,18 @@ LAB01_RECORD_CONFIG="${LAB01_RECORD_CONFIG:-configs/so101_mujoco_pick_leader.yam
 LAB01_NUM_EPISODES="${LAB01_NUM_EPISODES:-50}"
 LAB01_EPISODE_TIME_S="${LAB01_EPISODE_TIME_S:-90}"
 LAB01_RESET_TIME_S="${LAB01_RESET_TIME_S:-5}"
+
+# -----------------------------------------------------------------------------
+# 2b) Scripted yaw-aware collect
+#     auto_collect_yaw.cmd — visual smoke (record off unless LAB01_YAW_RECORD=1)
+#     collect_yaw.cmd      — one-click record: auto create-50 / expand-100
+# -----------------------------------------------------------------------------
+LAB01_YAW_DATASET_NAME="${LAB01_YAW_DATASET_NAME:-so101-simstudio-lab01-pnp-agent-yaw}"
+LAB01_YAW_DATASET_ROOT="${LAB01_YAW_DATASET_ROOT:-./datasets/${LAB01_YAW_DATASET_NAME}}"
+LAB01_YAW_REPO_ID="${LAB01_YAW_REPO_ID:-${LAB01_DATASET_HF_USER}/${LAB01_YAW_DATASET_NAME}}"
+LAB01_YAW_INIT_TARGET="${LAB01_YAW_INIT_TARGET:-50}"
+LAB01_YAW_EXPAND_TARGET="${LAB01_YAW_EXPAND_TARGET:-100}"
+# LAB01_YAW_HEADLESS=1
 
 # -----------------------------------------------------------------------------
 # 3) Train (SmolVLA) — train.cmd / train_smolvla_resume.cmd
@@ -302,12 +315,15 @@ LAB01_HZ_BENCH_LOG="${LAB01_HZ_BENCH_LOG:-./outputs/eval/hz_bench}"
 
 # -----------------------------------------------------------------------------
 # 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
-#    push_act_state6_model.cmd / push_vla_jepa_model.cmd / push_groot_model.cmd
+#    push_act_state6_model.cmd / push_act_agent_yaw_v4_model.cmd /
+#    push_vla_jepa_model.cmd / push_groot_model.cmd
 # -----------------------------------------------------------------------------
 LAB01_SMOLVLA_HF_REPO_ID="${LAB01_SMOLVLA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-smolvla}"
 LAB01_ACT_HF_REPO_ID="${LAB01_ACT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act}"
 LAB01_ACT_STATE6_HF_REPO_ID="${LAB01_ACT_STATE6_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act-state6}"
 LAB01_ACT_STATE6_CKPT_STEP="${LAB01_ACT_STATE6_CKPT_STEP:-050000}"
+LAB01_ACT_YAW_V4_HF_REPO_ID="${LAB01_ACT_YAW_V4_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act-agent-yaw-v4}"
+LAB01_ACT_YAW_V4_CKPT_STEP="${LAB01_ACT_YAW_V4_CKPT_STEP:-080000}"
 LAB01_MOLMO_HF_REPO_ID="${LAB01_MOLMO_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-molmoact2}"
 LAB01_MOLMO_CKPT_STEP="${LAB01_MOLMO_CKPT_STEP:-010000}"
 LAB01_JEPA_HF_REPO_ID="${LAB01_JEPA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-vla-jepa}"

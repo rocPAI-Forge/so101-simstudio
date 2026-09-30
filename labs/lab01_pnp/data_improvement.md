@@ -9,8 +9,9 @@
 | 阶段 | 目标 | Agent 的作用 | 状态 |
 |------|------|----------------|------|
 | 0 审计 | 量化人工 50 集的差 | 写审计脚本、读漏斗、定「干净轨迹」标准 | 已完成 |
-| **1 脚本化抓放 + 可录** | 能稳定抓放并写成 LeRobot v3 | **人在环编程**：定相位/特权信息/IK 与插值分工；看 GLFW 改过冲与推块 | **当前** |
-| 2 分箱采集 + ACT mix | 用 auto 数据抬高 ACT 成功率 | 扩采样、quality 过滤、配比实验、对照表 | 未做 |
+| **1 脚本化抓放 + 可录** | 能稳定抓放并写成 LeRobot v3 | **人在环编程**：定相位/特权信息/IK 与插值分工；看 GLFW 改过冲与推块 | **已完成（100 成功集）**；ACT 80K 闭环 **9/50（18%）** — 见 [`agent_act_80k.md`](agent_act_80k.md) |
+| **1b yaw→腕部** | 按立方体面法向 standoff + `wrist_roll`，分箱采成功集并 **重训** 新 ACT | 规格见 [`agent_act_80k.md`](agent_act_80k.md) §7；**不**混固定腕 100 条；不从 080000 resume | **采集 100 条**（配额满）；覆盖见 [`data_vs_success.md`](data_vs_success.md)；50 条 ACT 已清；**100 条 ACT 80K 从零训练中** |
+| 2 分箱采集 + ACT mix | 用 **转腕后** 的 auto 数据抬高 ACT；teleop 配比另开 | 扩采样、quality 过滤、配比实验、对照表 | 未做（勿把旧 100 条与 teleop 原样混合） |
 | 3 失败 mining | 补现行策略不会的 bin | Agent 只出宏参数 / 加采配方，不进控制环 | 未做 |
 | 4 真机感知 | 去掉仿真特权 pose | 另开；不阻塞仿真数据工厂 | 推迟 |
 
@@ -42,7 +43,7 @@
 | 夹爪闭合边沿 | 均值 2.3 次/集，最多 4 | 反复开合，不是一次干脆夹 |
 | 起始 EE | 标准差 ~1 cm | leader `follow`，起始姿态不算散 |
 
-**缺口：** 录制时 `reset_cube: random`，cube XY/yaw **没有写进 LeRobot parquet**。现有 50 集做不出分箱覆盖热力图。自动采集必须把 spawn 记进 episode 侧车（jsonl）或任务元数据。
+**缺口（录制当时）：** `reset_cube: random`，cube XY/yaw **没有写进 LeRobot parquet**。后来用俯视首帧反推了三套数据的朝向（精度见 [`data_vs_success.md`](data_vs_success.md)）；新采集仍应把 spawn 写进 sidecar，不要依赖事后估计。
 
 `validate_dataset.py` 只查完整性/关节限，**不打质量分、不查覆盖**。
 
@@ -231,11 +232,17 @@ LAB01_POC_RECORD=1 LAB01_POC_HEADLESS=1 MUJOCO_GL=osmesa \
 
 原始评测 Hz / RTC 口径仍见 [`hz_bench/COMPARISON.md`](hz_bench/COMPARISON.md)。
 
-### 8. Phase 1 尚未证明
+### 8. Phase 1 已证明 / 尚未证明
 
-- auto 数据能否抬高 **ACT 闭环成功率**（还没有 mix 训练）
-- x/y/yaw **分箱覆盖**（Sobol / 低成功率加采仍是 Phase 2）
-- 与人工 50 集的配比和 quality 标签（clean / hard / junk）
+**已证明：** 脚本专家能写成 LeRobot v3；ACT 能把它学到很低 BC loss（80K，loss 0.013）。
+
+**已证伪（当前专家）：** 仅 XY 随机 + 固定 `WRIST_GRASP` 的 100 成功集 **不能** 接近 teleop ACT 的 64%。正式 GLFW 评测 **9/50（18%）**。闭合时 100/100 集 `wrist_roll=0.17`，且成功过滤把 `+30…+45°` 削成 0 集。图 + 成功率对照：[`data_vs_success.md`](data_vs_success.md)；80K 复盘：[`agent_act_80k.md`](agent_act_80k.md)。
+
+**尚未证明：**
+
+- 按 cube **yaw 转腕** 的新专家集能否抬高闭环
+- x/y/yaw **分箱覆盖**（Sobol / 低成功率加采）
+- 与人工 50 集的配比（且不得把固定腕角 100 条当默认 mix）
 - 真机：无特权 cube pose
 
 ---

@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pyarrow as pa
 import pyarrow.parquet as pq
 
 # MuJoCo SO-101 joint limits (radians) from actuator_ctrlrange
@@ -129,9 +130,7 @@ def validate_dataset(root: Path) -> ValidationResult:
         result.error("No readable parquet data")
         return result
 
-    combined = all_frames[0]
-    for t in all_frames[1:]:
-        combined = combined.append(t)
+    combined = pa.concat_tables(all_frames)
 
     actual_frames = combined.num_rows
     result.ok(f"Actual frames in parquet: {actual_frames}")

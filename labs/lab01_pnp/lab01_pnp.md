@@ -754,6 +754,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | RTC | GLFW | 10 | **5/10 (50%)** | Same pose; RTC delay warnings throughout |
 | SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | GLFW | 10 | **3/10 (30%)** | Fewer knock-aways; more mid-transfer drops |
 | ACT 50K (15-D state) | Full-range random | `follow` | Sync | EGL | 50 | **32/50 (64%)** | Reference with `LAB01_N_ACTION_STEPS=50`; pos+vel+ee; Hub [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
+| ACT 80K (15-D, **scripted-agent** 100 ep) | Full-range random | `follow` | Sync | **GLFW** | 50 | **9/50 (18%)** | `n_action_steps=50`, 30 s / 600 ticks; ckpt `lab01_pnp_act_agent/080000`; Hub data [alexhegit/so101-simstudio-lab01-pnp-agent](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent). Funnel: reach 50/50, close 47/50, lift 14/50. **Do not cite** DORobot OSMesa 0/50 (wall-clock truncation). After-action: [`agent_act_80k.md`](agent_act_80k.md) |
 | ACT 50K (6-D state) | Full-range random | `follow` | Sync | EGL | 50 | **29/50 (58%)** | Joint `.pos` only (`LAB01_ACT_STATE_DIM=6`); same protocol as 15-D 64% row; Hub [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 | ACT 50K | Full-range random | `follow` | Sync | — | 50 | **23/50 (46%)** | Same checkpoint with `n_action_steps=100` (historical log) |
 | ACT 50K | Fixed `(0.27,0.20,−8°)` | `follow` | Sync | GLFW | 10 | **8/10 (80%)** | `n_action_steps=100`, `rollout_act_demo_fixed.yaml` |
@@ -788,6 +789,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 
 - `reset_arm` matches the intentional §6.2 contrast (SmolVLA and MolmoAct2 eval YAMLs → `home`, ACT → `follow`). Do not mix rows when claiming a single protocol.
 - On this 50-episode dataset, under the measured setups: **ACT full-range (15-D 64% / 6-D 58%, same level at n=50) > MolmoAct2 10K 6-D (54%) > MolmoAct2 10K 15-D (30%) > SmolVLA 50K full-range (22%)**. Quote `state=15` vs `state=6` when citing ACT or MolmoAct2; do not collapse them into one number.
+- **Scripted-agent ACT 80K (100 ep) is 9/50 (18%)** on the same full-range ACT YAML (GLFW, 30 s/ep). Do not cite it as beating teleop 64%. Wrist is locked in the demos; see [`agent_act_80k.md`](agent_act_80k.md).
 - 6-D ACT matches real SO-101 joint-pos IL. The 6-point gap vs 15-D is within n=50 noise; choose 6-D for sim2real alignment, not for a sim-success gain.
 - MolmoAct2 6-D vs 15-D is a **different** story than ACT. The SO100/101 base discretizes proprio into a **language state string** pretrained on **6 joint tokens**. Lab 01 15-D fine-tune fitted quantile stats on 15 channels (pos+vel+EE) and eval expanded rollout to match; 6-D keeps the pretrained layout. Train recipe was otherwise identical (bs32 × 10K, LoRA). The 24-point full-range gap is unlikely n=50 noise (two-proportion z≈2.5); failure mode is still mostly missed grasps at spawn, just fewer of them. Do not copy this Molmo gap onto ACT.
 - Fixed spawn raises ACT (80%) and MolmoAct2 (70%) more than SmolVLA (≈30–50%). SmolVLA is not classroom-stable even at a known-good pose.
@@ -1236,6 +1238,11 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `data_improvement.md` | Agent-for-data chapter: Phase 0 audit + Phase 1 scripted grasp (privileged pose, joint lerp, Jacobian IK; Agent programs collector, not 20 Hz servo) |
 | `audit_teleop_quality.py` | Phase 0 teleop parquet quality proxies (path / jerk / duration) |
 | `auto_collect_poc.cmd` | GLFW PoC: scripted pick-place on .43 (`LAB01_POC_HEADLESS=1` for OSMesa) |
+| `collect_yaw.cmd` | One-click yaw-aware dataset: `auto` create-50 / expand-100, `init`, `expand [N]` |
+| `auto_collect_yaw.cmd` | Low-level collector (smoke unless `LAB01_YAW_RECORD=1`); used by `collect_yaw.cmd` |
+| `agent_act_80k.md` | Fixed-wrist agent dataset / ACT 80K after-action and yaw-aware successor spec |
+| `data_vs_success.md` | Three datasets × two coverage figures × ACT closed-loop (teleop 64% vs fixed-wrist 18%; yaw-aware eval pending) |
+| `estimate_cube_pose.py` / `dataset_stats_viz.py` | Recover cube XY/yaw from the top camera; write `viz/coverage_*.png` |
 | `eval_vla_jepa_gui.cmd` | GLFW wrapper for local VLA-JEPA checkpoints |
 | `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
 | `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |

@@ -90,10 +90,11 @@ class ScriptedRecorder:
         features = {**obs_ft, **act_ft}
         info = self.root / "meta" / "info.json"
         if info.is_file():
-            self.dataset = LeRobotDataset(
+            self.dataset = LeRobotDataset.resume(
                 repo_id,
                 root=self.root,
                 tolerance_s=1e-3,
+                image_writer_threads=4,
             )
             print(f"  resume dataset {repo_id} @ {self.root}", flush=True)
         else:
