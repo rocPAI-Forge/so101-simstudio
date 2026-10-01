@@ -33,9 +33,29 @@ Choose the OpenGL backend with `MUJOCO_GL` (or Lab 01 `LAB01_MUJOCO_GL`):
 
 | Backend | Use when |
 |---------|----------|
-| `egl` | Headless GPU (preferred for batch eval on AMD/NVIDIA workstations) |
+| `egl` | Headless GPU GL — **consumer / workstation GPUs** (e.g. Radeon, NVIDIA A30/A100 with working EGL). Preferred for batch eval when it works. |
 | `glfw` | Interactive MuJoCo window (needs `DISPLAY`) |
-| `osmesa` | CPU software GL (compute nodes without EGL; very slow) |
+| `osmesa` | CPU software GL — **required on AMD Instinct compute GPUs** (see below). Slow but reliable for closed-loop eval. |
+
+### AMD Instinct (MI210 / MI300 / MI300X): use OSMesa for eval
+
+Instinct accelerators are **compute-first**: ROCm training/inference works, but MuJoCo’s **GPU OpenGL path (`egl`) is not a supported/reliable eval backend** on these cards. Typical failures:
+
+- `EGL_BAD_ALLOC` / `eglCreateContext` when building `mujoco.Renderer` (even with free HBM)
+- Black / garbage camera frames if EGL partially initializes
+- Contention with another ROCm process holding the device
+
+**Lab / server rule:** on **MI210, MI300, MI300X** (and similar Instinct SKUs), run policy eval with:
+
+```bash
+export MUJOCO_GL=osmesa          # or LAB01_MUJOCO_GL=osmesa
+unset DISPLAY                    # avoid accidental GLX/GLFW
+# keep render_window: false
+```
+
+Policy weights still run on the Instinct GPU via ROCm/HIP; only **camera rasterization** is CPU (OSMesa). Expect slower wall-clock than EGL on a workstation with a display GPU.
+
+Do **not** quote Instinct `egl` success rates next to workstation EGL numbers without calling out the backend — OSMesa changes timing slightly but should not change the success criterion.
 
 ### Diagnose camera images per backend
 
@@ -65,7 +85,8 @@ mujoco.mj_step(model, data)
 | Issue | Fix |
 |-------|-----|
 | Window invisible on Ubuntu | See `platform-quirks/glfw-window.md` |
-| Slow rendering on CPU | Normal for `osmesa`; prefer `egl` on GPU |
+| Slow rendering on CPU | Normal for `osmesa`; prefer `egl` only on GPUs that actually expose working EGL |
+| `EGL_BAD_ALLOC` on MI210/MI300X | Use `MUJOCO_GL=osmesa` — Instinct has no usable MuJoCo GPU render path |
 | Black / empty camera frames headless | Run `scripts/render_headless_cameras.py` for the backend you use |
 | `mujoco.viewer` crashes | Check GLFW, try `render_window: false` |
 

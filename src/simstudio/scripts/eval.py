@@ -7,6 +7,7 @@ Uses LeRobot's rollout context (policy + pre/post processors + inference
 engine) but owns the multi-episode loop so no ``rollout_`` dataset is required.
 """
 
+import json
 import logging
 import os
 import sys
@@ -809,6 +810,53 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
     logger.warning("NormalizerProcessorStep not found; skipping stats patch")
 
 
+def _load_episode_inits() -> list[dict[str, Any]] | None:
+    """Optional per-episode cube pose and arm qpos (LAB01_EPISODE_INIT)."""
+    path = os.environ.get("LAB01_EPISODE_INIT", "").strip()
+    if not path:
+        return None
+    with open(path, encoding="utf-8") as f:
+        rows = json.load(f)
+    if not isinstance(rows, list) or not rows:
+        raise ValueError(f"LAB01_EPISODE_INIT must be a non-empty list: {path}")
+    logger.info("Loaded %d episode inits from %s", len(rows), path)
+    return rows
+
+
+def _apply_episode_init(robot: SO101MujocoRobot, row: dict[str, Any]) -> None:
+    """Overwrite the post-reset cube and arm so eval starts like a recorded frame."""
+    import mujoco as mj
+    import numpy as np
+
+    qpos = row.get("qpos")
+    if qpos is not None:
+        if len(qpos) != len(robot.JOINT_NAMES):
+            raise ValueError(f"qpos length {len(qpos)} != {len(robot.JOINT_NAMES)}")
+        for name, value in zip(robot.JOINT_NAMES, qpos, strict=True):
+            robot.data.qpos[robot.dof_ids[name]] = float(value)
+            robot.data.qvel[robot.dof_ids[name]] = 0.0
+            robot.data.ctrl[robot.act_ids[name]] = float(value)
+        robot.q_des = robot.data.qpos.copy()
+        robot.dq_filt = np.zeros(robot.model.nv)
+    robot._set_block_pose(
+        float(row["x"]),
+        float(row["y"]),
+        float(row.get("z", 0.015)),
+        float(row.get("yaw_deg", 0.0)),
+    )
+    settle_steps = max(1, int(0.2 / robot.physics_dt))
+    for _ in range(settle_steps):
+        mj.mj_step(robot.model, robot.data)
+    logger.info(
+        "Episode init source=%s cube=(%.3f, %.3f, yaw %.1f) qpos=%s",
+        row.get("source_episode", "?"),
+        float(row["x"]),
+        float(row["y"]),
+        float(row.get("yaw_deg", 0.0)),
+        [round(float(v), 3) for v in qpos] if qpos is not None else None,
+    )
+
+
 @parser.wrap()
 def eval_main(cfg: RolloutConfig) -> None:
     if not isinstance(cfg.strategy, BaseStrategyConfig):
@@ -844,6 +892,11 @@ def eval_main(cfg: RolloutConfig) -> None:
 
     strategy = BaseStrategy(cfg.strategy)
     results: list[dict[str, Any]] = []
+    episode_inits = _load_episode_inits()
+    if episode_inits is not None and len(episode_inits) < num_episodes:
+        raise ValueError(
+            f"LAB01_EPISODE_INIT has {len(episode_inits)} rows but eval asks for {num_episodes}"
+        )
 
     logger.info(
         "Starting sim2sim eval: %d episodes × %.0fs @ %.0f Hz (%d ticks/ep) | policy=%s",
@@ -864,6 +917,8 @@ def eval_main(cfg: RolloutConfig) -> None:
             log_say(f"Eval episode {ep + 1} of {num_episodes}", cfg.play_sounds)
             if getattr(inner.config, "reset_mode", "manual") == "auto":
                 inner.reset_episode(ep)
+            if episode_inits is not None:
+                _apply_episode_init(inner, episode_inits[ep])
 
             if gripper_oracle is not None:
                 gripper_oracle.reset()
