@@ -1,4 +1,5 @@
-.PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync \
+.PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record \
+	cuda-sync cuda-test joycon-sync \
 	smoke-keyboard-record smoke-keyboard-replay smoke-keyboard-teleop smoke-joycon-record smoke-leader-record smoke-leader-teleop
 
 SMOKE := scripts/smoke
@@ -44,6 +45,19 @@ rocm-format:
 
 rocm-lint:
 	.venv-rocm/bin/ruff check
+
+# ---------------------------------------------------------------------------
+# CUDA — uses .venv-cuda (created by scripts/setup-cuda.sh)
+# Do not run bare `uv sync` inside .venv-cuda.
+# ---------------------------------------------------------------------------
+
+CUDA_PY := .venv-cuda/bin/python
+
+cuda-sync:
+	scripts/setup-cuda.sh
+
+cuda-test:
+	$(CUDA_PY) -m pytest
 
 # ---------------------------------------------------------------------------
 # Joy-Con — install joycon-robotics with patches

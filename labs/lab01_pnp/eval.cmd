@@ -38,40 +38,44 @@ fi
 
 # MolmoAct2: extras are transformers/peft/scipy only. Never uv pip install
 # 'lerobot[molmoact2]' — LeRobot's ImportError suggests that, but it re-resolves
-# torch onto CUDA + nvidia-* wheels and breaks .venv-rocm.
-_lab01_need_rocm_torch=false
+# torch and can replace the wheel in .venv-rocm. install-*-deps.sh targets
+# .venv-rocm only; do not point them at .venv-cuda.
+_lab01_need_gpu_torch=false
 if [[ "$LAB01_EVAL_CONFIG" == *molmoact2* || "$LAB01_POLICY_PATH" == *molmoact2* ]]; then
-    _lab01_need_rocm_torch=true
+    _lab01_need_gpu_torch=true
     if ! "$PYTHON" -c "import peft, transformers, scipy" 2>/dev/null; then
         echo "MolmoAct2 extras missing (transformers / peft / scipy)." >&2
-        echo "  ./scripts/install-molmoact2-deps.sh" >&2
-        echo "Do NOT run: uv pip install 'lerobot[molmoact2]' (pulls CUDA torch)." >&2
+        echo "  .venv-rocm: ./scripts/install-molmoact2-deps.sh" >&2
+        echo "  .venv-cuda: make cuda-sync  (do not run install-molmoact2-deps.sh)" >&2
+        echo "Do NOT run: uv pip install 'lerobot[molmoact2]' (re-resolves torch)." >&2
         exit 1
     fi
 fi
 if [[ "$LAB01_EVAL_CONFIG" == *lingbot* || "$LAB01_POLICY_PATH" == *lingbot* ]]; then
-    _lab01_need_rocm_torch=true
+    _lab01_need_gpu_torch=true
     if ! "$PYTHON" -c "import transformers, diffusers, accelerate, peft" 2>/dev/null; then
         echo "LingBot-VA extras missing (transformers / diffusers / accelerate / peft)." >&2
-        echo "  ./scripts/install-lingbot-va-deps.sh" >&2
-        echo "Do NOT run: pip install -e '.[lingbot_va]' (pulls CUDA torch)." >&2
+        echo "  .venv-rocm: ./scripts/install-lingbot-va-deps.sh" >&2
+        echo "  .venv-cuda: make cuda-sync  (do not run install-lingbot-va-deps.sh)" >&2
+        echo "Do NOT run: pip install -e '.[lingbot_va]' (re-resolves torch)." >&2
         exit 1
     fi
 fi
 if [[ "$LAB01_EVAL_CONFIG" == *fastwam* || "$LAB01_POLICY_PATH" == *fastwam* ]]; then
-    _lab01_need_rocm_torch=true
+    _lab01_need_gpu_torch=true
     if ! "$PYTHON" -c "import transformers, diffusers" 2>/dev/null; then
         echo "FastWAM extras missing (transformers / diffusers)." >&2
-        echo "  ./scripts/install-fastwam-deps.sh" >&2
-        echo "Do NOT run: pip install -e '.[fastwam]' (pulls CUDA torch)." >&2
+        echo "  .venv-rocm: ./scripts/install-fastwam-deps.sh" >&2
+        echo "  .venv-cuda: make cuda-sync  (do not run install-fastwam-deps.sh)" >&2
+        echo "Do NOT run: pip install -e '.[fastwam]' (re-resolves torch)." >&2
         exit 1
     fi
 fi
-if [[ "$_lab01_need_rocm_torch" == true ]]; then
-    if ! "$PYTHON" -c "import torch; hip=getattr(torch.version,'hip',None); assert hip and '+rocm' in torch.__version__" 2>/dev/null; then
-        echo "ROCm torch missing or replaced by CUDA build." >&2
-        echo "  ./scripts/install-lerobot-extra-deps.sh --repair-torch lingbot_va fastwam" >&2
-        echo "  # or full reset: make rocm-sync" >&2
+if [[ "$_lab01_need_gpu_torch" == true ]]; then
+    if ! "$PYTHON" -c "import torch; assert torch.cuda.is_available()" 2>/dev/null; then
+        echo "This interpreter has no CUDA/ROCm GPU (torch.cuda.is_available() is false)." >&2
+        echo "  .venv-rocm: ./scripts/install-lerobot-extra-deps.sh --repair-torch  or  make rocm-sync" >&2
+        echo "  .venv-cuda: make cuda-sync" >&2
         exit 1
     fi
 fi

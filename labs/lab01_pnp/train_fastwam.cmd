@@ -34,11 +34,12 @@ if [[ ! -d "${LAB01_DATASET_ROOT}/meta" ]]; then
     exit 1
 fi
 
-if ! "$PYTHON" -c "import transformers, diffusers, torch; hip=getattr(torch.version,'hip',None); assert hip and '+rocm' in torch.__version__" 2>/dev/null; then
-    echo "FastWAM extras missing or ROCm torch was replaced." >&2
-    echo "  ./scripts/install-fastwam-deps.sh" >&2
-    echo "  ./scripts/install-fastwam-deps.sh --repair-torch" >&2
-    echo "Do NOT run: pip install -e '.[fastwam]' (pulls CUDA torch)." >&2
+if ! "$PYTHON" -c "import transformers, diffusers, torch; assert torch.cuda.is_available()" 2>/dev/null; then
+    echo "FastWAM extras missing, or this interpreter has no CUDA/ROCm GPU." >&2
+    echo "  .venv-rocm: ./scripts/install-fastwam-deps.sh" >&2
+    echo "  .venv-rocm repair: ./scripts/install-fastwam-deps.sh --repair-torch" >&2
+    echo "  .venv-cuda: make cuda-sync  (do not run install-fastwam-deps.sh)" >&2
+    echo "Do NOT run: pip install -e '.[fastwam]' (re-resolves torch)." >&2
     exit 1
 fi
 

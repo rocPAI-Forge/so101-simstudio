@@ -25,7 +25,9 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 
 **Supported platform:** Ubuntu 24.04 + AMD GPU + system ROCm 7.x, Python 3.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-**Not supported yet (unverified; planned):** NVIDIA CUDA on Linux and macOS (including Apple Silicon / MPS). Do **not** use `uv sync` for this project — it installs CUDA PyTorch and is not a supported install path. See [ROADMAP.md](ROADMAP.md).
+**CUDA (branch `cuda`, unverified):** NVIDIA Linux, `make cuda-sync` → `.venv-cuda` (default wheel `cu128`, A30 / sm_80). Keep it separate from `.venv-rocm`. On a machine with both NVIDIA and AMD GPUs, set `SIMSTUDIO_VENV=.venv-rocm` to force the ROCm interpreter. Four A30s are used as separate jobs via `CUDA_VISIBLE_DEVICES`, not DDP.
+
+**Not supported yet (unverified; planned):** macOS (including Apple Silicon / MPS). Do **not** use `uv sync` in `.venv-rocm` or `.venv-cuda` — it can replace the pinned torch wheel. See [ROADMAP.md](ROADMAP.md).
 
 ```bash
 git clone --recursive https://github.com/rocPAI-Forge/so101-simstudio.git
@@ -110,6 +112,7 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | MolmoAct2 extras (ROCm-safe) | `./scripts/install-molmoact2-deps.sh` — **not** `uv pip install 'lerobot[molmoact2]'` |
 | MolmoAct2 eval processor patch | `git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch` (do not commit inside `lerobot/`) |
 | ROCm setup | `make rocm-sync` |
+| CUDA setup (branch `cuda`) | `make cuda-sync` → `.venv-cuda` |
 
 ## Key Conventions
 
@@ -129,11 +132,21 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 
 ## ROCm
 
-- **Only supported Python environment:** `.venv-rocm`, created by `scripts/setup-rocm.sh` (`make rocm-sync`).
+- **Validated Python environment:** `.venv-rocm`, created by `scripts/setup-rocm.sh` (`make rocm-sync`).
 - Installs **ROCm PyTorch first** (`--torch-backend rocm7.2`), then pins torch while installing MuJoCo, LeRobot, SmolVLA deps (`transformers`, `accelerate`, …), and dev tools.
 - **Do not** run `uv sync` in `.venv-rocm` — it can replace ROCm torch with a CUDA build.
 - Commands: `make rocm-sync`, `make rocm-lint`, `make rocm-test`, `make rocm-format`, `make rocm-smoke-record`.
 - Details: [llm-wiki/gpu-compute/rocm-setup.md](llm-wiki/gpu-compute/rocm-setup.md).
+
+## CUDA
+
+- **Unverified install path** on branch `cuda`: `.venv-cuda`, created by `scripts/setup-cuda.sh` (`make cuda-sync`).
+- Installs **CUDA PyTorch first** (`--torch-backend cu128` by default), then pins that wheel the same way as the ROCm script. A30 needs a build that still lists `sm_80`.
+- **Do not** run `uv sync` in `.venv-cuda`. Do not run `scripts/install-*-deps.sh` against it — those scripts reinstall ROCm torch into `.venv-rocm`.
+- Lab launchers pick `.venv-cuda` when that interpreter reports `torch.cuda.is_available()`. `nvidia-smi` can fail on a driver/library mismatch while PyTorch still sees the GPUs. Override with `SIMSTUDIO_VENV=.venv-rocm` or `SIMSTUDIO_VENV=.venv-cuda`.
+- On a mixed NVIDIA/AMD machine those launchers point MuJoCo EGL at the NVIDIA ICD (`10_nvidia.json`) so headless rendering does not bind a compute-only AMD GPU.
+- Commands: `make cuda-sync`, `make cuda-test`. Single-GPU jobs: `CUDA_VISIBLE_DEVICES=0 ./labs/lab01_pnp/train.cmd`.
+- Details: [llm-wiki/gpu-compute/torch-backends.md](llm-wiki/gpu-compute/torch-backends.md).
 
 ## Reusable Knowledge
 

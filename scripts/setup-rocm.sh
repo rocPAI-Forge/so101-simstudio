@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # setup-rocm.sh — create .venv-rocm with ROCm 7.2 PyTorch for Python 3.12
 #
-# This is the ONLY supported install path for SO-101 SimStudio.
-# CUDA (Linux) and macOS are not supported in the current release.
+# ROCm install path. NVIDIA CUDA lives in scripts/setup-cuda.sh (.venv-cuda);
+# do not install both torch builds into this venv.
 #
 # Installs: ROCm torch → MuJoCo/LeRobot/SmolVLA deps → editable project + lerobot.
 #

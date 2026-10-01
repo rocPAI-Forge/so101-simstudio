@@ -121,10 +121,10 @@ Current: so101-simstudio @ v0.1.3
 
 ### Platform support
 
-- [ ] **NVIDIA CUDA (Linux)** — not supported yet (unverified); needs documented install path, PyTorch CUDA wheels, smoke tests
+- [ ] **NVIDIA CUDA (Linux)** — install path on branch `cuda` (`make cuda-sync` → `.venv-cuda`, default `cu128`). Still unverified: driver must match, then 4× A30 visibility, short Lab 01 train, and short eval. Do not mark done until that smoke passes.
 - [ ] **macOS / Apple Silicon (MPS)** — not supported yet (unverified); needs documented install path, GLFW / input quirks, smoke tests
 
-**Current release:** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, and VLA training.
+**Current release:** **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is the validated path for simulation, recording, validation, and VLA training. Branch `cuda` is the NVIDIA bring-up track and is not the release default.
 
 ### Automated data pipeline
 

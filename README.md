@@ -21,7 +21,7 @@ SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting high-qu
 - LeRobot v3.0 dataset format
 - Modular, extensible architecture
 
-**Platform focus:** Validated on **Ubuntu 24.04 + AMD ROCm** only. **NVIDIA CUDA (Linux)** and **macOS (Apple Silicon / MPS)** are **not supported** in this release — unverified, no install path; see [ROADMAP](ROADMAP.md).
+**Platform focus:** Validated on **Ubuntu 24.04 + AMD ROCm**. **NVIDIA CUDA (Linux)** has an install path on branch `cuda` (`make cuda-sync` → `.venv-cuda`) that is still **unverified**. **macOS (Apple Silicon / MPS)** is **not supported**. See [ROADMAP](ROADMAP.md).
 
 ## Features
 
@@ -67,14 +67,14 @@ Post-recording visualization: `dataset_viz` (Rerun) and replay scripts.
 | Environment | Status |
 |-------------|--------|
 | **Ubuntu 24.04 + AMD ROCm 7.x** | ✅ **Supported** — tested and documented (`make rocm-sync`) |
-| **NVIDIA CUDA (Linux)** | ❌ **Not supported** — unverified; planned |
+| **NVIDIA CUDA (Linux)** | 🚧 **Unverified** — branch `cuda`: `make cuda-sync` → `.venv-cuda` (A30 bring-up) |
 | **macOS (incl. Apple Silicon / MPS)** | ❌ **Not supported** — unverified; planned |
 
-SimStudio ships a **single supported install path:** `make rocm-sync` → `.venv-rocm` with ROCm PyTorch.
+SimStudio's validated install path is `make rocm-sync` → `.venv-rocm` with ROCm PyTorch. Branch `cuda` adds a separate venv for NVIDIA GPUs. Do not put both torch builds in one venv.
 
-**Do not** use `uv sync` — it installs CUDA PyTorch and is not supported. CUDA and macOS support will be added in a future release once validated; see [ROADMAP](ROADMAP.md).
+**Do not** use `uv sync` in either venv — it can replace the pinned torch wheel. macOS support is still a future release; see [ROADMAP](ROADMAP.md).
 
-CPU-only runs are possible for headless CI (`render_window: false`) but are not the target workflow; GPU teleoperation and VLA training require ROCm.
+CPU-only runs are possible for headless CI (`render_window: false`) but are not the target workflow. GPU teleoperation and VLA training use the ROCm venv, or `.venv-cuda` on branch `cuda`.
 
 ### Tested environment
 
@@ -87,7 +87,7 @@ CPU-only runs are possible for headless CI (`render_window: false`) but are not 
 ### Dependencies
 
 - MuJoCo 3.x
-- PyTorch 2.x (**ROCm** backend on AMD — installed via `make rocm-sync`)
+- PyTorch 2.x (**ROCm** via `make rocm-sync`, or **CUDA** via `make cuda-sync` on branch `cuda`)
 - LeRobot (git submodule, pinned to v0.6.0)
 
 ## Layout
