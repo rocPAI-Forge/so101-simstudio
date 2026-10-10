@@ -3,7 +3,7 @@
 Date: 2026-09-22  
 Related: [data_improvement.md](data_improvement.md) (Phase 1 collector), Hub dataset [alexhegit/so101-simstudio-lab01-pnp-agent](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent), teleop ACT 15-D **32/50 (64%)**. Coverage figures + three-dataset vs success: [data_vs_success.md](data_vs_success.md).
 
-This note freezes **what we trained, how we evaluated, why it failed, and what we will do next**. It does not replace the living §6.4 table in [lab01_pnp.md](lab01_pnp.md).
+This note freezes **what we trained, how we evaluated, why it failed, and what we will do next**. It does not replace the living §6.4 table in [lab01_pnp.md](../lab01_pnp/lab01_pnp.md).
 
 ---
 
@@ -14,7 +14,7 @@ This note freezes **what we trained, how we evaluated, why it failed, and what w
 | Hub / local | `alexhegit/so101-simstudio-lab01-pnp-agent` · `datasets/so101-simstudio-lab01-pnp-agent` |
 | Format | LeRobot **v3.0**, 20 Hz, 6-D joint **position** actions, 15-D `observation.state` |
 | Size | **100** successful episodes, **50126** frames (mean ~501 frames ≈ 25 s) |
-| Collector | [`auto_collect_poc.py`](auto_collect_poc.py): privileged cube XYZ + joint lerp toward `Q_READY` + damped Jacobian IK on `gripperframe` |
+| Collector | [`auto_collect_poc.py`](../lab01_pnp/auto_collect_poc.py): privileged cube XYZ + joint lerp toward `Q_READY` + damped Jacobian IK on `gripperframe` |
 | Spawn box | Same as leader/eval: `x∈[0.26,0.34]`, `y∈[0.165,0.235]`, `z=0.0125`, **yaw ±45°** |
 | Arm reset at record | `reset_arm=home`, then scripted approach (not leader `follow`) |
 | Side car | `spawns.jsonl`: `episode / success / frames / spawn` **XYZ only** (no yaw) |
@@ -190,8 +190,8 @@ Sidecar `spawns.jsonl` per attempt: `xyz, yaw_deg, yaw_bin, xy_cell, wrist_roll_
 
 ### 7.6 Collection result (2026-09-22)
 
-Implemented as [`auto_collect_yaw.py`](auto_collect_yaw.py) /
-[`auto_collect_yaw.cmd`](auto_collect_yaw.cmd), preserving the fixed-wrist
+Implemented as [`auto_collect_yaw.py`](../lab01_pnp/auto_collect_yaw.py) /
+[`auto_collect_yaw.cmd`](../lab01_pnp/auto_collect_yaw.cmd), preserving the fixed-wrist
 collector as the v1 baseline.
 
 | | Result |
@@ -221,7 +221,7 @@ Reference commands:
 
 # Hub (run where HF auth is available)
 LAB01_DATASET_NAME=so101-simstudio-lab01-pnp-agent-yaw \
-LAB01_DATASET_CARD=./labs/lab01_pnp/hf_dataset_card_agent_yaw.md \
+LAB01_DATASET_CARD=./labs/lab01_pnp_agent/hf_dataset_card_agent_yaw.md \
   ./labs/lab01_pnp/push_dataset.cmd
 
 # DORobot: 100-ep ACT from scratch (2026-09-22: wiped the 50-ep ~32K job)

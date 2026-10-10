@@ -68,7 +68,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--rollout-config",
         type=Path,
-        default=Path("labs/lab01_pnp/configs/rollout_act_agent_yaw.yaml"),
+        default=Path("labs/lab01_pnp_agent/configs/rollout_act_agent_yaw.yaml"),
         help="Must match agent-yaw (gripperframe + home_gripper 0.85).",
     )
     p.add_argument(

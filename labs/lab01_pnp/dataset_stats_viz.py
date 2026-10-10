@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare cube-spawn coverage and wrist usage across the Lab 01 datasets.
 
-Renders two PNGs into ``labs/lab01_pnp/viz/``:
+Renders two PNGs into ``labs/lab01_pnp_agent/viz/``:
 
 * ``coverage_topview.png`` — workspace top view, per-episode cube pose and yaw.
 * ``coverage_stats.png``   — wrist-roll range, yaw distribution, episode length.
@@ -35,7 +35,7 @@ from matplotlib.patches import Rectangle
 REPO = Path(__file__).resolve().parents[2]
 DATASETS = REPO / "datasets"
 SCENE = REPO / "SO101" / "scenes" / "simple_pick" / "scene.xml"
-OUT_DIR = Path(__file__).resolve().parent / "viz"
+OUT_DIR = REPO / "labs" / "lab01_pnp_agent" / "viz"
 POSE_JSON = OUT_DIR / "cube_pose_estimates.json"
 
 TELEOP = "so101-simstudio-lab01-pnp"

@@ -637,6 +637,104 @@ def hold(robot: SO101MujocoRobot, gripper: float, steps: int = 15) -> None:
         _send_q(robot, q, gripper)
 
 
+# Off-tube joint kicks applied at the face standoff, before the creep.
+# wrist_roll stays 0: v4 already spreads it. wrist_flex std on v4 is ~0.09 rad,
+# so ±0.30–0.45 is several times that tube. Shoulder and elbow kicks are large
+# enough that the following IK correction is not the same approach every time.
+JOINT_KICKS: tuple[tuple[float, float, float, float, float], ...] = (
+    (0.0, 0.55, 0.0, 0.0, 0.0),
+    (0.0, -0.45, 0.0, 0.0, 0.0),
+    (0.0, 0.0, 0.60, 0.0, 0.0),
+    (0.0, 0.0, -0.55, 0.0, 0.0),
+    (0.0, 0.0, 0.0, 0.40, 0.0),
+    (0.0, 0.0, 0.0, -0.35, 0.0),
+    (0.40, 0.0, 0.0, 0.0, 0.0),
+    (-0.35, 0.0, 0.0, 0.0, 0.0),
+    (0.0, 0.40, -0.45, 0.0, 0.0),
+    (0.0, 0.0, 0.40, 0.30, 0.0),
+    (0.0, -0.35, 0.0, -0.30, 0.0),
+    (0.25, 0.40, -0.35, 0.0, 0.0),
+    (-0.25, -0.40, 0.35, 0.25, 0.0),
+    (0.0, 0.50, 0.35, -0.30, 0.0),
+    (0.30, -0.35, -0.40, 0.35, 0.0),
+)
+
+# Off-tube kicks after a successful lift, before the scripted place. Magnitudes
+# stay under the pre-grasp kicks so the cube can remain in the closed gripper.
+# wrist_roll stays 0. The following place servo is the expert correction.
+CARRY_KICKS: tuple[tuple[float, float, float, float, float], ...] = (
+    (0.0, 0.28, 0.0, 0.0, 0.0),
+    (0.0, -0.25, 0.0, 0.0, 0.0),
+    (0.0, 0.0, 0.30, 0.0, 0.0),
+    (0.0, 0.0, -0.28, 0.0, 0.0),
+    (0.0, 0.0, 0.0, 0.22, 0.0),
+    (0.0, 0.0, 0.0, -0.22, 0.0),
+    (0.22, 0.0, 0.0, 0.0, 0.0),
+    (-0.20, 0.0, 0.0, 0.0, 0.0),
+    (0.0, 0.22, -0.22, 0.0, 0.0),
+    (0.15, 0.18, 0.0, -0.15, 0.0),
+    (-0.15, -0.18, 0.18, 0.0, 0.0),
+    (0.0, 0.20, 0.18, 0.18, 0.0),
+)
+
+# Kicks once the closed gripper is already over the container. The expert then
+# lowers and opens, so the label covers the state just before release.
+RELEASE_KICKS: tuple[tuple[float, float, float, float, float], ...] = (
+    (0.0, 0.18, 0.0, 0.0, 0.0),
+    (0.0, -0.16, 0.0, 0.0, 0.0),
+    (0.0, 0.0, 0.18, 0.0, 0.0),
+    (0.0, 0.0, -0.16, 0.0, 0.0),
+    (0.0, 0.0, 0.0, 0.16, 0.0),
+    (0.0, 0.0, 0.0, -0.16, 0.0),
+    (0.16, 0.0, 0.0, 0.0, 0.0),
+    (-0.14, 0.0, 0.0, 0.0, 0.0),
+    (0.0, 0.14, -0.14, 0.0, 0.0),
+    (0.12, 0.0, 0.0, -0.12, 0.0),
+    (-0.12, -0.12, 0.12, 0.0, 0.0),
+    (0.0, 0.12, 0.12, 0.12, 0.0),
+)
+
+
+def _apply_joint_kick(
+    robot: SO101MujocoRobot,
+    kick: np.ndarray,
+    wrist_target: np.ndarray,
+) -> np.ndarray:
+    """Move off the nominal tube, then ease the wrist back. IK corrects the arm."""
+    q = _q_arm(robot)
+    q_kick = _clip_arm(robot, q + kick)
+    applied = q_kick - q
+    goto_q(robot, q_kick, gripper=GRIPPER_OPEN, steps=24, phase="joint-kick")
+    q_wrist = _q_arm(robot)
+    q_wrist[3] = float(wrist_target[0])
+    q_wrist[4] = float(wrist_target[1])
+    goto_q(robot, _clip_arm(robot, q_wrist), gripper=GRIPPER_OPEN, steps=16, phase="joint-kick-wrist-back")
+    print(
+        f"    joint-kick applied rad={np.round(applied, 3)} "
+        f"q={np.round(_q_arm(robot), 3)}",
+        flush=True,
+    )
+    return applied
+
+
+def _apply_carry_kick(
+    robot: SO101MujocoRobot,
+    kick: np.ndarray,
+    gripper: float,
+) -> np.ndarray:
+    """Shift the lifted arm off the carry tube without opening the gripper."""
+    q = _q_arm(robot)
+    q_kick = _clip_arm(robot, q + kick)
+    applied = q_kick - q
+    goto_q(robot, q_kick, gripper=gripper, steps=24, phase="carry-kick")
+    print(
+        f"    held-kick applied rad={np.round(applied, 3)} "
+        f"cube={robot.get_block_position()}",
+        flush=True,
+    )
+    return applied
+
+
 def _attempt_lift(
     robot: SO101MujocoRobot,
     recorder: ScriptedRecorder | None,
@@ -654,6 +752,7 @@ def _attempt_lift(
     contact_reach_m: float | None = None,
     stop_before_close: bool = False,
     slip_max_m: float = PRE_CLOSE_SLIP_MAX_M,
+    joint_kick: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Align, creep, close, and try to lift. Does not reset or end the episode."""
     prefix = f"{phase_prefix}" if phase_prefix else ""
@@ -696,6 +795,11 @@ def _attempt_lift(
             standoff_xy=[float(standoff_xy[0]), float(standoff_xy[1])],
             standoff_status=status_standoff,
         )
+
+    if joint_kick is not None and float(np.linalg.norm(joint_kick)) > 0.0:
+        applied = _apply_joint_kick(robot, np.asarray(joint_kick, dtype=float), wrist_target)
+        if recorder is not None and not phase_prefix:
+            recorder.update_metadata(joint_kick=[float(v) for v in applied])
 
     status = servo_xyz(
         robot,
@@ -1036,6 +1140,10 @@ def run_episode(
     miss_gripper: float = TARGETED_MISS_GRIPPER,
     miss_large_only: bool = False,
     preclose: bool = False,
+    joint_kick: np.ndarray | None = None,
+    carry_kick: np.ndarray | None = None,
+    release_kick: np.ndarray | None = None,
+    drop_after_lift: bool = False,
 ) -> bool:
     global _frame_hook
     robot.reset_episode(episode)
@@ -1138,6 +1246,74 @@ def run_episode(
             phase_prefix="correct-",
             contact_reach_m=0.012,
         )
+    elif drop_after_lift:
+        attempt = _attempt_lift(
+            robot,
+            None,
+            cx=cx,
+            cy=cy,
+            cz=cz,
+            cube_yaw_deg=cube_yaw_deg,
+            spawn=spawn,
+            close_dx=0.0,
+            close_dy=0.0,
+            close_droll=0.0,
+            gripper_closed=None,
+            contact_reach_m=FIRST_CONTACT_REACH_M,
+        )
+        if not attempt["lifted"]:
+            print("    drop-carry: nominal lift failed — skip", flush=True)
+            return False
+        site = _site_pos(robot)
+        mid_xy = 0.5 * (site[:2] + np.asarray(CONTAINER_XY, dtype=float))
+        servo_xyz(
+            robot,
+            np.array([mid_xy[0], mid_xy[1], LIFT_Z]),
+            gripper=GRIPPER_CLOSED,
+            steps=50,
+            phase="drop-carry-mid",
+            lock_wrist=True,
+            wrist_target=attempt["wrist_target"],
+            prevent_overshoot=False,
+            max_step=1.0,
+        )
+        set_grip(robot, GRIPPER_OPEN, steps=24)
+        hold(robot, GRIPPER_OPEN, steps=30)
+        dropped = robot.get_block_position()
+        dropped_z = float(dropped[2]) if dropped is not None else 0.0
+        print(f"    drop-carry released cube={dropped}", flush=True)
+        if dropped is None or dropped_z >= cz + 0.02 or check_pick_success(dropped):
+            print("    drop-carry did not leave a table drop — skip", flush=True)
+            return False
+        if recorder is not None and record_recovery_only:
+            recorder.begin_episode(
+                {
+                    **episode_meta,
+                    "targeted_recovery": True,
+                    "recovery_style": "drop_carry",
+                    "drop_cube": [float(v) for v in dropped],
+                }
+            )
+            _frame_hook = recorder.on_tick
+        cx, cy, cz, cube_yaw_deg = _block_pose(robot)
+        _prepare_regrasp(robot, np.array([cx, cy], dtype=float), cube_yaw_deg)
+        cx, cy, cz, cube_yaw_deg = _block_pose(robot)
+        spawn = (cx, cy, cz)
+        attempt = _attempt_lift(
+            robot,
+            recorder,
+            cx=cx,
+            cy=cy,
+            cz=cz,
+            cube_yaw_deg=cube_yaw_deg,
+            spawn=spawn,
+            close_dx=0.0,
+            close_dy=0.0,
+            close_droll=0.0,
+            gripper_closed=None,
+            phase_prefix="regrasp-",
+            contact_reach_m=0.012,
+        )
     elif force_first_miss and recovery_style == "closed_empty":
         _attempt_lift(
             robot,
@@ -1154,6 +1330,14 @@ def run_episode(
             stop_before_close=True,
         )
         parked = _site_pos(robot)
+        # The old 8–16 mm miss still closed on the cube. Push the jaws
+        # 40 mm off the face so this grasp cannot lift.
+        miss_norm = float(np.hypot(miss_dx, miss_dy))
+        if miss_norm < 1e-6:
+            miss_dx, miss_dy = 0.04, 0.0
+        else:
+            miss_dx *= 0.040 / miss_norm
+            miss_dy *= 0.040 / miss_norm
         servo_xyz(
             robot,
             np.array([parked[0] + miss_dx, parked[1] + miss_dy, GRASP_Z]),
@@ -1255,6 +1439,7 @@ def run_episode(
             cube_yaw_deg=cube_yaw_deg,
             spawn=spawn,
             contact_reach_m=FIRST_CONTACT_REACH_M,
+            joint_kick=joint_kick,
             **grasp_kwargs,
         )
     grasp_attempts = 1
@@ -1280,9 +1465,15 @@ def run_episode(
     elif record_recovery_only and force_first_miss and not attempt["lifted"]:
         # Home-start recovery without the high standoff retreat: open in place,
         # then a normal face approach / close from the current cube pose.
-        print("    first lift failed — open in place, local reclose", flush=True)
-        set_grip(robot, GRIPPER_OPEN, steps=GRIPPER_SQUEEZE_STEPS)
-        hold(robot, GRIPPER_OPEN, steps=GRIPPER_HOLD_STEPS)
+        # An empty close leaves the gripper at lift height, so retreat first.
+        if recovery_style == "closed_empty":
+            print("    empty close — retreat and regrasp", flush=True)
+            cx, cy, cz, cube_yaw_deg = _block_pose(robot)
+            _prepare_regrasp(robot, np.array([cx, cy], dtype=float), cube_yaw_deg)
+        else:
+            print("    first lift failed — open in place, local reclose", flush=True)
+            set_grip(robot, GRIPPER_OPEN, steps=GRIPPER_SQUEEZE_STEPS)
+            hold(robot, GRIPPER_OPEN, steps=GRIPPER_HOLD_STEPS)
         cx, cy, cz, cube_yaw_deg = _block_pose(robot)
         spawn = (cx, cy, cz)
         attempt = _attempt_lift(
@@ -1321,6 +1512,17 @@ def run_episode(
             flush=True,
         )
         return lifted
+    if lifted and carry_kick is not None and float(np.linalg.norm(carry_kick)) > 0.0:
+        applied = _apply_carry_kick(robot, np.asarray(carry_kick, dtype=float), grip_cmd)
+        if recorder is not None:
+            recorder.update_metadata(carry_kick=[float(v) for v in applied])
+        held = robot.get_block_position()
+        still_up = held is not None and float(held[2]) >= cz + 0.015
+        if not still_up:
+            print(f"    carry-kick dropped the cube cube={held} — discard", flush=True)
+            if recorder is not None:
+                recorder.end_episode(success=False, episode=episode)
+            return False
     if not lifted:
         print("    WARN: cube not in hand after lift — skip place", flush=True)
         block = robot.get_block_position()
@@ -1353,6 +1555,17 @@ def run_episode(
         == "reached"
         or ok
     )
+    if release_kick is not None and float(np.linalg.norm(release_kick)) > 0.0:
+        applied = _apply_carry_kick(robot, np.asarray(release_kick, dtype=float), GRIPPER_CLOSED)
+        if recorder is not None:
+            recorder.update_metadata(release_kick=[float(v) for v in applied])
+        held = robot.get_block_position()
+        still_up = held is not None and float(held[2]) >= cz + 0.015
+        if not still_up:
+            print(f"    release-kick dropped the cube cube={held} — discard", flush=True)
+            if recorder is not None:
+                recorder.end_episode(success=False, episode=episode)
+            return False
     hold(robot, GRIPPER_CLOSED, steps=10)
     ok = (
         servo_xyz(
@@ -1558,7 +1771,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--recovery-style",
-        choices=("closed-empty", "pre-close"),
+        choices=("closed-empty", "pre-close", "drop-carry"),
         default="",
         help="closed-empty: fully closed miss then regrasp. pre-close: correct while still open.",
     )
@@ -1583,6 +1796,31 @@ def main() -> int:
         default=os.environ.get(
             "LAB01_YAW_REPO_ID",
             "alexhegit/so101-simstudio-lab01-pnp-agent-yaw",
+        ),
+    )
+    parser.add_argument(
+        "--joint-diverse",
+        action="store_true",
+        help=(
+            "After the face standoff, kick shoulder / elbow / wrist_flex off the "
+            "nominal tube, then let the expert correct. Keep only full successes. "
+            "Does not overwrite an existing dataset; resume appends."
+        ),
+    )
+    parser.add_argument(
+        "--carry-diverse",
+        action="store_true",
+        help=(
+            "After a successful lift, kick shoulder / elbow / wrist_flex while the "
+            "gripper stays closed, then place and release. Keep only full successes."
+        ),
+    )
+    parser.add_argument(
+        "--release-diverse",
+        action="store_true",
+        help=(
+            "After the arm reaches the container, kick shoulder / elbow / wrist_flex "
+            "with the gripper closed, then lower and open. Keep only full successes."
         ),
     )
     parser.add_argument(
@@ -1632,7 +1870,14 @@ def main() -> int:
 
     wins = 0
     recovery_wins = 0
-    style_name = {"closed-empty": "closed_empty", "pre-close": "pre_close"}.get(args.recovery_style, "")
+    diverse_wins = 0
+    carry_wins = 0
+    release_wins = 0
+    style_name = {
+        "closed-empty": "closed_empty",
+        "pre-close": "pre_close",
+        "drop-carry": "drop_carry",
+    }.get(args.recovery_style, "")
     bin_wins = [0] * 6
     xy_wins = [0] * len(XY_CELLS)
     if recorder is not None and recorder.spawn_log.is_file():
@@ -1645,6 +1890,12 @@ def main() -> int:
                     recovery_wins += 1
             elif row.get("targeted_recovery"):
                 recovery_wins += 1
+            if row.get("joint_kick"):
+                diverse_wins += 1
+            if row.get("carry_kick"):
+                carry_wins += 1
+            if row.get("release_kick"):
+                release_wins += 1
             if row.get("yaw_bin") is not None:
                 bin_wins[int(row["yaw_bin"])] += 1
             cell = row.get("xy_cell")
@@ -1652,6 +1903,8 @@ def main() -> int:
                 xy_wins[XY_CELL_NAMES.index(cell)] += 1
         wins = sum(bin_wins)
 
+    if (args.joint_diverse or args.carry_diverse or args.release_diverse) and args.target_successes <= 0:
+        args.target_successes = 50 if args.joint_diverse else 24
     target = max(0, args.target_successes)
     recovery_target = max(0, args.target_recovery_successes)
     quotas = split_quota(target, 6, YAW_REMAINDER_ORDER) if target else [0] * 6
@@ -1662,6 +1915,24 @@ def main() -> int:
         print(f"xy-cell target={xy_quotas} existing={xy_wins} names={XY_CELL_NAMES}", flush=True)
     if recovery_target:
         print(f"targeted recovery target={recovery_target} existing={recovery_wins}", flush=True)
+    if args.joint_diverse:
+        print(
+            f"joint-diverse target={target} existing_kicks={diverse_wins} "
+            f"patterns={len(JOINT_KICKS)}",
+            flush=True,
+        )
+    if args.carry_diverse:
+        print(
+            f"carry-diverse target={target} existing_carry={carry_wins} "
+            f"patterns={len(CARRY_KICKS)}",
+            flush=True,
+        )
+    if args.release_diverse:
+        print(
+            f"release-diverse target={target} existing_release={release_wins} "
+            f"patterns={len(RELEASE_KICKS)}",
+            flush=True,
+        )
 
     attempts = 0
     bin_cursor = 0
@@ -1672,6 +1943,12 @@ def main() -> int:
         ):
             if recovery_target and recovery_wins >= recovery_target:
                 break
+            if args.joint_diverse and diverse_wins >= target:
+                break
+            if args.carry_diverse and carry_wins >= target:
+                break
+            if args.release_diverse and release_wins >= target:
+                break
             if args.v2 and wins >= target:
                 if not recovery_target:
                     break
@@ -1679,11 +1956,21 @@ def main() -> int:
                 target
                 and not recovery_target
                 and not args.v2
+                and not args.joint_diverse
+                and not args.carry_diverse
+                and not args.release_diverse
                 and all(bin_wins[i] >= quotas[i] for i in range(6))
                 and all(xy_wins[i] >= xy_quotas[i] for i in range(4))
             ):
                 break
-            if target and not recovery_target and not args.v2:
+            if (
+                target
+                and not recovery_target
+                and not args.v2
+                and not args.joint_diverse
+                and not args.carry_diverse
+                and not args.release_diverse
+            ):
                 yaw_need = next_deficit(bin_wins, quotas, bin_cursor)
                 xy_need = next_deficit(xy_wins, xy_quotas, xy_cursor)
                 yaw_bin = yaw_need if yaw_need is not None else (bin_cursor % 6)
@@ -1700,12 +1987,25 @@ def main() -> int:
             ]
             robot.config.cube_random_x_range = list(x_range)
             robot.config.cube_random_y_range = list(y_range)
+            kick = None
+            carry = None
+            if args.joint_diverse:
+                kick = np.array(JOINT_KICKS[attempts % len(JOINT_KICKS)], dtype=float)
+            if args.carry_diverse:
+                carry = np.array(CARRY_KICKS[attempts % len(CARRY_KICKS)], dtype=float)
+            release = None
+            if args.release_diverse:
+                release = np.array(RELEASE_KICKS[attempts % len(RELEASE_KICKS)], dtype=float)
             success = run_episode(
                 robot,
                 attempts,
                 random_cube=robot.config.reset_cube == "random",
                 recorder=recorder,
                 start_jitter_rad=0.06 if args.v2 else 0.0,
+                joint_kick=kick,
+                carry_kick=carry,
+                release_kick=release,
+                drop_after_lift=args.recovery_style == "drop-carry",
                 allow_regrasp=args.v2 and args.recovery_style != "pre-close",
                 force_first_miss=recovery_target > 0 and args.recovery_style != "pre-close",
                 record_recovery_only=recovery_target > 0,
@@ -1719,6 +2019,12 @@ def main() -> int:
                 bin_wins[yaw_bin] += 1
                 xy_wins[xy_idx] += 1
                 meta = recorder._attempt_meta if recorder is not None else {}
+                if meta.get("joint_kick"):
+                    diverse_wins += 1
+                if meta.get("carry_kick"):
+                    carry_wins += 1
+                if meta.get("release_kick"):
+                    release_wins += 1
                 if style_name:
                     if meta.get("recovery_style") == style_name:
                         recovery_wins += 1
@@ -1727,7 +2033,8 @@ def main() -> int:
             attempts += 1
             print(
                 f"  campaign attempts={attempts} wins={wins} bins={bin_wins} "
-                f"xy={xy_wins} recovery={recovery_wins} cell={cell_name}"
+                f"xy={xy_wins} recovery={recovery_wins} diverse={diverse_wins} "
+                f"carry={carry_wins} release={release_wins} cell={cell_name}"
                 + (f" target_yaw={quotas} target_xy={xy_quotas}" if target else ""),
                 flush=True,
             )
@@ -1741,6 +2048,12 @@ def main() -> int:
     print(f"yaw-aware scripted expert: wins={wins} attempts={attempts} bins={bin_wins} xy={xy_wins}")
     if recovery_target:
         return 0 if recovery_wins >= recovery_target else 1
+    if args.joint_diverse:
+        return 0 if diverse_wins >= target else 1
+    if args.carry_diverse:
+        return 0 if carry_wins >= target else 1
+    if args.release_diverse:
+        return 0 if release_wins >= target else 1
     if args.v2:
         return 0 if wins >= target else 1
     if target:

@@ -676,6 +676,8 @@ Closed-loop rollout: load a fine-tuned checkpoint, run inference at 20 Hz in MuJ
 
 **Success criterion:** cube center inside the container bounds of the `simple_pick` scene (see `simstudio.common.eval_success`). Episodes that grasp but drop mid-transfer, knock the cube away, or leave it on the container rim count as **fail**.
 
+How the lab moved from teleop demos to agent-yaw data, ACT-follow increments, 6-D joint training, and the 3-seed Home20 score is written up in [`labs/lab01_pnp_agent/`](../lab01_pnp_agent/lab01_pnp_agent.md). That lab holds the agent-generated data notes, the Home20 pose file, the 193-episode publish scripts, coverage figures, and demo clips. This runbook keeps the teleop pipeline and the shared train/eval scripts. Per-run data numbers stay in [`smolvla_v4_diversity.md`](../lab01_pnp_agent/smolvla_v4_diversity.md) and [`data_vs_success.md`](../lab01_pnp_agent/data_vs_success.md). Home20 scores stay in [`home20.md`](../lab01_pnp_agent/home20.md).
+
 ### 6.1 What you are measuring
 
 Three axes change the reported success rate. Compare only runs that match on all three, or call out the difference explicitly.
@@ -683,10 +685,10 @@ Three axes change the reported success rate. Compare only runs that match on all
 | Axis | Choices | Meaning |
 |------|---------|---------|
 | **Policy** | SmolVLA 50K (`lab01_pnp_smolvla`) vs ACT 50K (`lab01_pnp_act`) | Different architectures / training recipes on the **same** 50-episode lab dataset |
-| **Cube spawn** | Full-range random / narrowed demo random / fixed pose | Distribution of initial cube `(x, y, yaw)` at episode reset |
+| **Cube spawn** | Full-range random / home-20 paired / narrowed demo random / fixed pose | Distribution of initial cube `(x, y, yaw)` at episode reset |
 | **Inference** | `rtc` vs `sync`; ACT `n_action_steps` | How actions are produced relative to the 20 Hz control loop |
 
-**Honest generalization** uses the recording spawn box. **Demo configs** deliberately shrink that box (or freeze one pose) so a classroom run looks more reliable without retraining. Demo rates are **not** interchangeable with full-range rates.
+**Honest generalization** uses the recording spawn box, freshly sampled. **Lab01-PnP-Home20** ([`home20.md`](../lab01_pnp_agent/home20.md)) freezes one 20-pose draw from that same box so later runs share initial conditions. It is an eval protocol, not a training dataset. **Demo configs** deliberately shrink that box (or freeze one pose) so a classroom run looks more reliable without retraining. Demo rates, Home20 rates, and a new full-range draw are **not** interchangeable.
 
 ### 6.2 Eval configs (spawn)
 
@@ -701,7 +703,8 @@ Recording / full-range box (leader teleop):
 
 | Config | Policy | `reset_cube` | `reset_arm` | Spawn | Role |
 |--------|--------|--------------|------------|-------|------|
-| `labs/lab01_pnp/configs/rollout_smolvla.yaml` | SmolVLA | `random` | `home` | Full record box | Honest SmolVLA benchmark |
+| `labs/lab01_pnp/configs/rollout_smolvla.yaml` | SmolVLA | `random` | `home` | Full record box | Honest SmolVLA generalization (new draw each run) |
+| policy YAML + `LAB01_EPISODE_INIT=labs/lab01_pnp_agent/configs/smolvla_v4_div50_home20_spawns.json` | Any compatible policy | random, then overwritten | `home` | 20 frozen full-box poses | **Lab01-PnP-Home20** ([`home20.md`](../lab01_pnp_agent/home20.md)) |
 | `labs/lab01_pnp/configs/rollout_smolvla_demo.yaml` | SmolVLA | `random` | `home` | `x∈[0.265,0.29]`, `y∈[0.175,0.205]`, `yaw∈[-15°,0°]` | Narrowed random demo (default `eval.cmd`) |
 | `labs/lab01_pnp/configs/rollout_smolvla_demo_fixed.yaml` | SmolVLA | `fixed` | `home` | Always `(0.27, 0.20, yaw −8°)` via `cube_positions_demo_fixed.json` | Fixed-pose SmolVLA demo |
 | `labs/lab01_pnp/configs/rollout_act.yaml` | ACT | `random` | `follow` | Full record box | Honest ACT benchmark |
@@ -724,6 +727,10 @@ Recording / full-range box (leader teleop):
 
 Lab 01 **keeps both on purpose** in the eval YAMLs above: SmolVLA → `home`, ACT → `follow`. That is an **intentional side-by-side example** of the two reset styles (not an ACT-vs-SmolVLA algorithm requirement). Use it to see how episode-start arm pose changes closed-loop behavior; when quoting §6.4, keep each policy paired with the `reset_arm` in the table (or re-measure after changing it). Do **not** “unify” these files unless you want a single protocol for a new measurement campaign.
 
+#### 6.2.1 Lab01-PnP-Home20
+
+**Lab01-PnP-Home20** freezes 20 cube poses and the home arm start `qpos` `[0.0, -0.3, 0.6, 1.2, 0.0, 0.85]` so later runs share initial conditions. It is an eval protocol, not a training dataset. Pose file, seed rule, the 0.85 score table, and the 193-episode publish scripts: [`labs/lab01_pnp_agent/home20.md`](../lab01_pnp_agent/home20.md). Teleop full-range numbers stay in §6.4.
+
 Fixed pose freezes **both** translation and yaw. Episode-to-episode outcomes can still differ because policies (especially SmolVLA flow sampling) are stochastic and because inference latency / chunking change the closed loop.
 
 **SmolVLA** configs include the training `rename_map` (`camera_top/front/wrist` → `camera1/2/3`). **ACT** configs must **not** use that map — use the `rollout_act*.yaml` files.
@@ -743,7 +750,7 @@ Optional **`LAB01_N_ACTION_STEPS`**: when set, passed as `--policy.n_action_step
 
 Living comparison table for closed-loop MuJoCo eval on this scene. Append a row when a new policy or checkpoint is measured; do not overwrite prior rows.
 
-**n** is small for demo/fixed runs; treat those as indicative, not precise CI estimates. Full-range rows are the primary generalization numbers. Quote `reset_arm`, inference backend, and `n_action_steps` with the success fraction — do not mix protocols.
+**n** is small for demo/fixed runs; treat those as indicative, not precise CI estimates. Full-range rows are the primary generalization numbers. Agent-yaw paired comparisons use the Home20 file in [`home20.md`](../lab01_pnp_agent/home20.md); do not merge those fractions into the rows below. Quote `reset_arm`, inference backend, and `n_action_steps` with the success fraction — do not mix protocols.
 
 SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 
@@ -754,7 +761,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | RTC | GLFW | 10 | **5/10 (50%)** | Same pose; RTC delay warnings throughout |
 | SmolVLA 50K | Fixed `(0.27,0.20,−8°)` | `home` | Sync | GLFW | 10 | **3/10 (30%)** | Fewer knock-aways; more mid-transfer drops |
 | ACT 50K (15-D state) | Full-range random | `follow` | Sync | EGL | 50 | **32/50 (64%)** | Reference with `LAB01_N_ACTION_STEPS=50`; pos+vel+ee; Hub [alexhegit/so101-simstudio-lab01-pnp-act](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act) |
-| ACT 80K (15-D, **scripted-agent** 100 ep) | Full-range random | `follow` | Sync | **GLFW** | 50 | **9/50 (18%)** | `n_action_steps=50`, 30 s / 600 ticks; ckpt `lab01_pnp_act_agent/080000`; Hub data [alexhegit/so101-simstudio-lab01-pnp-agent](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent). Funnel: reach 50/50, close 47/50, lift 14/50. **Do not cite** DORobot OSMesa 0/50 (wall-clock truncation). After-action: [`agent_act_80k.md`](agent_act_80k.md) |
+| ACT 80K (15-D, **scripted-agent** 100 ep) | Full-range random | `follow` | Sync | **GLFW** | 50 | **9/50 (18%)** | `n_action_steps=50`, 30 s / 600 ticks; ckpt `lab01_pnp_act_agent/080000`; Hub data [alexhegit/so101-simstudio-lab01-pnp-agent](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent). Funnel: reach 50/50, close 47/50, lift 14/50. **Do not cite** DORobot OSMesa 0/50 (wall-clock truncation). After-action: [`agent_act_80k.md`](../lab01_pnp_agent/agent_act_80k.md) |
 | ACT 50K (6-D state) | Full-range random | `follow` | Sync | EGL | 50 | **29/50 (58%)** | Joint `.pos` only (`LAB01_ACT_STATE_DIM=6`); same protocol as 15-D 64% row; Hub [alexhegit/so101-simstudio-lab01-pnp-act-state6](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-state6) |
 | ACT 50K | Full-range random | `follow` | Sync | — | 50 | **23/50 (46%)** | Same checkpoint with `n_action_steps=100` (historical log) |
 | ACT 50K | Fixed `(0.27,0.20,−8°)` | `follow` | Sync | GLFW | 10 | **8/10 (80%)** | `n_action_steps=100`, `rollout_act_demo_fixed.yaml` |
@@ -789,7 +796,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 
 - `reset_arm` matches the intentional §6.2 contrast (SmolVLA and MolmoAct2 eval YAMLs → `home`, ACT → `follow`). Do not mix rows when claiming a single protocol.
 - On this 50-episode dataset, under the measured setups: **ACT full-range (15-D 64% / 6-D 58%, same level at n=50) > MolmoAct2 10K 6-D (54%) > MolmoAct2 10K 15-D (30%) > SmolVLA 50K full-range (22%)**. Quote `state=15` vs `state=6` when citing ACT or MolmoAct2; do not collapse them into one number.
-- **Scripted-agent ACT 80K (100 ep) is 9/50 (18%)** on the same full-range ACT YAML (GLFW, 30 s/ep). Do not cite it as beating teleop 64%. Wrist is locked in the demos; see [`agent_act_80k.md`](agent_act_80k.md).
+- **Scripted-agent ACT 80K (100 ep) is 9/50 (18%)** on the same full-range ACT YAML (GLFW, 30 s/ep). Do not cite it as beating teleop 64%. Wrist is locked in the demos; see [`agent_act_80k.md`](../lab01_pnp_agent/agent_act_80k.md).
 - 6-D ACT matches real SO-101 joint-pos IL. The 6-point gap vs 15-D is within n=50 noise; choose 6-D for sim2real alignment, not for a sim-success gain.
 - MolmoAct2 6-D vs 15-D is a **different** story than ACT. The SO100/101 base discretizes proprio into a **language state string** pretrained on **6 joint tokens**. Lab 01 15-D fine-tune fitted quantile stats on 15 channels (pos+vel+EE) and eval expanded rollout to match; 6-D keeps the pretrained layout. Train recipe was otherwise identical (bs32 × 10K, LoRA). The 24-point full-range gap is unlikely n=50 noise (two-proportion z≈2.5); failure mode is still mostly missed grasps at spawn, just fewer of them. Do not copy this Molmo gap onto ACT.
 - Fixed spawn raises ACT (80%) and MolmoAct2 (70%) more than SmolVLA (≈30–50%). SmolVLA is not classroom-stable even at a known-good pose.
@@ -1235,14 +1242,14 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
 | `hz_bench.cmd` | Headless closed-loop Hz sweep across keepers (wraps `eval.cmd`) |
 | `hz_bench/` | `COMPARISON.md` (sync/RTC tables + FAQ), `RESULTS.md`, `summarize.py` |
-| `data_improvement.md` | Agent-for-data chapter: Phase 0 audit + Phase 1 scripted grasp (privileged pose, joint lerp, Jacobian IK; Agent programs collector, not 20 Hz servo) |
 | `audit_teleop_quality.py` | Phase 0 teleop parquet quality proxies (path / jerk / duration) |
 | `auto_collect_poc.cmd` | GLFW PoC: scripted pick-place on .43 (`LAB01_POC_HEADLESS=1` for OSMesa) |
 | `collect_yaw.cmd` | One-click yaw-aware dataset: `auto` create-50 / expand-100, `init`, `expand [N]` |
 | `auto_collect_yaw.cmd` | Low-level collector (smoke unless `LAB01_YAW_RECORD=1`); used by `collect_yaw.cmd` |
-| `agent_act_80k.md` | Fixed-wrist agent dataset / ACT 80K after-action and yaw-aware successor spec |
-| `data_vs_success.md` | Three datasets × two coverage figures × ACT closed-loop (teleop 64% vs fixed-wrist 18%; yaw-aware eval pending) |
-| `estimate_cube_pose.py` / `dataset_stats_viz.py` | Recover cube XY/yaw from the top camera; write `viz/coverage_*.png` |
+| `estimate_cube_pose.py` / `dataset_stats_viz.py` | Recover cube XY/yaw from the top camera; write `../lab01_pnp_agent/viz/coverage_*.png` |
+| `collect_policy_recovery.py` / `collect_policy_takeover.py` | Policy-rollout recorders for the agent-yaw line (ACT follow, DAgger, takeover) |
+| `train_upweight_episodes.py` | `lerobot-train` wrapper that repeats the last N episodes' frames |
+| `probe_open_loop.py` / `probe_release_open_loop.py` | Open-loop checks of a policy on recorded expert frames |
 | `eval_vla_jepa_gui.cmd` | GLFW wrapper for local VLA-JEPA checkpoints |
 | `plot_act_loss.py` | Parse `train_act.log` → ACT loss CSV/PNG |
 | `push_dataset.cmd` / `hf_dataset_card.md` | Validate + upload dataset to Hub |
@@ -1254,6 +1261,8 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `loss_curve_run1.*` | SmolVLA Run 1 training loss (reference) |
 | `loss_curve_act_mi300x_50k.*` | ACT 50K training loss (reference) |
 | `lab01_pnp.md` | This runbook |
+
+Agent-generated trajectories, the Home20 pose file, and the 193-episode Hub publish scripts are under [`labs/lab01_pnp_agent/`](../lab01_pnp_agent/lab01_pnp_agent.md). Collectors (`auto_collect_yaw.py`, `collect_policy_*.py`) stay here. Train and eval entry points stay here; the agent lab's `_env.sh` sources this lab's `_env.sh` and adds only Home20 / 193 Hub ids. Old `push_*agent193*` / `push_smolvla_follow2` paths in this directory exec the scripts next door.
 
 Local scratch (not committed): project-root `.tmp/`.
 

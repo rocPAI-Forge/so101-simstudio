@@ -50,4 +50,4 @@ yaw −44.93° … +44.66°, wrist targets −0.650 … +1.049 rad, and pre-clos
 cube slip ≤4.15 mm.
 
 Collector: `labs/lab01_pnp/auto_collect_yaw.py`.
-Experiment rationale and predecessor failure: `labs/lab01_pnp/agent_act_80k.md`.
+Experiment rationale and predecessor failure: `labs/lab01_pnp_agent/agent_act_80k.md`.

@@ -314,9 +314,10 @@ LAB01_N_ACTION_STEPS="${LAB01_N_ACTION_STEPS:-}"
 LAB01_HZ_BENCH_LOG="${LAB01_HZ_BENCH_LOG:-./outputs/eval/hz_bench}"
 
 # -----------------------------------------------------------------------------
-# 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
-#    push_act_state6_model.cmd / push_act_agent_yaw_v4_model.cmd /
-#    push_vla_jepa_model.cmd / push_groot_model.cmd
+# 7) Hub — teleop 50-ep repos:
+#    push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
+#    push_act_state6_model.cmd / push_vla_jepa_model.cmd / push_groot_model.cmd
+#    Agent-yaw / 193 / Home20 repos: labs/lab01_pnp_agent/_env.sh and its push_*.cmd.
 # -----------------------------------------------------------------------------
 LAB01_SMOLVLA_HF_REPO_ID="${LAB01_SMOLVLA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-smolvla}"
 LAB01_ACT_HF_REPO_ID="${LAB01_ACT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act}"

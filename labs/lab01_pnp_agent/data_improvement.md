@@ -69,7 +69,7 @@ Agent 在 Phase 0 的产出：把「看起来乱」变成可对比的代理指�
 
 ## Phase 1 — Agent 如何产出高质量抓取轨迹
 
-实现：[`auto_collect_poc.py`](auto_collect_poc.py)、[`auto_collect_poc.cmd`](auto_collect_poc.cmd)。  
+实现：[`auto_collect_poc.py`](../lab01_pnp/auto_collect_poc.py)、[`auto_collect_poc.cmd`](../lab01_pnp/auto_collect_poc.cmd)。  
 场景：`SO101/scenes/simple_pick`，机器人 `action_mode=position`（6 维关节，与 ACT 对齐）。
 
 ### 1. 这一阶段 Agent 具体做了什么
@@ -230,7 +230,7 @@ LAB01_POC_RECORD=1 LAB01_POC_HEADLESS=1 MUJOCO_GL=osmesa \
 
 覆盖：`LAB01_POC_DATASET_ROOT`、`LAB01_POC_REPO_ID`、`LAB01_POC_RANDOM=1`、`LAB01_POC_SAVE_FAILURES=1`。
 
-原始评测 Hz / RTC 口径仍见 [`hz_bench/COMPARISON.md`](hz_bench/COMPARISON.md)。
+原始评测 Hz / RTC 口径仍见 [`hz_bench/COMPARISON.md`](../lab01_pnp/hz_bench/COMPARISON.md)。
 
 ### 8. Phase 1 已证明 / 尚未证明
 

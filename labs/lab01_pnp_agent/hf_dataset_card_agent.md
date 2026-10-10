@@ -27,7 +27,7 @@ Privileged-state scripted expert (cube pose + joint lerp + Jacobian IK) recorded
 
 Teleop counterpart: [alexhegit/so101-simstudio-lab01-pnp](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp).
 
-**Closed-loop (do not treat as a 64% ACT set):** ACT 80K on this dataset, full-range eval on .43 GLFW, 30 s/ep, `n_action_steps=50`: **9/50 (18%)**. The expert **locks wrist** at close (`wrist_roll=0.17` on all 100 episodes) and does not map cube yaw to jaw alignment. After-action: `labs/lab01_pnp/agent_act_80k.md`. A follow-up yaw-aware collector will use a **new** repo id.
+**Closed-loop (do not treat as a 64% ACT set):** ACT 80K on this dataset, full-range eval on .43 GLFW, 30 s/ep, `n_action_steps=50`: **9/50 (18%)**. The expert **locks wrist** at close (`wrist_roll=0.17` on all 100 episodes) and does not map cube yaw to jaw alignment. After-action: `labs/lab01_pnp_agent/agent_act_80k.md`. A follow-up yaw-aware collector will use a **new** repo id.
 
 ## Documentation
 

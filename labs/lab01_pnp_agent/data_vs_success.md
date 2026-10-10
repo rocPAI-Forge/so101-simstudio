@@ -1,11 +1,11 @@
 # Lab 01 — 三种示范数据 vs ACT 闭环成功率
 
 Date: 2026-09-22  
-Related: [agent_act_80k.md](agent_act_80k.md)（固定腕 80K 复盘）、[data_improvement.md](data_improvement.md)（阶段账）、[lab01_pnp.md](lab01_pnp.md) §6.4。
+Related: [agent_act_80k.md](agent_act_80k.md)（固定腕 80K 复盘）、[data_improvement.md](data_improvement.md)（阶段账）、[lab01_pnp.md](../lab01_pnp/lab01_pnp.md) §6.4。
 
 本页把两张覆盖图、三种 LeRobot v3 示范、以及已经做过的 ACT 闭环数字放在同一张对照里。核心读法：**示范里立方体朝向是否多样、腕部是否跟着朝向变，决定了 ACT 在全范围随机 yaw 上能不能抬起来**；训练集越大、BC loss 越低，并不能补偿这个缺口。
 
-图由 [`estimate_cube_pose.py`](estimate_cube_pose.py)（俯视相机反推 reset 位姿）+ [`dataset_stats_viz.py`](dataset_stats_viz.py) 生成，输出在 [`viz/`](viz/)。
+图由 [`estimate_cube_pose.py`](../lab01_pnp/estimate_cube_pose.py)（俯视相机反推 reset 位姿）+ [`dataset_stats_viz.py`](../lab01_pnp/dataset_stats_viz.py) 生成，输出在 [`viz/`](viz/)。三列保持为 teleop 50、固定腕 100、agent-yaw 100。v4 的 DAgger 和后来的 ACT follow 不画进这张图，读法在 [`lab01_pnp_agent.md`](lab01_pnp_agent.md)。
 
 ---
 
@@ -39,7 +39,7 @@ Teleop / 固定腕采集时 **没有把 cube yaw 写入 parquet**。图中朝向
 | | Teleop（leader） | Agent 固定腕 | Agent-yaw |
 |---|---|---|---|
 | Hub / 本地 | `so101-simstudio-lab01-pnp` | `…-pnp-agent` | `…-pnp-agent-yaw` |
-| 采集器 | 人手 leader | [`auto_collect_poc.py`](auto_collect_poc.py)，腕锁死 | [`auto_collect_yaw.py`](auto_collect_yaw.py)，面法向 + 转腕 |
+| 采集器 | 人手 leader | [`auto_collect_poc.py`](../lab01_pnp/auto_collect_poc.py)，腕锁死 | [`auto_collect_yaw.py`](../lab01_pnp/auto_collect_yaw.py)，面法向 + 转腕 |
 | 保存成功集 | 50 | 100 | **100** |
 | 帧数（20 Hz） | 21 218 | 50 126 | 45 654 |
 | 中位时长 | 406 帧 ≈ 20 s | 514 帧 ≈ 26 s | 448 帧 ≈ 22 s |
@@ -98,7 +98,7 @@ Teleop 为什么还能到 64%：人手会为朝向改腕部（图 2 左栏有带
 
 ## 5. 现在卡在哪
 
-XY 已按配额补到 100 条（各格 25）。50 条上的 ACT 已停、权重已删；DORobot 上同一目录 `lab01_pnp_act_agent_yaw` 正对 100 条 **从零** 跑 80K / bs64。配方见 [`collect_yaw.cmd`](collect_yaw.cmd) 和 [`agent_act_80k.md`](agent_act_80k.md) §7.6。
+XY 已按配额补到 100 条（各格 25）。50 条上的 ACT 已停、权重已删；DORobot 上同一目录 `lab01_pnp_act_agent_yaw` 正对 100 条 **从零** 跑 80K / bs64。配方见 [`collect_yaw.cmd`](../lab01_pnp/collect_yaw.cmd) 和 [`agent_act_80k.md`](agent_act_80k.md) §7.6。
 
 在那之前不要：
 

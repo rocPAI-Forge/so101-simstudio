@@ -11,6 +11,7 @@ __pycache__/
 
 # Datasets (Hub / local LeRobot stores). Keep the SimStudio Python package.
 datasets/
+labs/lab01_pnp_agent/datasets/
 !src/simstudio/datasets/
 !src/simstudio/datasets/*.py
 
