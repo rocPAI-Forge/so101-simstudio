@@ -5,6 +5,8 @@ Each subdirectory is one simulation scene (robot + workspace + task objects).
 | Scene | Path | Description |
 |-------|------|-------------|
 | `simple_pick` | `simple_pick/scene.xml` | Hello-world: single cube pick on a table |
+| `kitchen_counter` | `kitchen_counter/scene.xml` | Text2MuJoCo 01 workcell + SO-101: cube, button, place box |
+| `smart_drawer` | `smart_drawer/scene.xml` | Text2MuJoCo 02 workcell + SO-101: sliding tool drawer |
 
 Robot arm MJCF is included from `SO101/so101_new_calib.xml` (shared across scenes).
 

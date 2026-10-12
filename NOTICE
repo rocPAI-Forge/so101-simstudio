@@ -27,6 +27,7 @@ Major components:
   - box2ai-robotics joycon-robotics (MIT) — git submodule; optional Joy-Con teleop
   - DeepMind MuJoCo (Apache-2.0) — physics simulation
   - TheRobotStudio SO-ARM100 / SO-101 assets (Apache-2.0) — robot mesh and URDF lineage
+  - Text2MuJoCo 01-button-cube-box / 02-smart-drawer workcells (MIT) — kitchen_counter, smart_drawer
   - PyTorch, NumPy, SciPy, and other Python dependencies — see THIRD_PARTY_NOTICES.md
 
 Optional system components inside the joycon-robotics submodule (GPL-2.0 / GPL-3.0)

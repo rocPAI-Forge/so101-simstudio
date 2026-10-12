@@ -14,7 +14,7 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
   - `common/`: Shared constants and action mapping utilities.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
-  - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`).
+  - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`; ROSCon demos: `kitchen_counter`, `smart_drawer`).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
 - **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why.
 - **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
@@ -89,6 +89,8 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Format | `make rocm-format` |
 | Test | `make rocm-test` |
 | MuJoCo preview | `.venv-rocm/bin/python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml` |
+| Smoke: kitchen teleop | `make smoke-keyboard-teleop-kitchen` |
+| Smoke: smart-drawer teleop | `make smoke-keyboard-teleop-smart-drawer` |
 | Smoke: keyboard record | `make smoke-keyboard-record VIEW_MODE=mujoco` |
 | Smoke: keyboard replay | `make smoke-keyboard-replay` |
 | Smoke: keyboard teleop | `make smoke-keyboard-teleop` |

@@ -1,0 +1,147 @@
+<mujoco model="smart_drawer">
+  <!-- ROSCon teleop workcell adapted from Text2MuJoCo showcase
+       `02-smart-drawer` (MIT): bench + tool cabinet with sliding drawer.
+
+       Layout (camera-facing cabinet, arm in front of the handle):
+         - Cabinet FRONT faces +Y so front/top cameras see the drawers.
+         - SO-101 is mounted via so101_drawer_mount.xml at (0.18, 0.48),
+           facing -Y — standing in front of the handle at a reachable distance.
+         - Drawer opens +Y (toward the arm / operator). Pull = toward yourself.
+         Bench top at z=0. -->
+  <include file="../../so101_drawer_mount.xml"/>
+
+  <option timestep=".001" noslip_iterations="20" noslip_tolerance="1e-6">
+    <flag contact="enable" override="enable"/>
+  </option>
+
+  <default>
+    <geom friction="0.8 0.01 0.001" solimp="0.98 0.999 0.0005" solref="0.01 1"/>
+    <default class="world_part">
+      <geom contype="1" conaffinity="7"/>
+    </default>
+    <default class="drawer_part">
+      <geom contype="1" conaffinity="7" friction="1.2 0.01 0.001"/>
+    </default>
+  </default>
+
+  <statistic center="0.18 0.22 0.12" extent="1.0"/>
+
+  <visual>
+    <headlight ambient="0.35 0.35 0.38" diffuse="0.72 0.72 0.70" specular="0.18 0.18 0.18"/>
+    <global azimuth="20" elevation="-25" offheight="720" offwidth="1280"/>
+    <quality offsamples="8" shadowsize="2048"/>
+    <map znear="0.01" zfar="8"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.22 0.24 0.28" rgb2="0.02 0.02 0.03" width="32" height="512"/>
+    <texture name="floor_tex" type="2d" builtin="checker" width="512" height="512"
+             rgb1="0.20 0.22 0.24" rgb2="0.30 0.32 0.34"/>
+    <material name="floor_mat" texture="floor_tex" texrepeat="5 5" reflectance="0.05"/>
+    <material name="bench_mat" rgba="0.52 0.38 0.24 1" roughness="0.75"/>
+    <material name="cabinet_mat" rgba="0.66 0.69 0.72 1" roughness="0.55"/>
+    <material name="drawer_mat" rgba="0.28 0.32 0.36 1" roughness="0.48"/>
+    <material name="inside_mat" rgba="0.13 0.15 0.17 1" roughness="0.75"/>
+    <material name="handle_mat" rgba="0.06 0.07 0.08 1" roughness="0.3"/>
+    <material name="green_mat" rgba="0.03 0.82 0.20 1" emission="0.10"/>
+  </asset>
+
+  <worldbody>
+    <!-- Same calibrated camera names; poses still cover the cabinet front well. -->
+    <camera name="top" pos="0.05 0.26 0.42" quat="-0.535362 -0.133481 0.201765 0.809235" fovy="60"/>
+    <camera name="front" pos="0.3200 0.4000 0.2600" quat="0.138452 0.058333 0.383862 0.911086" fovy="65"/>
+    <camera name="overview" pos="0.95 0.55 0.70" quat="0.560986 0.430459 0.430459 0.560986" fovy="55"/>
+
+    <light name="key_light" pos="-1 -1 2.7" dir="0.3 0.4 -1" directional="true" castshadow="true"/>
+    <light name="fill_light" pos="1.4 -0.2 1.8" dir="-0.8 0 -0.8" directional="true"
+           diffuse="0.4 0.42 0.46"/>
+
+    <geom name="ground_geom" class="world_part" type="plane" size="2.5 2.5 0.1" pos="0 0 -0.75"
+          material="floor_mat"/>
+
+    <!-- Bench under cabinet + arm standing in front -->
+    <body name="workbench" pos="0.18 0.20 0">
+      <geom name="workbench_top_geom" class="world_part" type="box" size="0.50 0.45 0.018"
+            pos="0 0 -0.018" material="bench_mat"/>
+      <geom name="bench_leg_left" class="world_part" type="box" pos="-0.44 0 -0.393"
+            size="0.030 0.36 0.357" material="handle_mat"/>
+      <geom name="bench_leg_right" class="world_part" type="box" pos="0.44 0 -0.393"
+            size="0.030 0.36 0.357" material="handle_mat"/>
+    </body>
+
+    <!-- Cabinet: front faces +Y (toward arm and cameras). -->
+    <body name="cabinet" pos="0.18 0.02 0.105">
+      <geom name="cabinet_back_geom" class="world_part" type="box" pos="0 -0.100 0"
+            size="0.125 0.008 0.105" material="cabinet_mat"/>
+      <geom name="cabinet_left_geom" class="world_part" type="box" pos="-0.120 0 0"
+            size="0.008 0.100 0.105" material="cabinet_mat"/>
+      <geom name="cabinet_right_geom" class="world_part" type="box" pos="0.120 0 0"
+            size="0.008 0.100 0.105" material="cabinet_mat"/>
+      <geom name="cabinet_top_geom" class="world_part" type="box" pos="0 0 0.100"
+            size="0.112 0.100 0.008" material="cabinet_mat"/>
+      <geom name="cabinet_bottom_geom" class="world_part" type="box" pos="0 0 -0.100"
+            size="0.112 0.100 0.008" material="cabinet_mat"/>
+      <!-- Horizontal shelf above the lower drawer; keep ≥4 mm clearance from drawer walls. -->
+      <geom name="cabinet_divider_geom" class="world_part" type="box" pos="0 0 0.028"
+            size="0.112 0.100 0.006" material="cabinet_mat"/>
+      <geom name="upper_drawer_false_front" class="world_part" type="box" pos="0 0.100 0.060"
+            size="0.110 0.006 0.035" material="drawer_mat"/>
+      <geom name="upper_handle" class="world_part" type="capsule"
+            fromto="-0.045 0.112 0.060 0.045 0.112 0.060" size="0.006" material="handle_mat"/>
+    </body>
+
+    <body name="unlock_button_mount" pos="0.08 0.135 0.185">
+      <geom name="unlock_button_backplate" class="world_part" type="cylinder" pos="0 -0.008 0"
+            size="0.020 0.004" quat="0.707107 0.707107 0 0" material="handle_mat"/>
+      <geom name="unlock_button_geom" class="world_part" type="cylinder" pos="0 0 0"
+            size="0.012 0.006" quat="0.707107 0.707107 0 0" material="green_mat"/>
+    </body>
+
+    <!-- Drawer opens toward the arm (+Y). Closed handle ≈ (0.18, 0.15); open ≈ (0.18, 0.23).
+         Arm base at y=0.48 → ~15 cm from home EE to closed handle. -->
+    <body name="tool_drawer" pos="0.18 0.04 0.050">
+      <!-- Soft slide so keyboard/Joy-Con pull can overcome joint friction. -->
+      <joint name="drawer_slide" type="slide" axis="0 1 0" range="0 0.08"
+             damping="1.5" frictionloss="0.05"/>
+      <geom name="drawer_bottom_geom" class="drawer_part" type="box" pos="0 0 0"
+            size="0.108 0.085 0.006" mass="0.5" material="inside_mat"/>
+      <geom name="drawer_left_geom" class="drawer_part" type="box" pos="-0.102 0 0.028"
+            size="0.006 0.085 0.028" mass="0.06" material="drawer_mat"/>
+      <geom name="drawer_right_geom" class="drawer_part" type="box" pos="0.102 0 0.028"
+            size="0.006 0.085 0.028" mass="0.06" material="drawer_mat"/>
+      <geom name="drawer_back_geom" class="drawer_part" type="box" pos="0 -0.079 0.028"
+            size="0.096 0.006 0.028" mass="0.06" material="drawer_mat"/>
+      <geom name="drawer_front_geom" class="drawer_part" type="box" pos="0 0.090 0.014"
+            size="0.112 0.007 0.036" mass="0.16" material="drawer_mat"/>
+      <geom name="drawer_handle_geom" class="drawer_part" type="capsule"
+            fromto="-0.045 0.106 0.014 0.045 0.106 0.014" size="0.007" mass="0.03"
+            material="handle_mat"/>
+      <!-- Decorative tray tools only (no collision / no grasp). -->
+      <geom name="tool_red" type="box" pos="-0.045 -0.01 0.016" size="0.024 0.032 0.010"
+            rgba="0.82 0.08 0.06 1" mass="0.01" contype="0" conaffinity="0"/>
+      <geom name="tool_yellow" type="cylinder" pos="0.040 -0.012 0.022" size="0.015 0.016"
+            rgba="0.94 0.62 0.03 1" mass="0.01" contype="0" conaffinity="0"/>
+    </body>
+
+    <body name="block" pos="0.38 0.28 0.015">
+      <freejoint name="block"/>
+      <geom name="block" type="box" size=".015 .015 .015" mass="0.05"
+            rgba="0.15 0.85 0.20 1" friction="2 0.01 0.0001" solimp="0.95 0.95 0.001"
+            solref="0.02 1" margin="0.003" condim="4"/>
+    </body>
+
+    <body name="target" pos="0.2 0.25 .3" quat="0 1 0 0" mocap="true">
+      <geom name="target" type="box" size=".03 .03 .03" contype="0" conaffinity="0" rgba=".6 .3 .3 0"/>
+    </body>
+  </worldbody>
+
+  <sensor>
+    <framepos name="block_pos" objtype="geom" objname="block"/>
+    <framequat name="block_quat" objtype="geom" objname="block"/>
+    <jointpos name="drawer_position" joint="drawer_slide"/>
+    <framepos name="so101/ee_pos" objtype="site" objname="gripperframe"/>
+    <framequat name="so101/ee_quat" objtype="site" objname="gripperframe"/>
+    <framelinvel name="so101/ee_vel" objtype="site" objname="gripperframe"/>
+    <frameangvel name="so101/ee_angvel" objtype="site" objname="gripperframe"/>
+  </sensor>
+</mujoco>

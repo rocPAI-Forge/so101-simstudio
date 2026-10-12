@@ -56,7 +56,7 @@ Post-recording visualization: `dataset_viz` (Rerun) and replay scripts.
 ### Simulation
 
 - **Robot**: SO-101 6-DOF arm
-- **Scene**: Table pick task (`simple_pick`)
+- **Scene**: Table pick (`simple_pick`); Text2MuJoCo demos (`kitchen_counter`, `smart_drawer`)
 - **Cameras**: front / top / wrist
 - **Physics**: MuJoCo
 
