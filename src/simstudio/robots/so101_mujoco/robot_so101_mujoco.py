@@ -313,6 +313,8 @@ class SO101MujocoRobot(Robot):
         self._glfw_ctx = mj.MjrContext(self.model, mj.mjtFontScale.mjFONTSCALE_150)
         glfw.make_context_current(None)
 
+        # Display grid may include MJCF ``overview`` even when it is not in
+        # camera_names (teleop awareness only; not written to observations).
         glfw_cam_names = list(self.config.camera_names)
         overview_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_CAMERA, "overview")
         if overview_id >= 0 and "overview" not in glfw_cam_names:

@@ -56,8 +56,8 @@ Post-recording visualization: `dataset_viz` (Rerun) and replay scripts.
 ### Simulation
 
 - **Robot**: SO-101 6-DOF arm
-- **Scene**: Table pick (`simple_pick`); Text2MuJoCo demos (`kitchen_counter`, `smart_drawer`)
-- **Cameras**: front / top / wrist
+- **Scene**: Table pick (`simple_pick`); Text2MuJoCo demos (`kitchen_counter`, `smart_drawer`) — how to run: [QUICKSTART §1](QUICKSTART.md#roscon-demo-scenes-text2mujoco), [SO101/scenes/README.md](SO101/scenes/README.md)
+- **Cameras**: front / top / wrist (recorded); optional `overview` for teleop viewing — [camera notes](SO101/scenes/README.md#cameras-record-vs-teleop-vs-train)
 - **Physics**: MuJoCo
 
 ## Requirements
@@ -132,6 +132,8 @@ python -c "import torch; print(torch.__version__, torch.version.hip, torch.cuda.
 ```bash
 make smoke-keyboard-record VIEW_MODE=mujoco EPISODES=1
 make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
+make smoke-keyboard-teleop-kitchen          # Text2MuJoCo 01 workcell
+make smoke-keyboard-teleop-smart-drawer     # Text2MuJoCo 02 drawer pull
 ./scripts/quicktest/keyboard.cmd    # fixed 2-episode run → test.log
 ```
 

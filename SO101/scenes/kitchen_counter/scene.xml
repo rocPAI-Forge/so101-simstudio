@@ -47,7 +47,8 @@
     <!-- Same calibrated cameras as simple_pick (policy / teleop) -->
     <camera name="top" pos="0.05 0.26 0.42" quat="-0.535362 -0.133481 0.201765 0.809235" fovy="60"/>
     <camera name="front" pos="0.3200 0.4000 0.2600" quat="0.138452 0.058333 0.383862 0.911086" fovy="65"/>
-    <!-- Viewer-only wide shots (not in robot.camera_names; GLFW 4th pane uses overview) -->
+    <!-- Teleop GLFW only (4th pane uses overview). Not recorded unless listed in
+         robot.camera_names. Extra overview_* cams are MJCF helpers / unused by default. -->
     <camera name="overview" pos="0.950 1.100 0.780" quat="0.274720 0.156617 0.469850 0.824161" fovy="55"/>
     <camera name="overview_front" pos="0.220 1.200 0.520" quat="0.007236 0.004821 0.554445 0.832175" fovy="55"/>
     <camera name="overview_side" pos="1.250 0.180 0.480" quat="0.559149 0.375268 0.411975 0.613843" fovy="50"/>

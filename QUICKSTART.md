@@ -127,6 +127,20 @@ Both modes produce identical LeRobot v3.0 recordings. Post-recording: `dataset_v
 # or: make smoke-keyboard-teleop
 ```
 
+### ROSCon demo scenes (Text2MuJoCo)
+
+Keyboard teleop on richer workcells (same keys as below). Default recorded cams
+remain `front` / `top` / `wrist`; GLFW may show an `overview` pane for viewing
+only — see [SO101/scenes/README.md](SO101/scenes/README.md#cameras-record-vs-teleop-vs-train).
+
+| Scene | Smoke | Config | Notes |
+|-------|-------|--------|-------|
+| `kitchen_counter` (T2M 01) | `make smoke-keyboard-teleop-kitchen` | `configs/so101_mujoco_keyboard_teleop_kitchen.yaml` | Cube, button, place box — [scene README](SO101/scenes/kitchen_counter/README.md) |
+| `smart_drawer` (T2M 02) | `make smoke-keyboard-teleop-smart-drawer` | `configs/so101_mujoco_keyboard_teleop_smart_drawer.yaml` | Grasp handle, hold **C**, hold **W** to open drawer — [scene README](SO101/scenes/smart_drawer/README.md) |
+
+Run on a machine with a local display (`DISPLAY=:0`, `MUJOCO_GL=glfw`). Teleop-only
+has no mid-session reset — restart the smoke script to return to home.
+
 **Record:**
 
 ```bash

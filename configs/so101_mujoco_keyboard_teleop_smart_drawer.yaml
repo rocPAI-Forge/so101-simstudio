@@ -10,6 +10,7 @@ robot:
   physics_fps: 360
   camera_width: 640
   camera_height: 480
+  # Recorded cams only. Scene ``overview`` is GLFW 4th pane (teleop view), not listed here.
   camera_names: [front, top, wrist]
   show_collision_geometry: false
   render_window: true

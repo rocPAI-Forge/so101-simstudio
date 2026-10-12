@@ -19,13 +19,16 @@ class SO101MujocoConfig(RobotConfig):
     control_fps: int = 180
     physics_fps: int = 360
 
-    # Cameras
+    # Cameras written to observations / LeRobot datasets. Scene MJCF may define
+    # extra cams (e.g. ``overview``); those appear in the GLFW teleop grid only
+    # unless listed here.
     camera_width: int = 640
     camera_height: int = 480
     camera_names: list[str] = field(default_factory=lambda: ["front", "top", "wrist"])
     show_collision_geometry: bool = False
 
-    # Live GLFW rendering window (disable for headless/CI)
+    # Live GLFW rendering window (disable for headless/CI). If the MJCF has an
+    # ``overview`` camera, it is shown as a 4th pane for operator awareness only.
     render_window: bool = True
 
     # Frames drawn per position-mode action. One frame per action means the

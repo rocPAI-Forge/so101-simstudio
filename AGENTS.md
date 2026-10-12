@@ -15,6 +15,7 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
   - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`; ROSCon demos: `kitchen_counter`, `smart_drawer`).
+  - Cameras: record via `robot.camera_names`; optional MJCF `overview` is GLFW teleop-only unless listed there; train/eval subset via `--rename_map` (see [SO101/scenes/README.md](SO101/scenes/README.md#cameras-record-vs-teleop-vs-train)).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
 - **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why.
 - **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
