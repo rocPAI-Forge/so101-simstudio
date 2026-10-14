@@ -12,13 +12,14 @@ SO-101 simulation studio for expert trajectory generation with MuJoCo and LeRobo
   <img src="docs/assets/architecture-flow.png" alt="Teleoperation (keyboard, Joy-Con, leader arm) → MuJoCo simulation → LeRobot dataset v3.0" width="820"/>
 </p>
 
-SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting high-quality expert demonstration datasets for behavior cloning.
+SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting expert demonstration datasets for behavior cloning. v0.1.4 adds a closed-loop Lab 01 line on the same table pick: agent-generated demonstrations, policy finetunes, and one frozen eval.
 
 **Core capabilities:**
 - Multiple teleop backends (keyboard, Joy-Con, leader arm)
 - Two recording GUIs: **MuJoCo** (GLFW 3D window) and **Rerun** (multi-camera stream)
 - High-fidelity MuJoCo physics simulation
 - LeRobot v3.0 dataset format
+- Lab 01 pick-and-place: record or agent-collect → train → MuJoCo eval
 - Modular, extensible architecture
 
 **Platform focus:** Validated on **Ubuntu 24.04 + AMD ROCm** only. **NVIDIA CUDA (Linux)** and **macOS (Apple Silicon / MPS)** are **not supported** in this release — unverified, no install path; see [ROADMAP](ROADMAP.md).
@@ -59,6 +60,19 @@ Post-recording visualization: `dataset_viz` (Rerun) and replay scripts.
 - **Scene**: Table pick task (`simple_pick`)
 - **Cameras**: front / top / wrist
 - **Physics**: MuJoCo
+
+### Lab 01 pick-and-place (v0.1.4)
+
+Same scene and success rule as the leader-teleop lab. Two data sources, one eval.
+
+| Piece | What it is |
+|-------|------------|
+| Human reference | 50 leader episodes, still the v0.1.3 Hub set |
+| Agent set | **193 episodes / 130,835 frames**. Scripted grasps cover an XY grid and yaw bins, with the wrist following the cube. 53 of the episodes are successful follow rollouts from an ACT policy trained on the first 140 |
+| Finetunes | Camera choice, 6-D absolute joints vs relative actions, and frozen / LoRA / full updates. Gains are per model; a full update is not always better |
+| **Home20** | 20 frozen cube poses, arm home, gripper start 0.85, seeds 1000 / 1001 / 1002. Quote `final_success` as /20 and /60 |
+
+Adopted Home20 totals on that protocol: ACT 6-D **53/60** (first 140 episodes only), SmolVLA **51/60**, MolmoAct2 LoRA **39/60**, pi05 full unfreeze **34/60**, DM0.5 **25/60**, GR00T N1.7 absolute **14/60** (uploaded frozen checkpoint; the unfrozen run is 15/60 and was not uploaded). The only score table is [Home20](labs/lab01_pnp_agent/home20.md). The LeRobot submodule stays at v0.6.0; the DM0.5 checkpoint is not loadable from that pin.
 
 ## Requirements
 
@@ -101,6 +115,7 @@ so101-simstudio/
 │   └── common/              # Shared utilities
 ├── configs/                 # YAML configs
 ├── SO101/                   # MuJoCo assets
+├── labs/                    # Lab 01 teleop + agent-yaw / Home20
 ├── scripts/smoke/           # Parameterized manual smoke tests
 ├── scripts/quicktest/       # Fixed 2-episode collaboration runs
 ├── lerobot/                 # LeRobot submodule
@@ -147,10 +162,13 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 | MuJoCo recording GUI (`view_mode=mujoco`) | ✅ |
 | Rerun recording GUI (`view_mode=rerun`) | ✅ |
 | Lab 01 ACT / SmolVLA train + MuJoCo eval | ✅ |
+| Agent-yaw 193-episode dataset + Home20 eval | ✅ |
+| Lab 01 MolmoAct2 / pi05 / GR00T / DM0.5 finetunes | ✅ |
 | Real follower hardware | 🔲 Planned |
 
 ## Version history
 
+- **v0.1.4** (`release-v0.1.4`): 193-episode agent dataset (scripted poses + ACT follow); per-model camera, joint-frame, and full-finetune trials; Home20 as the only cross-model score; MolmoAct2, pi05, GR00T N1.7, DM0.5
 - **v0.1.3** (`release-v0.1.3`): Lab 01 pick-and-place (record → ACT/SmolVLA train → sim2sim eval); lab-local eval configs; Hub reference dataset/policies; wrist cam + spawn layout; ROCm-only docs
 - **v0.1.2** (`release-v0.1.2`): Joy-Con cylindrical reach/swing; decoupled HID sticks; gripper toggle; one-handed A/Y/+ recording; `scripts/quicktest/`; joycon-robotics upstream pin + install-time patch; English docs/prints; repo `so101-simstudio`
 - **v0.1.1** (`release-v0.1.1`): Unified `--view_mode mujoco/rerun`; evdev recording controls; leader reliability; `reset_arm` / `reset_cube`; smoke scripts in `scripts/smoke/`
@@ -162,6 +180,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 
 - [Quick start](QUICKSTART.md)
 - [Lab 01 — PnP record / train / eval](labs/lab01_pnp/lab01_pnp.md)
+- [Lab 01 agent data](labs/lab01_pnp_agent/lab01_pnp_agent.md) · [Home20 scores](labs/lab01_pnp_agent/home20.md)
 - [Architecture](DESIGN.md)
 - [Roadmap](ROADMAP.md)
 - [Agent / dev guide](AGENTS.md)
