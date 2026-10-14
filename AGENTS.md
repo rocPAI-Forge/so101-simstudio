@@ -19,7 +19,7 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 - **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why. `labs/lab01_pnp_agent/` holds the agent-generated trajectory line (agent-yaw datasets, ACT-follow, 193-episode Hub scripts, demo media). Home20 protocol and scores are only in `labs/lab01_pnp_agent/home20.md`. Its `_env.sh` sources `labs/lab01_pnp/_env.sh`. Collectors and the shared `train_*.cmd` / `eval.cmd` stay in `labs/lab01_pnp/`.
 - **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
 - **`third_party/joycon-robotics/`**: Upstream [box2ai-robotics/joycon-robotics](https://github.com/box2ai-robotics/joycon-robotics) git submodule (pinned to upstream `master`). **Do not commit project-specific edits inside the submodule.** SO-101 fixes (serial compatibility, English connect messages) live in `patches/joycon-robotics.patch` and are applied locally by `make joycon-sync` / `scripts/setup-joycon.sh`.
-- **`.tmp/`**: Local scratch (not committed). One-shot smoke helpers and temp logs may live here; do not point formal Hub datasets here.
+- **`.tmp/`**: Local scratch (not committed). One-shot smoke helpers and temp logs may live here; do not point formal Hub datasets here. A directory named `tmp/` is the same kind of scratch and stays out of the repo, at the root or under a lab.
 
 ## Setup
 
