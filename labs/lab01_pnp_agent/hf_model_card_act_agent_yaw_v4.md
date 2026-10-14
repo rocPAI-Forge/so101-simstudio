@@ -21,7 +21,7 @@ ACT policy trained on the yaw-aware agent **v4** dataset with **[SO-101 SimStudi
 
 This repo previously held a **15-D** ACT (MI300X 80K, home n=20 → 17/20). That revision was **deleted**. Do not cite 17/20 for the weights in this repo.
 
-**Lab01-PnP-Home20** for this 6-D checkpoint (`050000`, trained on the 140-episode v4 set, not the later 193-episode follow2 set): **18/20, 17/20, 18/20 = 53/60**. Arm `home`, gripper start 0.85, seeds 1000/1001/1002. Quote `final_success`.
+**Lab01-PnP-Home20** for this 6-D checkpoint (`050000`, trained on the 140-episode v4 set, not the later 193-episode follow2 set): **18/20, 17/20, 18/20 = 53/60**. Arm `home`, gripper start 0.85, seeds 1000/1001/1002. Quote `final_success`. Comparison with the 193-episode runs: [`home20.md`](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp_agent/home20.md).
 
 ## Recipe
 

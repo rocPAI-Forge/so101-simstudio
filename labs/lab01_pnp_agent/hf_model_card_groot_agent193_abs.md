@@ -22,7 +22,7 @@ Fine-tune of [`nvidia/GR00T-N1.7-3B`](https://huggingface.co/nvidia/GR00T-N1.7-3
 
 **Training data:** [alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)
 
-**Lab01-PnP-Home20:** **7/20, 2/20, 5/20 = 14/60**. Reach 60/60, within 4 cm 51/60, close 45/60, lift 17/60. Failed closes are mostly beside the cube (near-zero jaw force).
+**Lab01-PnP-Home20:** **7/20, 2/20, 5/20 = 14/60**. Reach 60/60, within 4 cm 51/60, close 45/60, lift 17/60. Failed closes are mostly beside the cube (near-zero jaw force). A later full unfreeze of these weights scored **15/60** and was not uploaded. This repo stays the frozen-backbone 10K. The comparison is [`home20.md`](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp_agent/home20.md).
 
 The relative-action runs on this same set are not in this repo: 10K scored **0/60** (checkpoint deleted) and a fresh 30K scored **1/60** with approach collapsed to 11/60 reach. A later 5K continuation of these absolute weights at lr `1e-5` was worse on seed 1000 (4/20). Do not resume this cosine; it ended at lr 0.
 

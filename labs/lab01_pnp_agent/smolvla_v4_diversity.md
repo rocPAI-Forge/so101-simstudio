@@ -25,7 +25,7 @@
 - 配置 `labs/lab01_pnp/configs/rollout_smolvla.yaml`：`reset_arm: home`，`home_gripper: -0.1`，方块范围 x[0.26, 0.34]、y[0.165, 0.235]、yaw ±45°。
 - `n_action_steps=50`，EGL，A30，`.venv-cuda`，每集 60 秒。
 - 成功 = 该集结束时方块在容器内。
-- 固定对照用 **Lab01-PnP-Home20**：[`configs/smolvla_v4_div50_home20_spawns.json`](configs/smolvla_v4_div50_home20_spawns.json)（见 [home20.md](home20.md)）。这 20 个方块位姿就是 v4-div 4K 那次 home 评测抽到的点。本页的 0/20、1/20、14/20、15/20、17/20 都是这组点、夹爪起点 **−0.1**。正式 benchmark 的夹爪起点是 **0.85**。2026-10-03，同一份 Home20 用种子 1000、1001、1002 各测 3 次，不是 60 个新方块点。ACT 6 维三次 Home20 是 **18/20、17/20、18/20**，合计 **53/60**（三次都是接近 20/20、闭合 20/20，漏在抬起之后），不是未设种子的单次 **17/20**。SmolVLA actonly 3K 是 **16/20、15/20、14/20**，合计 **45/60**。从该权重再在 follow2（193 集，最后 22 条 ×3）上平 lr 训 2500 步后，同一 3×Home20 是 **16/20、18/20、17/20**，合计 **51/60**，高于 45/60，0.85 列改用 follow2。未设种子的 ACT **17/20** 和 SmolVLA **12/20** 不作为这一列的成绩。不要把本页的 −0.1 分数写进那一列。
+- 固定对照用 **Lab01-PnP-Home20**，清单是 [`configs/smolvla_v4_div50_home20_spawns.json`](configs/smolvla_v4_div50_home20_spawns.json)。正式的夹爪 **0.85** 成绩只记在 [home20.md](home20.md)。本页的 0/20、1/20、14/20、15/20、17/20 都是同一 20 个点、夹爪起点 **−0.1**，不要写进那一列。
 - 统计用的是该次训练的数据集，不是 teleop 数据集。
 - ACT follow 轨迹来自 v4 的 ACT 6 维权重，录制协议是 `rollout_act.yaml`（`reset_arm: follow`，夹爪起点 −0.1）。只保存成功集。这不是人手 teleop。
 
@@ -111,7 +111,7 @@
 
 权重（−0.1 消融 17/20）：`outputs/train/lab01_pnp_smolvla_agent_yaw_v4_actonly3k/checkpoints/003000`。  
 日志：`outputs/eval/smolvla_v4_actonly3k_egl_home_n20.log`、`outputs/eval/smolvla_v4_ctrl3k_egl_home_n20.log`。  
-0.85 Home20 现用权重：`outputs/train/lab01_pnp_smolvla_agent_yaw_v4_actonly_follow2/checkpoints/002500`（51/60；见 [home20.md](home20.md)）。
+0.85 Home20 现用权重：[alexhegit/so101-simstudio-lab01-pnp-smolvla-agent-yaw-follow2](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla-agent-yaw-follow2)（51/60；见 [home20.md](home20.md)）。
 
 ## 还不能写成的话
 

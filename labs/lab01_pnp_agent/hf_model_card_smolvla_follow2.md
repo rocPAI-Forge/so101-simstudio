@@ -19,7 +19,7 @@ SmolVLA fine-tune on the **193-episode** agent-yaw follow2 set. Actions are abso
 
 **Training data:** [alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)
 
-**Lab01-PnP-Home20:** **16/20, 18/20, 17/20 = 51/60**. Arm `home`, gripper start 0.85, seeds 1000/1001/1002. This is not a fresh full-range n=50.
+**Lab01-PnP-Home20:** **16/20, 18/20, 17/20 = 51/60**. Arm `home`, gripper start 0.85, seeds 1000/1001/1002. This is not a fresh full-range n=50. Comparison with the other runs: [`home20.md`](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp_agent/home20.md).
 
 Checkpoint `002500`. Chunk / `n_action_steps` 50.
 

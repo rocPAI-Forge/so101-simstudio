@@ -27,7 +27,7 @@ This repo is the pure-model **34/60** checkpoint. It does not replace [alexhegit
 
 The published weights are the third 5000-step stage. Each stage starts a fresh optimizer at peak lr `2.5e-6`, warmup 200, decay over that stage's 5000 steps down to `2.5e-7`. The checkpoint directory is `005000` because the step counter restarts. Chunk / `n_action_steps` 50.
 
-How this score was reached: [`pi05_unfreeze_home20.md`](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp_agent/pi05_unfreeze_home20.md).
+How this score was reached: [`home20.md`](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp_agent/home20.md#pi05).
 
 ```python
 from lerobot.policies.pi05.modeling_pi05 import PI05Policy

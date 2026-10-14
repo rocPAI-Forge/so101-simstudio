@@ -19,7 +19,7 @@ pi05 fine-tune from [`ant0nh/pi05_pnp_425_25k`](https://huggingface.co/ant0nh/pi
 
 **Training data:** [alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)
 
-**Lab01-PnP-Home20:** **4/20, 6/20, 2/20 = 12/60**. Reach 60/60, close 39/60, lift 15/60. The hole is lift after close.
+**Lab01-PnP-Home20:** **4/20, 6/20, 2/20 = 12/60**. Reach 60/60, close 39/60, lift 15/60. The hole is lift after close. The later full-unfreeze run is a different repo, [alexhegit/so101-simstudio-lab01-pnp-pi05-agent193-unfreeze](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-pi05-agent193-unfreeze), at **34/60**. Comparison: [`home20.md`](https://github.com/rocPAI-Forge/so101-simstudio/blob/main/labs/lab01_pnp_agent/home20.md).
 
 Checkpoint `010000`. Chunk / `n_action_steps` 50. Sync inference.
 

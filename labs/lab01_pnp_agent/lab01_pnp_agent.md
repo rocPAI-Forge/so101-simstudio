@@ -1,9 +1,9 @@
 # Lab 01 PnP Agent — 用 Agent 生成专家轨迹
 
-日期：2026-10-04  
+日期：2026-10-14  
 任务、场景和评测都和 [Lab 01 PnP](../lab01_pnp/lab01_pnp.md) 相同。区别在专家轨迹的来源：Lab 01 由人操作 leader 臂录 teleop，本 lab 由 Agent 编写的采集器和已训好的策略自动产生轨迹。
 
-本页分两块。前半是数据怎么生成：为什么改用 Agent、哪些改法没有提高 SmolVLA、193 条里有什么。后半是 Home20：协议、成绩和这条线上的 Hub 发布，正文在 [`home20.md`](home20.md)，各模型的阶段结论在 [`vla_home20_193.md`](vla_home20_193.md)。逐次实验的数字在链接的账本里，本页只规定怎么读这些数字。
+本页分两块。前半是数据怎么生成：为什么改用 Agent、哪些改法没有提高 SmolVLA、193 条里有什么。Home20 的协议、成绩、各模型为什么停、基座和微调的下载链接都在 [`home20.md`](home20.md)。逐次实验的数字在链接的账本里，本页只规定怎么读这些数字。
 
 命名：目录是 `labs/lab01_pnp_agent/`，数据和模型这一代叫 **agent-yaw**，当前是 **agent-yaw v4**。Hub 上的 `alexhegit/so101-simstudio-lab01-pnp-agent` 已经被固定腕的 100 条脚本集占用，对应 ACT 15 维全范围 **9/50**。新的数据和权重不要复用这个 Hub id，继续用 `…-agent-yaw-*`。
 
@@ -17,9 +17,7 @@
 | [`data_vs_success.md`](data_vs_success.md) | teleop / 固定腕 / agent-yaw 三套数据的覆盖图和 ACT 闭环成功率 |
 | [`smolvla_v4_diversity.md`](smolvla_v4_diversity.md) | agent-yaw v4 上 SmolVLA 从 **0/50** 到 Home20 **51/60** 的每一步 |
 | `hf_dataset_card_agent*.md` | 固定腕、agent-yaw v1–v4 数据集的 Hub 卡片 |
-| [`home20.md`](home20.md) | Lab01-PnP-Home20 协议、0.85 成绩表、193 这条线的发布脚本 |
-| [`vla_home20_193.md`](vla_home20_193.md) | 193 条上各模型的 Home20 阶段结论，以及和 NVIDIA SO-101 GR00T 课程的差别 |
-| [`pi05_unfreeze_home20.md`](pi05_unfreeze_home20.md) | pi05 全量解冻到纯模型 Home20 **34/60** 的路径 |
+| [`home20.md`](home20.md) | Home20 协议、唯一的成绩表、各模型为什么停、基座和微调的下载链接、发布脚本 |
 | `_env.sh` | `source` Lab 01 的 `_env.sh`，再设 Home20 清单和 193 条 Hub id |
 | `configs/smolvla_v4_div50_home20_spawns.json` | Home20 的 20 个方块位姿。`labs/lab01_pnp/configs/` 里的同名文件是符号链接 |
 | `configs/rollout_act_agent_yaw.yaml` | agent-yaw ACT 评测：`gripperframe`，夹爪 0.85，`reset_arm: home` |
@@ -46,9 +44,9 @@
 | Teleop 全范围 | 50 条人手 leader，方块在记录盒里新抽，ACT 用 `follow`，SmolVLA 用 `home` | ACT 15 维 **32/50**，ACT 6 维 **29/50**，SmolVLA **11/50** |
 | 固定腕 Agent 全范围 | 100 条，腕锁死，ACT `follow` | ACT 15 维 **9/50** |
 | agent-yaw v4 SmolVLA 全范围 | 140 条脚本成功，`home`，另一次随机 | **0/50** |
-| **Lab01-PnP-Home20** | 同一 20 个方块点，手臂 `home`，夹爪起点 **0.85**，种子 1000 / 1001 / 1002 各测一次 | ACT 6 维 **53/60**，SmolVLA follow2 **51/60**。同一协议上的 MolmoAct2、pi05、GR00T、FastWAM、JEPA 见 [`vla_home20_193.md`](vla_home20_193.md) |
+| **Lab01-PnP-Home20** | 同一 20 个方块点，手臂 `home`，夹爪起点 **0.85**，种子 1000 / 1001 / 1002 各测一次 | 成绩表只在 [`home20.md`](home20.md) |
 
-Home20 的 60 次是 20 个点测 3 次，不是 60 个新点，也不叫 Home60。种子只改变 SmolVLA 规划动作时的噪声序列，不改变方块、手臂或权重。这不是域随机化。夹爪 **−0.1** 的旧分数暂时留着，不写进 0.85 这一列。follow2 这份权重还没有新的全范围 50 集，不能把 **51/60** 说成全范围成功率。
+Home20 的 60 次是 20 个点测 3 次，不是 60 个新点，也不叫 Home60。种子只改变策略采样动作块时的噪声序列，不改变方块、手臂或权重。这不是域随机化。夹爪 **−0.1** 的旧分数暂时留着，不写进 0.85 这一列。follow2 这份权重还没有新的全范围 50 集，不能把 **51/60** 说成全范围成功率。
 
 ## 为什么用 Agent 生成数据
 
@@ -147,13 +145,9 @@ SO-101 是 6 个关节。和真机模仿学习对齐的训练量是这 6 个关�
 
 ACT 6 维和 15 维在 teleop 全范围上是 **29/50** 与 **32/50**，差距在 50 集的噪声里。选 6 维是为了和真机关节对齐，不是因为 6 维在仿真里明显高于 15 维。
 
-## Home20 的三次种子
+## Home20
 
-**Lab01-PnP-Home20** 固定 20 个方块位姿和手臂起点 `qpos = [0.0, -0.3, 0.6, 1.2, 0.0, 0.85]`。清单是 [`configs/smolvla_v4_div50_home20_spawns.json`](configs/smolvla_v4_div50_home20_spawns.json)。正式报分时用 `LAB01_EVAL_SEED` **1000、1001、1002** 各跑完这 20 集，写成 `16/20、18/20、17/20 = 51/60` 这种形式。协议和成绩表在 [`home20.md`](home20.md)。
-
-一次不设种子的 12/20 或 17/20 只说明那一条噪声序列，不作为这一列的成绩。种子不能让真机更稳；真机上的重复来自重新摆放和重新抓。仿真里场景能固定，所以用三套固定噪声看模型自己掷骰子会让分数晃多少。
-
-全范围新抽仍然单独报。Home20 用来比较同一起点上的模型和数据版本，不代替那一列。
+协议、三次种子怎么报、成绩表、各模型为什么停，都在 [`home20.md`](home20.md)。种子只改变噪声，不能让真机更稳；真机上的重复来自重新摆放和重新抓。全范围新抽仍然单独报。夹爪起点 **−0.1** 的旧分数留在 [`smolvla_v4_diversity.md`](smolvla_v4_diversity.md)。
 
 ## 数据
 
