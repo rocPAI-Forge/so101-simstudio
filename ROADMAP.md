@@ -104,6 +104,38 @@
 - [x] Joy-Con init guards (invalid device / missing serial)
 - [x] Headless MuJoCo camera backend notes (`llm-wiki`)
 
+## v0.1.4 ✅ (`release-v0.1.4`)
+
+### Agent dataset (193 episodes)
+
+- [x] Scripted collectors sample cube XY and yaw inside the record box; the wrist follows the cube yaw
+- [x] Adopted set: 100 one-shot grasps + 10 pre-close alignments + 10 local regrasps + 20 DAgger + 53 ACT-follow successes = **193 episodes / 130,835 frames**
+- [x] ACT 6-D trained on the first 140 only (Home20 **53/60**). Its successful `follow` rollouts are the last 53 episodes, used to finetune other policies
+- [x] Hub dataset `alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2`. The v0.1.3 50-episode teleop set stays the human reference
+
+### Finetune trials
+
+- [x] Camera map recorded per policy (top+wrist or front). The dataset still stores the front camera
+- [x] 6-D absolute joint targets for sim2real-style policies. GR00T relative actions stayed near 0/60; absolute joints are the Home20 frame
+- [x] Frozen backbone, action-expert-only, LoRA, and full updates. pi05 full unfreeze **34/60** (expert-only was 12/60). MolmoAct2 LoRA **39/60**; the later full update fell to 23/60 and was not adopted
+- [x] Uploaded checkpoints linked from [home20.md](labs/lab01_pnp_agent/home20.md), including DM0.5 10K at **25/60**
+
+### Home20
+
+- [x] One protocol: 20 frozen poses, `reset_arm: home`, gripper start 0.85, seeds 1000 / 1001 / 1002
+- [x] Success is `final_success`. Report each seed /20 and the total /60
+- [x] Full-range redraws, the single demo pose, and gripper −0.1 runs stay off that column
+- [x] `LAB01_EPISODE_INIT` applies the frozen list over the random cube and the YAML home
+
+### Other
+
+- [x] Agent line lives in `labs/lab01_pnp_agent/`; train/eval entry points stay in `labs/lab01_pnp/`
+- [x] Lab 01 entry points for MolmoAct2, pi05, GR00T N1.7, VLA-JEPA, FastWAM
+- [x] Instinct MI210 / MI300 / MI300X eval notes: `MUJOCO_GL=osmesa`
+- [x] MuJoCo GLFW window no longer vsync-blocks the control loop
+- [x] Directories named `tmp/` stay untracked
+- [x] Pinned LeRobot remains v0.6.0. DM0.5 is not in that pin
+
 ## Evolution
 
 ```
@@ -112,7 +144,8 @@ v0.0.x: so101-mujoco-teleop
         ↓ v0.1.1 (unified view_mode + evdev)
         ↓ v0.1.2 (`release-v0.1.2`) Joy-Con cylindrical + one-handed recording + joycon patch workflow
         ↓ v0.1.3 (`release-v0.1.3`) Lab 01 PnP: train ACT/SmolVLA + MuJoCo sim2sim eval + Hub assets
-Current: so101-simstudio @ v0.1.3
+        ↓ v0.1.4 (`release-v0.1.4`) 193-episode agent set, per-model finetune trials, Home20
+Current: so101-simstudio @ v0.1.4
         Expert trajectories + Lab 01 closed-loop train/eval (ROCm)
         Future: domain randomization, broader automated pipeline, real follower, CUDA/macOS
 ```
@@ -129,8 +162,9 @@ Current: so101-simstudio @ v0.1.3
 ### Automated data pipeline
 
 - [ ] Dataset annotation (VLM language labels)
-- [x] Behavior cloning training — Lab 01 ACT / SmolVLA (`labs/lab01_pnp/`)
+- [x] Behavior cloning training — Lab 01 ACT / SmolVLA, plus MolmoAct2, pi05, GR00T, DM0.5 and the negative JEPA / FastWAM transfers
 - [x] Policy rollout in MuJoCo — Lab 01 sim2sim eval (`eval.cmd` + lab configs)
+- [x] Agent-generated Lab 01 trajectories and the Home20 benchmark (`labs/lab01_pnp_agent/`)
 - [ ] Broader multi-task / multi-scene automated pipeline beyond Lab 01
 
 ### Real hardware
