@@ -22,7 +22,8 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 # Import LeRobot *before* mujoco — otherwise OSMesa+torch import order can SIGSEGV.
 from lerobot.datasets.lerobot_dataset import LeRobotDataset

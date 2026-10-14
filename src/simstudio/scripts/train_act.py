@@ -244,6 +244,7 @@ def main() -> None:
     if any("groot" in arg.lower() for arg in sys.argv) or _truthy("LAB01_GROOT"):
         # Register policy.type=groot. GrootConfig.__post_init__ rejects N1.5 paths.
         from lerobot.policies.groot.configuration_groot import GrootConfig  # noqa: F401
+
         from simstudio.policies.groot_n17 import patch_groot_n17_vlm_processor_source
 
         logging.basicConfig(level=logging.INFO)

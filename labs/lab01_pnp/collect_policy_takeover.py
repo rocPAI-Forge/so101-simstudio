@@ -20,7 +20,6 @@ import os
 from pathlib import Path
 
 import numpy as np
-
 from auto_collect_yaw import (
     GRIPPER_CLOSED,
     GRIPPER_OPEN,
@@ -32,6 +31,7 @@ from auto_collect_yaw import (
     servo_xyz,
     set_grip,
 )
+
 from simstudio.common.eval_success import CONTAINER_XY, check_pick_success, cube_over_container
 
 # Spawn box in rollout_smolvla.yaml, expanded by about 1 cm.
