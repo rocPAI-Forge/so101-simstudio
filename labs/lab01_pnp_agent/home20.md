@@ -34,6 +34,7 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 | GR00T N1.7 绝对关节，全量解冻 | 从上面的 10K 再训两段 5000 步 | **6/20、4/20、5/20 = 15/60** | 这条线的成绩。闭合 57，抬起 20。之后加重修正 12/60、动作块 8 步 11/60，已暂停 |
 | pi05，只训动作专家 10K | 从 `ant0nh/pi05_pnp_425_25k` 训 10K，绝对关节 | **4/20、6/20、2/20 = 12/60** | 合拢 39，抬起 15。不要和全量解冻的仓库混用 |
 | pi05 全量解冻 | 前方相机，三段 5000 步 | **12/20、11/20、11/20 = 34/60** | 这条线的成绩。闭合 58，抬起 38 |
+| DM0.5 | 从 `lerobot/dm05_base` 训 10K，俯视加腕部，绝对关节 | **7/20、7/20、11/20 = 25/60** | 闭合 59，抬起 27。见下文 |
 | GR00T N1.7 相对动作 | 同一基座，手臂学增量，夹爪保持绝对值 | 10K **0/60**（检查点已删）；30K **1/60** | 10K 能靠近（8 cm 内 54/60），30K 连靠近都退到 11/60 |
 | FastWAM | 4K，视频网络冻结 | **0/60** | 4 cm 内合计 3/60，合拢 0 |
 | JEPA，冻结 Qwen，6 维关节 | 只训动作头，10K | **0/60** | 能靠近，闭环里不发合拢 |
@@ -43,7 +44,7 @@ SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**�
 
 ACT 日志 `outputs/eval/act_state6_v4_lab01_pnp_home20_g085_seed1000.log` 及 `seed1001`、`seed1002`。SmolVLA follow2 日志 `outputs/eval/smolvla_v4_actonly_follow2_lab01_pnp_home20_g085_seed1000.log` 及另外两个种子。这两份权重的下载链接在下面的表里。
 
-DM0.5 从 [`lerobot/dm05_base`](https://huggingface.co/lerobot/dm05_base) 微调的 10K 已训完。三种子 Home20 还没跑完，不记入上表，微调权重一列留空。
+DM0.5 的训练和三种子漏斗在下面的 DM0.5 一节。下载链接在基座表里。
 
 ### 可以定下来的话
 
@@ -57,7 +58,7 @@ DM0.5 从 [`lerobot/dm05_base`](https://huggingface.co/lerobot/dm05_base) 微调
 
 FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的原权重是 7 维动作，改成 6 维时相关张量重新初始化，视频网络仍冻着。6 维 JEPA 不继续解冻 Qwen。7 维末端连 8 cm 都进不去，正常化统计和派生数据集是对齐的，不是尺度写错。
 
-因此 10 月 5 日停止了当时那一批微调，也不为了冲成功率去补轨迹。之后续了 pi05、GR00T 的全量解冻，以及 MolmoAct2 的一次全量对照。pi05 停在全量解冻那一行。GR00T 停在全量解冻那一行。MolmoAct2 仍引用 LoRA 那一行。
+因此 10 月 5 日停止了当时那一批微调，也不为了冲成功率去补轨迹。之后续了 pi05、GR00T 的全量解冻，以及 MolmoAct2 的一次全量对照。pi05 停在全量解冻那一行。GR00T 停在全量解冻那一行。MolmoAct2 仍引用 LoRA 那一行。再往后的 DM0.5 10K 是 **25/60**，闭合 59、抬起 27，缺口仍是闭合之后的抬起。
 
 ## 基座和微调
 
@@ -77,7 +78,7 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 | FastWAM（193 条） | [lerobot/fastwam_base](https://huggingface.co/lerobot/fastwam_base) | |
 | JEPA 6 维（193 条） | [lerobot/VLA-JEPA-LIBERO](https://huggingface.co/lerobot/VLA-JEPA-LIBERO) | |
 | JEPA 7 维末端 | 同上 | |
-| DM0.5 10K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | |
+| DM0.5 10K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k) |
 | LingBot-VA | [lerobot/lingbot_va_libero_long](https://huggingface.co/lerobot/lingbot_va_libero_long) | |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
@@ -259,6 +260,40 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 
 不要再做的：同一配方再加步数；加重第 100–139 条；`n_action_steps=8`；从 7/60 或 12/60 的权重接着训；`--resume` 已经衰减完的余弦；两路相机；相对动作；冻结骨干再降学习率；旧的重抓整段或蒸馏片段。
 
+## DM0.5
+
+基座是 [`lerobot/dm05_base`](https://huggingface.co/lerobot/dm05_base)。仓库里钉住的 LeRobot 是 v0.6.0，没有 DM0.5，这次训练用的是一份更新的 LeRobot 检出，没有写进子模块。相机是俯视和腕部，前方相机在数据里但不进模型。`add_state=true`，绝对关节，chunk 和 `n_action_steps` 都是 10。图像缩到 448×448。
+
+评测是纯模型 Home20，没有专家接管。日志 `outputs/eval/dm05_base_agent193_10k_lab01_pnp_home20_g085_seed1000.log` 及 `seed1001`、`seed1002`。2026-10-14 10:23 跑完。
+
+| 种子 | 成功 | 4 cm 内 | 闭合 | 抬起 | 到盒子上方 | 掉落 |
+|---|---:|---:|---:|---:|---:|---:|
+| 1000 | 7/20 | 20 | 20 | 7 | 7 | 0 |
+| 1001 | 7/20 | 20 | 19 | 8 | 7 | 0 |
+| 1002 | 11/20 | 20 | 20 | 12 | 11 | 1 |
+| 合计 | **25/60** | **60** | **59** | **27** | **25** | **1** |
+
+8 cm 内是 60/60。松开后仍在盒内 25，某拍已放入 25。没做成的几乎都是闭合了但没有抬起。
+
+发布的是 10000 步的检查点。[alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)。5000 步的中间检查点没有上传。
+
+配方：
+
+| | |
+|---|---|
+| 初始化 | `lerobot/dm05_base`，不是 `dm05_libero` |
+| 可训练参数 | 4,486,607,248。`use_peft=false`，词嵌入 `freeze_vlm_embedding=true` |
+| 数据 | 193 条。磁盘上的状态是 15 维，训练取前 6 维关节 `.pos` |
+| 相机 | `camera_top`、`camera_wrist` |
+| 状态 / 动作 | 6 维绝对关节，`use_relative_actions=false`，`add_state=true` |
+| chunk / `n_action_steps` | 10 / 10 |
+| 步数 / 批量 | 10000 / 每卡 1。4 张 MI210 做 DDP，`dp_replicate=4`，有效批量 4 |
+| 学习率 | 峰值 `2.5e-5`，warmup 400，`decay_steps=10000`，末端 `2.5e-6` |
+| dtype | bfloat16，视觉和动作专家的梯度检查点开着 |
+| 用时 | 2026-10-13 15:58 到 20:34，约 4 小时 36 分。约 1.65 秒/步，每卡约 51 GB。结束时日志损失 0.007，约 0.31 个 epoch |
+
+`decay_steps` 必须等于这次的 `--steps`，否则余弦会把峰值再缩放一次。
+
 ## 和 NVIDIA SO-101 GR00T 课程不是同一张考卷
 
 课程是 [Train an SO-101 Robot From Sim-to-Real With NVIDIA Isaac](https://docs.nvidia.com/learning/physical-ai/sim-to-real-so-101/latest/index.html)。仿真评测页写的期望成功率是 **50–70%**：[Sim Evaluation](https://docs.nvidia.com/learning/physical-ai/sim-to-real-so-101/latest/11-sim-evaluation.html)。示例日志是跑到第 7、8 集时的累计 66.7% 和 71.4%，不是冻住 20 个点、三个种子的总分。
@@ -288,6 +323,7 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 | `push_pi05_agent193_model.cmd` | pi05 只训动作专家 10K |
 | `push_pi05_agent193_unfreeze_model.cmd` | pi05 全量解冻 |
 | `push_groot_agent193_abs_model.cmd` | GR00T 绝对关节、冻结骨干 10K |
+| `push_dm05_agent193_model.cmd` | DM0.5 10K |
 | `push_agent_yaw_follow2_dataset.cmd` | 193 条数据集 |
 
 50 条 teleop 数据集和对应的 ACT / SmolVLA / MolmoAct2 / GR00T / JEPA 上传脚本仍在 `labs/lab01_pnp/`。Hub 卡片 `hf_model_card_*.md`、`hf_dataset_card_*.md` 是上传稿，不在这里维护对照表。
