@@ -7,6 +7,7 @@ Uses LeRobot's rollout context (policy + pre/post processors + inference
 engine) but owns the multi-episode loop so no ``rollout_`` dataset is required.
 """
 
+import json
 import logging
 import os
 import sys
@@ -168,6 +169,15 @@ class _EpisodeStageTracker:
         self.max_cube_z_m = self.initial_z
         self.min_container_xy_m = float("inf")
         self.seen_open = False
+        self.tick = 0
+        self.close_events = 0
+        self.first_close: dict[str, float] | None = None
+        self._close_tick: int | None = None
+        self._block_geom = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_GEOM, "block")
+        self._fixed_body = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_BODY, "gripper")
+        self._moving_body = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_BODY, "moving_jaw_so101_v1")
+        grip_joint = mj.mj_name2id(robot.model, mj.mjtObj.mjOBJ_JOINT, "gripper")
+        self._grip_qadr = int(robot.model.jnt_qposadr[grip_joint]) if grip_joint >= 0 else None
         self.stages = {
             "reach_8cm": False,
             "near_4cm": False,
@@ -179,9 +189,80 @@ class _EpisodeStageTracker:
             "dropped_after_lift": False,
         }
 
+    # Post-close window over which jaw contact is sampled (ticks at the eval fps).
+    GRASP_WINDOW_TICKS = 30
+
+    def _jaw_forces(self) -> tuple[float, float]:
+        import mujoco as mj
+        import numpy as np
+
+        m, d = self.robot.model, self.robot.data
+        f = np.zeros(6)
+        out = [0.0, 0.0]
+        for i in range(d.ncon):
+            c = d.contact[i]
+            if self._block_geom not in (c.geom1, c.geom2):
+                continue
+            other = c.geom2 if c.geom1 == self._block_geom else c.geom1
+            body = m.geom_bodyid[other]
+            if body not in (self._fixed_body, self._moving_body):
+                continue
+            mj.mj_contactForce(m, d, i, f)
+            out[0 if body == self._fixed_body else 1] += abs(float(f[0]))
+        return out[0], out[1]
+
+    def _close_geometry(self) -> dict[str, float]:
+        """Fingertip pose relative to the cube face it approaches, as in the scripted expert probe."""
+        import numpy as np
+
+        d = self.robot.data
+        block_id = self._block_geom
+        cube = np.asarray(d.geom_xpos[block_id], dtype=float)
+        rot = np.asarray(d.geom_xmat[block_id], dtype=float).reshape(3, 3)
+        site = np.asarray(d.site_xpos[self.site_id], dtype=float)
+        rel = site - cube
+        axes = [rot[:2, 0], -rot[:2, 0], rot[:2, 1], -rot[:2, 1]]
+        axes = [a / (np.linalg.norm(a) + 1e-9) for a in axes]
+        normal = max(axes, key=lambda a: float(a @ rel[:2]))
+        tangent = np.array([-normal[1], normal[0]])
+        jaw = np.asarray(d.site_xmat[self.site_id], dtype=float).reshape(3, 3)[:2, 1]
+        jaw = jaw / (np.linalg.norm(jaw) + 1e-9)
+        return {
+            "jaw_vs_normal_deg": float(np.degrees(np.arccos(np.clip(abs(jaw @ normal), 0.0, 1.0)))),
+            "normal_mm": float(rel[:2] @ normal) * 1000.0,
+            "tangent_mm": float(rel[:2] @ tangent) * 1000.0,
+            "dz_mm": float(rel[2]) * 1000.0,
+            "cube_x": float(cube[0]),
+            "cube_y": float(cube[1]),
+        }
+
+    def _update_grasp(self, block: tuple[float, float, float], closing: bool) -> None:
+        if closing and self._close_tick is None:
+            self._close_tick = self.tick
+            self.first_close = {**self._close_geometry(), "max_min_jaw_n": 0.0}
+            self._close_block_xy = (block[0], block[1])
+        if self._close_tick is None or self.first_close is None:
+            return
+        if self.tick - self._close_tick > self.GRASP_WINDOW_TICKS or "window_end_tick" in self.first_close:
+            return
+        f_fixed, f_moving = self._jaw_forces()
+        self.first_close["max_min_jaw_n"] = max(self.first_close["max_min_jaw_n"], min(f_fixed, f_moving))
+        self.first_close["f_fixed_n"] = f_fixed
+        self.first_close["f_moving_n"] = f_moving
+        if self._grip_qadr is not None:
+            self.first_close["q_gripper"] = float(self.robot.data.qpos[self._grip_qadr])
+        self.first_close["cube_shift_mm"] = 1000.0 * (
+            (block[0] - self._close_block_xy[0]) ** 2 + (block[1] - self._close_block_xy[1]) ** 2
+        ) ** 0.5
+        lifted = block[2] >= self.initial_z + 0.02
+        if lifted or self.tick - self._close_tick == self.GRASP_WINDOW_TICKS:
+            self.first_close["window_end_tick"] = float(self.tick - self._close_tick)
+            self.first_close["lifted_in_window"] = float(lifted)
+
     def update(self, sent: dict[str, Any] | None) -> None:
         from simstudio.common.eval_success import CONTAINER_XY
 
+        self.tick += 1
         block = self.robot.get_block_position()
         if block is None:
             return
@@ -211,22 +292,31 @@ class _EpisodeStageTracker:
         ):
             self.stages["dropped_after_lift"] = True
 
-        if sent is None:
-            return
-        gripper = sent.get("gripper.pos")
-        if gripper is None:
-            return
-        gripper = float(gripper)
-        if gripper >= 0.45:
-            if self.stages["lift_2cm"] and self.stages["over_box"]:
-                self.stages["released_after_lift"] = True
-            self.seen_open = True
-        elif self.seen_open and self.stages["near_4cm"] and gripper <= 0.15:
-            self.stages["close_after_open"] = True
+        closing = False
+        gripper = sent.get("gripper.pos") if sent is not None else None
+        if gripper is not None:
+            gripper = float(gripper)
+            if gripper >= 0.45:
+                if self.stages["lift_2cm"] and self.stages["over_box"]:
+                    self.stages["released_after_lift"] = True
+                self.seen_open = True
+            elif self.seen_open and self.stages["near_4cm"] and gripper <= 0.15:
+                closing = True
+                if not self.stages["close_after_open"] or self._reopened:
+                    self.close_events += 1
+                self._reopened = False
+                self.stages["close_after_open"] = True
+            if gripper >= 0.45 and self.stages["close_after_open"]:
+                self._reopened = True
+        self._update_grasp(block, closing)
+
+    _reopened = False
 
     def result(self) -> dict[str, Any]:
         return {
             **self.stages,
+            "close_events": self.close_events,
+            "first_close": self.first_close,
             "min_gripper_cube_m": self.min_gripper_cube_m,
             "max_cube_z_m": self.max_cube_z_m,
             "min_container_xy_m": self.min_container_xy_m,
@@ -237,6 +327,8 @@ def _run_episode(
     strategy: BaseStrategy,
     ctx: Any,
     episode_time_s: float,
+    frame_hook: Any = None,
+    stop_when: Any = None,
 ) -> dict[str, Any]:
     cfg = ctx.runtime.cfg
     robot = ctx.hardware.robot_wrapper
@@ -253,9 +345,13 @@ def _run_episode(
 
     infer_n = 0
     infer_s = 0.0
+    chunk_n = 0
+    chunk_s = 0.0
     tick_n = 0
     tick_s = 0.0
     orig_get_action = engine.get_action
+    policy = getattr(getattr(ctx, "policy", None), "policy", None)
+    orig_predict = getattr(policy, "predict_action_chunk", None) if policy is not None else None
 
     def timed_get_action(obs_frame: dict | None):
         nonlocal infer_n, infer_s
@@ -265,12 +361,43 @@ def _run_episode(
         infer_n += 1
         return out
 
+    def timed_predict_chunk(*args, **kwargs):
+        nonlocal chunk_n, chunk_s
+        t0 = time.perf_counter()
+        out = orig_predict(*args, **kwargs)
+        chunk_s += time.perf_counter() - t0
+        chunk_n += 1
+        return out
+
     engine.get_action = timed_get_action  # type: ignore[method-assign]
+    if orig_predict is not None:
+        policy.predict_action_chunk = timed_predict_chunk  # type: ignore[method-assign]
+    takeover = None
+    if _env_flag("LAB01_EXPERT_TAKEOVER"):
+        from simstudio.scripts.expert_takeover import ExpertTakeover
+
+        takeover = ExpertTakeover()
+        logger.info("Expert takeover enabled dist<=%.3fm gripper_q>=%.2f", takeover.dist_m, takeover.open_q)
+    # Count control ticks, not wall time. OSMesa/CPU GL can run at ~2 Hz; a
+    # 60s wall-clock cap then only simulates ~6s (120 ticks) and truncates
+    # grasps. fps=20 × 60s → 1200 ticks on any backend.
+    fps = float(getattr(cfg, "fps", 20) or 20)
+    max_ticks = max(1, int(round(episode_time_s * fps)))
+    wall_cap_s = episode_time_s * 30.0
     start = time.perf_counter()
+    stop_reason = None
     engine.resume()
     try:
         while not ctx.runtime.shutdown_event.is_set():
-            if time.perf_counter() - start >= episode_time_s:
+            if tick_n >= max_ticks:
+                break
+            if time.perf_counter() - start >= wall_cap_s:
+                logger.warning(
+                    "Eval episode hit %.0fs wall cap after %d/%d ticks",
+                    wall_cap_s,
+                    tick_n,
+                    max_ticks,
+                )
                 break
 
             loop_start = time.perf_counter()
@@ -281,7 +408,16 @@ def _run_episode(
                 continue
 
             sent = send_next_action(obs_processed, obs, ctx, interpolator)
+            if frame_hook is not None and sent is not None:
+                frame_hook(obs, sent)
             stage_tracker.update(sent)
+            if takeover is not None and takeover.consider(inner, stage_tracker):
+                stop_reason = "expert_takeover"
+                break
+            if stop_when is not None:
+                stop_reason = stop_when(inner, tick_n + 1)
+                if stop_reason:
+                    break
             if debug_left[0] > 0 and sent is not None:
                 debug_left[0] -= 1
                 names = list(getattr(inner, "JOINT_NAMES", []))
@@ -303,13 +439,18 @@ def _run_episode(
                 precise_sleep(sleep_t)
     finally:
         engine.get_action = orig_get_action  # type: ignore[method-assign]
+        if orig_predict is not None:
+            policy.predict_action_chunk = orig_predict  # type: ignore[method-assign]
 
     return {
         "infer_n": float(infer_n),
         "infer_s": infer_s,
+        "chunk_n": float(chunk_n),
+        "chunk_s": chunk_s,
         "tick_n": float(tick_n),
         "tick_s": tick_s,
         "funnel": stage_tracker.result(),
+        "stop_reason": stop_reason,
     }
 
 
@@ -357,6 +498,31 @@ def _fitted_state_dim(step: Any) -> int | None:
         shape = getattr(value, "shape", None)
         return int(shape[-1]) if shape else len(value)
     return None
+
+
+def _apply_eval_seed() -> int | None:
+    """Seed Python, NumPy, and PyTorch from LAB01_EVAL_SEED.
+
+    SmolVLA draws a fresh Gaussian noise tensor for every action chunk. The
+    seed fixes that sequence at process start. RTC timing can still change
+    which observation is paired with which draw.
+    """
+    raw = os.environ.get("LAB01_EVAL_SEED", "").strip()
+    if not raw:
+        return None
+    seed = int(raw)
+    import random
+
+    import numpy as np
+    import torch
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    logger.info("Eval RNG seed set to %d", seed)
+    return seed
 
 
 def _env_flag(name: str) -> bool:
@@ -556,6 +722,36 @@ def _checkpoint_normalizer_fitted_state_dim(ctx: Any) -> int | None:
     return None
 
 
+def _fix_groot_inference_timesteps(ctx: Any) -> None:
+    """LeRobot GrootConfig stores ``num_inference_timesteps: null``.
+
+    Loading a Lab 01 continuation checkpoint as ``base_model_path`` can copy
+    that null onto the inner N1.7 model, which then crashes in
+    ``dt = 1.0 / self.num_inference_timesteps``. NVIDIA's N1.7 default is 4.
+    """
+    policy = getattr(getattr(ctx, "policy", None), "policy", None)
+    if policy is None:
+        return
+    groot = getattr(policy, "_groot_model", None)
+    if groot is None:
+        return
+    head = getattr(groot, "action_head", None)
+    patched = []
+    for obj in (head, groot, getattr(head, "config", None) if head else None, getattr(groot, "config", None)):
+        if obj is None:
+            continue
+        n = getattr(obj, "num_inference_timesteps", "missing")
+        if n in (None, 0, "missing") and (hasattr(obj, "num_inference_timesteps") or obj is head):
+            obj.num_inference_timesteps = 4
+            patched.append(type(obj).__name__)
+        horizon = getattr(obj, "action_horizon", "missing")
+        if horizon in (None, 0) and hasattr(obj, "action_horizon"):
+            obj.action_horizon = 16
+            patched.append(f"{type(obj).__name__}.action_horizon")
+    if patched:
+        logger.info("Patched GR00T inference knobs on %s", patched)
+
+
 def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     """Include vel/ee in rollout ``observation.state`` when the policy expects them.
 
@@ -658,10 +854,75 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
     logger.warning("NormalizerProcessorStep not found; skipping stats patch")
 
 
+def _maybe_success_recorder(robot: SO101MujocoRobot) -> Any:
+    """Append eval episodes that finish in the box when LAB01_RECORD_ROOT is set."""
+    root = os.environ.get("LAB01_RECORD_ROOT", "").strip()
+    if not root:
+        return None
+    lab = Path(__file__).resolve().parents[3] / "labs" / "lab01_pnp"
+    sys.path.insert(0, str(lab))
+    from auto_collect_yaw import ScriptedRecorder
+
+    repo_id = os.environ.get(
+        "LAB01_RECORD_REPO_ID",
+        "alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4",
+    )
+    logger.info("Recording successful eval episodes to %s", root)
+    return ScriptedRecorder(robot, repo_id=repo_id, root=Path(root), save_failures=False)
+
+
+def _load_episode_inits() -> list[dict[str, Any]] | None:
+    """Optional per-episode cube pose and arm qpos (LAB01_EPISODE_INIT)."""
+    path = os.environ.get("LAB01_EPISODE_INIT", "").strip()
+    if not path:
+        return None
+    with open(path, encoding="utf-8") as f:
+        rows = json.load(f)
+    if not isinstance(rows, list) or not rows:
+        raise ValueError(f"LAB01_EPISODE_INIT must be a non-empty list: {path}")
+    logger.info("Loaded %d episode inits from %s", len(rows), path)
+    return rows
+
+
+def _apply_episode_init(robot: SO101MujocoRobot, row: dict[str, Any]) -> None:
+    """Overwrite the post-reset cube and arm so eval starts like a recorded frame."""
+    import mujoco as mj
+    import numpy as np
+
+    qpos = row.get("qpos")
+    if qpos is not None:
+        if len(qpos) != len(robot.JOINT_NAMES):
+            raise ValueError(f"qpos length {len(qpos)} != {len(robot.JOINT_NAMES)}")
+        for name, value in zip(robot.JOINT_NAMES, qpos, strict=True):
+            robot.data.qpos[robot.dof_ids[name]] = float(value)
+            robot.data.qvel[robot.dof_ids[name]] = 0.0
+            robot.data.ctrl[robot.act_ids[name]] = float(value)
+        robot.q_des = robot.data.qpos.copy()
+        robot.dq_filt = np.zeros(robot.model.nv)
+    robot._set_block_pose(
+        float(row["x"]),
+        float(row["y"]),
+        float(row.get("z", 0.015)),
+        float(row.get("yaw_deg", 0.0)),
+    )
+    settle_steps = max(1, int(0.2 / robot.physics_dt))
+    for _ in range(settle_steps):
+        mj.mj_step(robot.model, robot.data)
+    logger.info(
+        "Episode init source=%s cube=(%.3f, %.3f, yaw %.1f) qpos=%s",
+        row.get("source_episode", "?"),
+        float(row["x"]),
+        float(row["y"]),
+        float(row.get("yaw_deg", 0.0)),
+        [round(float(v), 3) for v in qpos] if qpos is not None else None,
+    )
+
+
 @parser.wrap()
 def eval_main(cfg: RolloutConfig) -> None:
     if not isinstance(cfg.strategy, BaseStrategyConfig):
         raise ValueError("eval.py requires strategy.type=base (multi-episode loop is built-in)")
+    _apply_eval_seed()
 
     eval_settings = _EVAL_SETTINGS
     num_episodes = int(eval_settings["num_episodes"])
@@ -679,6 +940,7 @@ def eval_main(cfg: RolloutConfig) -> None:
     signal_handler = ProcessSignalHandler(use_threads=True, display_pid=False)
     _preserve_vla_jepa_finetune_dims()
     ctx = build_rollout_context(cfg, signal_handler.shutdown_event)
+    _fix_groot_inference_timesteps(ctx)
     robot = ctx.hardware.robot_wrapper
     inner_robot = getattr(robot, "inner", robot)
     _expand_rollout_state_features(ctx, inner_robot)
@@ -689,21 +951,36 @@ def eval_main(cfg: RolloutConfig) -> None:
     if not isinstance(inner, SO101MujocoRobot):
         raise TypeError(f"eval.py expects so101_mujoco robot, got {type(inner)}")
     gripper_oracle = _install_gripper_oracle(inner) if _env_flag("LAB01_GRIPPER_ORACLE") else None
+    success_recorder = _maybe_success_recorder(inner)
 
     strategy = BaseStrategy(cfg.strategy)
     results: list[dict[str, Any]] = []
+    episode_inits = _load_episode_inits()
+    if episode_inits is not None and len(episode_inits) < num_episodes:
+        raise ValueError(
+            f"LAB01_EPISODE_INIT has {len(episode_inits)} rows but eval asks for {num_episodes}"
+        )
 
     logger.info(
-        "Starting sim2sim eval: %d episodes × %.0fs @ %.0f Hz | policy=%s",
+        "Starting sim2sim eval: %d episodes × %.0fs @ %.0f Hz (%d ticks/ep) | policy=%s",
         num_episodes,
         episode_time_s,
         cfg.fps,
+        max(1, int(round(episode_time_s * float(cfg.fps)))),
         cfg.policy.pretrained_path,
     )
     log_say(f"Sim2sim eval: {num_episodes} episodes", cfg.play_sounds)
 
     try:
         strategy.setup(ctx)
+        if os.environ.get("LAB01_TAKEOVER"):
+            lab_dir = Path(__file__).resolve().parents[3] / "labs" / "lab01_pnp"
+            if str(lab_dir) not in sys.path:
+                sys.path.insert(0, str(lab_dir))
+            from collect_policy_takeover import run_takeover_campaign
+
+            run_takeover_campaign(strategy, ctx, inner, cfg)
+            return
         for ep in range(num_episodes):
             if ctx.runtime.shutdown_event.is_set():
                 break
@@ -711,12 +988,21 @@ def eval_main(cfg: RolloutConfig) -> None:
             log_say(f"Eval episode {ep + 1} of {num_episodes}", cfg.play_sounds)
             if getattr(inner.config, "reset_mode", "manual") == "auto":
                 inner.reset_episode(ep)
+            if episode_inits is not None:
+                _apply_episode_init(inner, episode_inits[ep])
 
             if gripper_oracle is not None:
                 gripper_oracle.reset()
             strategy._engine.reset()
             strategy._interpolator.reset()
-            timing = _run_episode(strategy, ctx, episode_time_s)
+            if success_recorder is not None:
+                success_recorder.begin_episode({"source": "eval_success", "eval_episode": ep})
+            timing = _run_episode(
+                strategy,
+                ctx,
+                episode_time_s,
+                frame_hook=None if success_recorder is None else success_recorder.on_tick,
+            )
 
             if gripper_oracle is not None:
                 logger.info(
@@ -730,6 +1016,7 @@ def eval_main(cfg: RolloutConfig) -> None:
             block_pos = inner.get_block_position()
             success = check_pick_success(block_pos)
             infer_hz = (timing["infer_n"] / timing["infer_s"]) if timing["infer_s"] > 0 else 0.0
+            chunk_hz = (timing["chunk_n"] / timing["chunk_s"]) if timing.get("chunk_s", 0.0) > 0 else 0.0
             funnel = timing.pop("funnel")
             funnel["final_success"] = success
             results.append(
@@ -744,13 +1031,18 @@ def eval_main(cfg: RolloutConfig) -> None:
             status = "SUCCESS" if success else "fail"
             pos_str = f"{block_pos}" if block_pos else "unknown"
             logger.info(
-                "Episode %d: %s (block=%s) policy_infer=%.2f Hz (%d calls, %.1fs)",
+                "Episode %d: %s (block=%s) policy_infer=%.2f Hz (%d calls, %.1fs) "
+                "chunk=%.2f Hz (%d calls, %.1fs, mean %.0fms)",
                 ep,
                 status,
                 pos_str,
                 infer_hz,
                 int(timing["infer_n"]),
                 timing["infer_s"],
+                chunk_hz,
+                int(timing.get("chunk_n", 0.0)),
+                float(timing.get("chunk_s", 0.0)),
+                (1000.0 * timing["chunk_s"] / timing["chunk_n"]) if timing.get("chunk_n", 0.0) else 0.0,
             )
             logger.info(
                 "Episode %d funnel: %s",
@@ -759,12 +1051,24 @@ def eval_main(cfg: RolloutConfig) -> None:
             )
             print(
                 f"Episode {ep + 1}/{num_episodes}: {status}  block={pos_str}  "
-                f"infer={infer_hz:.2f} Hz"
+                f"infer={infer_hz:.2f} Hz  chunk={chunk_hz:.2f} Hz"
             )
+            if fc := funnel.get("first_close"):
+                print(
+                    f"  first close: jaw_vs_normal={fc['jaw_vs_normal_deg']:.1f}deg "
+                    f"normal={fc['normal_mm']:+.1f}mm tangent={fc['tangent_mm']:+.1f}mm dz={fc['dz_mm']:+.1f}mm "
+                    f"max_min_jaw={fc['max_min_jaw_n']:.2f}N q_grip={fc.get('q_gripper', float('nan')):+.3f} "
+                    f"shift={fc.get('cube_shift_mm', 0.0):.1f}mm lifted_in_window={int(fc.get('lifted_in_window', 0))} "
+                    f"closes={funnel['close_events']} cube=({fc['cube_x']:.3f},{fc['cube_y']:.3f})"
+                )
 
+            if success_recorder is not None:
+                success_recorder.end_episode(success=success, episode=ep)
             if ep < num_episodes - 1 and reset_time_s > 0:
                 _reset_pause(inner, reset_time_s, cfg.fps)
     finally:
+        if success_recorder is not None:
+            success_recorder.close()
         strategy.teardown(ctx)
         if cfg.display_data:
             shutdown_visualization()
@@ -774,13 +1078,18 @@ def eval_main(cfg: RolloutConfig) -> None:
         rate = 100.0 * n_success / len(results)
         infer_n = sum(float(r.get("infer_n", 0.0)) for r in results)
         infer_s = sum(float(r.get("infer_s", 0.0)) for r in results)
+        chunk_n = sum(float(r.get("chunk_n", 0.0)) for r in results)
+        chunk_s = sum(float(r.get("chunk_s", 0.0)) for r in results)
         tick_n = sum(float(r.get("tick_n", 0.0)) for r in results)
         tick_s = sum(float(r.get("tick_s", 0.0)) for r in results)
         infer_hz = (infer_n / infer_s) if infer_s > 0 else 0.0
+        chunk_hz = (chunk_n / chunk_s) if chunk_s > 0 else 0.0
         tick_hz = (tick_n / tick_s) if tick_s > 0 else 0.0
+        chunk_ms = (1000.0 * chunk_s / chunk_n) if chunk_n else 0.0
         summary = (
             f"Eval complete: {n_success}/{len(results)} success ({rate:.0f}%) | "
             f"policy infer {infer_hz:.2f} Hz ({int(infer_n)} calls, {infer_s:.1f}s) | "
+            f"chunk {chunk_hz:.2f} Hz ({int(chunk_n)} calls, mean {chunk_ms:.0f}ms) | "
             f"control compute {tick_hz:.1f} Hz (excl. fps sleep)"
         )
         logger.info(summary)
@@ -821,10 +1130,26 @@ def _patch_fastwam_pad_before_config_load() -> None:
     patch_fastwam_pad_action_channels(int(os.environ.get("LAB01_FASTWAM_REAL_ACTION_DIM", "6")))
 
 
+def _patch_groot_processor_before_config_load() -> None:
+    """Use public Qwen3-VL tokenizer files when Cosmos-Reason2-2B is gated."""
+    argv = " ".join(sys.argv).lower()
+    if not (
+        _env_flag("LAB01_GROOT")
+        or "groot" in argv
+        or "groot" in os.environ.get("LAB01_EVAL_CONFIG", "").lower()
+        or "groot" in os.environ.get("LAB01_POLICY_PATH", "").lower()
+    ):
+        return
+    from simstudio.policies.groot_n17 import patch_groot_n17_vlm_processor_source
+
+    patch_groot_n17_vlm_processor_source()
+
+
 def main() -> None:
     register_third_party_plugins()
     init_logging()
     _patch_fastwam_pad_before_config_load()
+    _patch_groot_processor_before_config_load()
     eval_main()
 
 

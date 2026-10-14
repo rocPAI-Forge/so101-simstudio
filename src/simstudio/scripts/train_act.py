@@ -13,6 +13,55 @@ def _truthy(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
 
 
+def patch_pi05_train_vision_freeze_lm() -> None:
+    """Train the pi05 vision tower, projector, and action expert. Keep the language model frozen.
+
+    ``train_expert_only`` freezes all of PaliGemma. This patch runs after that setup and
+    re-opens only the vision path. The language model stays in eval mode.
+    """
+    from lerobot.policies.pi05.modeling_pi05 import PaliGemmaWithExpertModel
+
+    orig_init = PaliGemmaWithExpertModel.__init__
+    orig_train = PaliGemmaWithExpertModel.train
+
+    def _vision_param(name: str) -> bool:
+        return "vision_tower" in name or "multi_modal_projector" in name
+
+    def _apply(self) -> None:
+        vision = frozen = 0
+        for name, param in self.paligemma.named_parameters():
+            keep = _vision_param(name)
+            param.requires_grad_(keep)
+            if keep:
+                vision += param.numel()
+            else:
+                frozen += param.numel()
+        expert = sum(p.numel() for p in self.gemma_expert.parameters() if p.requires_grad)
+        logging.getLogger(__name__).info(
+            "LAB01_PI05_TRAIN_VISION: vision=%s frozen_lm=%s action_expert=%s",
+            f"{vision:,}",
+            f"{frozen:,}",
+            f"{expert:,}",
+        )
+
+    def wrapped_init(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        orig_init(self, *args, **kwargs)
+        self._lab01_train_vision = True
+        _apply(self)
+
+    def wrapped_train(self, mode: bool = True) -> None:  # type: ignore[no-untyped-def]
+        orig_train(self, mode)
+        if mode and getattr(self, "_lab01_train_vision", False):
+            self.paligemma.eval()
+            self.paligemma.model.vision_tower.train()
+            projector = getattr(self.paligemma.model, "multi_modal_projector", None)
+            if projector is not None:
+                projector.train()
+
+    PaliGemmaWithExpertModel.__init__ = wrapped_init  # type: ignore[method-assign]
+    PaliGemmaWithExpertModel.train = wrapped_train  # type: ignore[method-assign]
+
+
 def patch_vla_jepa_freeze_except_action_model() -> None:
     """Keep Qwen frozen and train only ``action_model`` (Lab 01 JEPA action-head FT)."""
     from lerobot.policies.vla_jepa.modeling_vla_jepa import VLAJEPAModel
@@ -163,6 +212,10 @@ def main() -> None:
         logging.basicConfig(level=logging.INFO)
         patch_lerobot_observation_state_dim(dim)
 
+    if _truthy("LAB01_PI05_TRAIN_VISION"):
+        logging.basicConfig(level=logging.INFO)
+        patch_pi05_train_vision_freeze_lm()
+
     if _truthy("LAB01_JEPA_FREEZE_EXCEPT_ACTION"):
         logging.basicConfig(level=logging.INFO)
         patch_vla_jepa_freeze_except_action_model()
@@ -187,6 +240,15 @@ def main() -> None:
     if any("lingbot" in arg.lower() for arg in sys.argv):
         logging.basicConfig(level=logging.INFO)
         patch_lingbot_action_feature_from_used_channels()
+
+    if any("groot" in arg.lower() for arg in sys.argv) or _truthy("LAB01_GROOT"):
+        # Register policy.type=groot. GrootConfig.__post_init__ rejects N1.5 paths.
+        from lerobot.policies.groot.configuration_groot import GrootConfig  # noqa: F401
+
+        from simstudio.policies.groot_n17 import patch_groot_n17_vlm_processor_source
+
+        logging.basicConfig(level=logging.INFO)
+        patch_groot_n17_vlm_processor_source()
 
     from lerobot.scripts.lerobot_train import main as lerobot_train_main
 

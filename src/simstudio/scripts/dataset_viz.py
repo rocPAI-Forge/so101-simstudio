@@ -12,6 +12,13 @@ Usage:
         --root ./datasets/so101-simstudio-lab01-pnp \
         --episode 0 --save --output-dir ./outputs/viz
     .venv-rocm/bin/rerun ./outputs/viz/alexhegit_so101-simstudio-lab01-pnp_episode_0.rrd
+
+    # Headless host, view from another machine's browser:
+    .venv-rocm/bin/python -m simstudio.scripts.dataset_viz \
+        --repo-id alexhegit/so101-simstudio-lab01-pnp \
+        --root ./datasets/so101-simstudio-lab01-pnp \
+        --episode 0 --mode distant
+    # open http://<host-ip>:9090/?url=rerun%2Bhttp://<host-ip>:9876/proxy
 """
 
 import argparse
@@ -26,10 +33,24 @@ from lerobot.utils.import_utils import register_third_party_plugins
 
 def _ensure_rerun_viewer_on_path() -> None:
     """Rerun's spawn() looks for the `rerun` CLI on PATH, not next to sys.executable."""
-    venv_bin = Path(sys.executable).resolve().parent
+    # Do not resolve(): the venv python is a symlink to uv's interpreter dir.
+    venv_bin = Path(sys.executable).parent
     rerun_cli = venv_bin / "rerun"
     if rerun_cli.is_file():
         os.environ["PATH"] = f"{venv_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+
+
+def _allow_remote_web_viewer(origins: list[str]) -> None:
+    """Rerun's gRPC server only accepts localhost browser origins by default."""
+    import rerun as rr
+
+    serve_grpc = rr.serve_grpc
+
+    def patched(*args, **kwargs):  # type: ignore[no-untyped-def]
+        kwargs.setdefault("cors_allow_origin", origins)
+        return serve_grpc(*args, **kwargs)
+
+    rr.serve_grpc = patched
 
 
 def main():
@@ -57,12 +78,20 @@ def main():
         default=None,
         help="Directory for .rrd when --save is set",
     )
+    parser.add_argument(
+        "--cors-allow-origin",
+        action="append",
+        default=None,
+        help="Browser origin allowed to read --mode distant data (repeatable). Default: any.",
+    )
     args = parser.parse_args()
 
     if args.save and args.output_dir is None:
         parser.error("--save requires --output-dir")
 
     _ensure_rerun_viewer_on_path()
+    if args.mode == "distant":
+        _allow_remote_web_viewer(args.cors_allow_origin or ["*"])
 
     print(f"Loading dataset: {args.repo_id}")
     dataset = LeRobotDataset(
@@ -88,7 +117,7 @@ def main():
     )
     if rrd_path is not None:
         print(f"Saved: {rrd_path}")
-        print(f"Open with: {Path(sys.executable).resolve().parent / 'rerun'} {rrd_path}")
+        print(f"Open with: {Path(sys.executable).parent / 'rerun'} {rrd_path}")
 
 
 if __name__ == "__main__":

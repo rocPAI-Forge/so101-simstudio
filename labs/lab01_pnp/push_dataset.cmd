@@ -13,7 +13,11 @@ _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
 source "$_LAB01_DIR/_env.sh"
 
-CARD="$_LAB01_DIR/hf_dataset_card.md"
+if [[ -n "${LAB01_HF_UPLOAD_ENDPOINT:-}" ]]; then
+    export HF_ENDPOINT="$LAB01_HF_UPLOAD_ENDPOINT"
+fi
+
+CARD="${LAB01_DATASET_CARD:-$_LAB01_DIR/hf_dataset_card.md}"
 PRIVATE=false
 CARD_ONLY=false
 SKIP_VALIDATE=false

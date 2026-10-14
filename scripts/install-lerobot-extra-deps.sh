@@ -28,11 +28,11 @@ EXTRAS=()
 for arg in "$@"; do
     case "$arg" in
         --repair-torch) REPAIR=true ;;
-        lingbot_va|fastwam|molmoact2) EXTRAS+=("$arg") ;;
-        *) die "Unknown extra '$arg'. Use: lingbot_va | fastwam | molmoact2 [--repair-torch]" ;;
+        lingbot_va|fastwam|molmoact2|groot) EXTRAS+=("$arg") ;;
+        *) die "Unknown extra '$arg'. Use: lingbot_va | fastwam | molmoact2 | groot [--repair-torch]" ;;
     esac
 done
-[[ ${#EXTRAS[@]} -gt 0 ]] || die "Pass at least one extra: lingbot_va fastwam molmoact2"
+[[ ${#EXTRAS[@]} -gt 0 ]] || die "Pass at least one extra: lingbot_va fastwam molmoact2 groot"
 
 if "$REPAIR"; then
     info "Reinstalling ROCm torch (repair) ..."
@@ -74,6 +74,16 @@ for extra in "${EXTRAS[@]}"; do
             PKGS+=("transformers>=5.4.0,<5.6.0")
             NEED_PEFT=true
             NEED_SCIPY=true
+            ;;
+        groot)
+            # lerobot[groot] without decord (often NVIDIA wheels). Lab 01 uses pyav.
+            PKGS+=(
+                "transformers>=5.4.0,<5.6.0"
+                "diffusers>=0.27.2"
+                "dm-tree>=0.1.8,<1.0.0"
+                "timm>=1.0.0"
+            )
+            NEED_PEFT=true
             ;;
     esac
 done

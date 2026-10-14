@@ -13,12 +13,14 @@
 # Sections:
 #   1) Shared   — lab identity / dataset (record, train, eval, push)
 #   2) Record   — record.cmd only
+#   2b) Scripted collect — collect_yaw.cmd (one-click) / auto_collect_yaw.cmd (smoke)
 #   3) Train    — train.cmd / train_smolvla_resume.cmd (SmolVLA)
 #   4) Train ACT — train_act.cmd
 #   5) Train MolmoAct2 — train_molmoact2.cmd (DORobot / MI300X)
 #   5b) Train VLA-JEPA — train_vla_jepa.cmd (DORobot / MI300X)
 #   5c) Train LingBot-VA — train_lingbot_va.cmd (DORobot / MI300X)
 #   5d) Train FastWAM — train_fastwam.cmd (DORobot / MI300X)
+#   5e) Train GR00T N1.7 — train_groot.cmd (smoke default; MI300X overrides)
 #   6) Eval     — eval.cmd (any LeRobot policy)
 #   7) Hub      — push_*.cmd
 # =============================================================================
@@ -55,6 +57,18 @@ LAB01_RECORD_CONFIG="${LAB01_RECORD_CONFIG:-configs/so101_mujoco_pick_leader.yam
 LAB01_NUM_EPISODES="${LAB01_NUM_EPISODES:-50}"
 LAB01_EPISODE_TIME_S="${LAB01_EPISODE_TIME_S:-90}"
 LAB01_RESET_TIME_S="${LAB01_RESET_TIME_S:-5}"
+
+# -----------------------------------------------------------------------------
+# 2b) Scripted yaw-aware collect
+#     auto_collect_yaw.cmd — visual smoke (record off unless LAB01_YAW_RECORD=1)
+#     collect_yaw.cmd      — one-click record: auto create-50 / expand-100
+# -----------------------------------------------------------------------------
+LAB01_YAW_DATASET_NAME="${LAB01_YAW_DATASET_NAME:-so101-simstudio-lab01-pnp-agent-yaw}"
+LAB01_YAW_DATASET_ROOT="${LAB01_YAW_DATASET_ROOT:-./datasets/${LAB01_YAW_DATASET_NAME}}"
+LAB01_YAW_REPO_ID="${LAB01_YAW_REPO_ID:-${LAB01_DATASET_HF_USER}/${LAB01_YAW_DATASET_NAME}}"
+LAB01_YAW_INIT_TARGET="${LAB01_YAW_INIT_TARGET:-50}"
+LAB01_YAW_EXPAND_TARGET="${LAB01_YAW_EXPAND_TARGET:-100}"
+# LAB01_YAW_HEADLESS=1
 
 # -----------------------------------------------------------------------------
 # 3) Train (SmolVLA) — train.cmd / train_smolvla_resume.cmd
@@ -251,6 +265,38 @@ if [[ -z "${LAB01_FASTWAM_RENAME_MAP:-}" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
+# 5e) Train (GR00T N1.7) — train_groot.cmd
+#    Base: nvidia/GR00T-N1.7-3B. Never N1.5. Embodiment: new_embodiment.
+#    Defaults are a VRAM-safe smoke (20 steps / bs1). MI300X reference:
+#      LAB01_GROOT_STEPS=10000 LAB01_GROOT_BATCH_SIZE=4 LAB01_GROOT_SAVE_FREQ=2000
+#    Extras: ./scripts/install-groot-deps.sh  (not uv pip install 'lerobot[groot]')
+#    Spec: labs/lab01_pnp/groot_n1_7_adapt.md
+#    Keeper closed-loop ckpt (do not replace with cont30k / vis20k):
+#      $LAB01_GROOT_OUTPUT/checkpoints/010000/pretrained_model
+# -----------------------------------------------------------------------------
+LAB01_GROOT_OUTPUT="${LAB01_GROOT_OUTPUT:-./outputs/train/lab01_pnp_groot_n17}"
+LAB01_GROOT_BASE="${LAB01_GROOT_BASE:-nvidia/GR00T-N1.7-3B}"
+LAB01_GROOT_EMBODIMENT_TAG="${LAB01_GROOT_EMBODIMENT_TAG:-new_embodiment}"
+LAB01_GROOT_STEPS="${LAB01_GROOT_STEPS:-20}"
+LAB01_GROOT_BATCH_SIZE="${LAB01_GROOT_BATCH_SIZE:-1}"
+LAB01_GROOT_SAVE_FREQ="${LAB01_GROOT_SAVE_FREQ:-20}"
+LAB01_GROOT_NUM_WORKERS="${LAB01_GROOT_NUM_WORKERS:-2}"
+LAB01_GROOT_CHUNK_SIZE="${LAB01_GROOT_CHUNK_SIZE:-16}"
+LAB01_GROOT_N_ACTION_STEPS="${LAB01_GROOT_N_ACTION_STEPS:-16}"
+LAB01_GROOT_USE_RELATIVE_ACTIONS="${LAB01_GROOT_USE_RELATIVE_ACTIONS:-true}"
+LAB01_GROOT_USE_BF16="${LAB01_GROOT_USE_BF16:-true}"
+if [[ -z "${LAB01_GROOT_RELATIVE_EXCLUDE_JOINTS:-}" ]]; then
+  LAB01_GROOT_RELATIVE_EXCLUDE_JOINTS='["gripper"]'
+fi
+# Empty / {} = keep Lab 01 camera_* keys (no LIBERO rename).
+LAB01_GROOT_RENAME_MAP="${LAB01_GROOT_RENAME_MAP:-}"
+# VLM tokenizer/processor. Default empty → public Qwen/Qwen3-VL-2B-Instruct files
+# (nvidia/Cosmos-Reason2-2B is gated; GR00T-N1.7-3B weights are not).
+LAB01_GROOT_PROCESSOR_MODEL="${LAB01_GROOT_PROCESSOR_MODEL:-}"
+LAB01_GROOT_TUNE_VISUAL="${LAB01_GROOT_TUNE_VISUAL:-false}"
+LAB01_GROOT_TUNE_LLM="${LAB01_GROOT_TUNE_LLM:-false}"
+
+# -----------------------------------------------------------------------------
 # 6) Eval — eval.cmd (policy-agnostic)
 #    Point POLICY_PATH at any pretrained_model/; match EVAL_CONFIG under
 #    labs/lab01_pnp/configs/ (SmolVLA needs rename_map yaml; ACT uses rollout_act*).
@@ -264,19 +310,27 @@ LAB01_EVAL_LOG="${LAB01_EVAL_LOG:-./outputs/eval/eval_${LAB01_MUJOCO_GL}.log}"
 # Empty = do not pass --policy.n_action_steps (use checkpoint default).
 # ACT full-range reference often uses 50; fixed-pose demos sometimes 100.
 LAB01_N_ACTION_STEPS="${LAB01_N_ACTION_STEPS:-}"
+# Headless Hz sweep (hz_bench.cmd). Logs stay gitignored; tables in hz_bench/.
+LAB01_HZ_BENCH_LOG="${LAB01_HZ_BENCH_LOG:-./outputs/eval/hz_bench}"
 
 # -----------------------------------------------------------------------------
-# 7) Hub — push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
-#    push_act_state6_model.cmd / push_vla_jepa_model.cmd
+# 7) Hub — teleop 50-ep repos:
+#    push_dataset.cmd / push_smolvla_model.cmd / push_act_model_card.cmd /
+#    push_act_state6_model.cmd / push_vla_jepa_model.cmd / push_groot_model.cmd
+#    Agent-yaw / 193 / Home20 repos: labs/lab01_pnp_agent/_env.sh and its push_*.cmd.
 # -----------------------------------------------------------------------------
 LAB01_SMOLVLA_HF_REPO_ID="${LAB01_SMOLVLA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-smolvla}"
 LAB01_ACT_HF_REPO_ID="${LAB01_ACT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act}"
 LAB01_ACT_STATE6_HF_REPO_ID="${LAB01_ACT_STATE6_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act-state6}"
 LAB01_ACT_STATE6_CKPT_STEP="${LAB01_ACT_STATE6_CKPT_STEP:-050000}"
+LAB01_ACT_YAW_V4_HF_REPO_ID="${LAB01_ACT_YAW_V4_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-act-agent-yaw-v4}"
+LAB01_ACT_YAW_V4_CKPT_STEP="${LAB01_ACT_YAW_V4_CKPT_STEP:-080000}"
 LAB01_MOLMO_HF_REPO_ID="${LAB01_MOLMO_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-molmoact2}"
 LAB01_MOLMO_CKPT_STEP="${LAB01_MOLMO_CKPT_STEP:-010000}"
 LAB01_JEPA_HF_REPO_ID="${LAB01_JEPA_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-vla-jepa}"
 LAB01_JEPA_CKPT_STEP="${LAB01_JEPA_CKPT_STEP:-010000}"
+LAB01_GROOT_HF_REPO_ID="${LAB01_GROOT_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-groot-n17}"
+LAB01_GROOT_CKPT_STEP="${LAB01_GROOT_CKPT_STEP:-010000}"
 # Checkpoint step name under LAB01_TRAIN_OUTPUT when push_smolvla_model does not
 # get an explicit LAB01_POLICY_PATH.
 LAB01_SMOLVLA_CKPT_STEP="${LAB01_SMOLVLA_CKPT_STEP:-050000}"

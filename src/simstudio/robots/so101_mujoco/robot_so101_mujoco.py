@@ -307,9 +307,16 @@ class SO101MujocoRobot(Robot):
         self._glfw_scene = mj.MjvScene(self.model, maxgeom=10000)
 
         glfw.make_context_current(self._glfw_window)
-        glfw.swap_interval(1)
+        # No vsync: the record/control loop paces itself, and waiting for the
+        # display refresh on every camera viewport dominates the loop budget.
+        glfw.swap_interval(0)
         self._glfw_ctx = mj.MjrContext(self.model, mj.mjtFontScale.mjFONTSCALE_150)
         glfw.make_context_current(None)
+
+        self._glfw_cam_ids = {
+            name: mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_CAMERA, name)
+            for name in self.config.camera_names
+        }
 
         logger.info("GLFW visualization window created")
 
@@ -322,7 +329,6 @@ class SO101MujocoRobot(Robot):
             return
 
         glfw.make_context_current(self._glfw_window)
-        glfw.swap_interval(1)
 
         viewport_width, viewport_height = glfw.get_framebuffer_size(self._glfw_window)
         cam_width = viewport_width // 2
@@ -341,6 +347,11 @@ class SO101MujocoRobot(Robot):
             x, y = camera_positions[cam_name]
             viewport = mj.MjrRect(x, y, cam_width, cam_height)
 
+            cam_id = self._glfw_cam_ids.get(cam_name, -1)
+            if cam_id >= 0:
+                self._glfw_cam.type = mj.mjtCamera.mjCAMERA_FIXED
+                self._glfw_cam.fixedcamid = cam_id
+
             mj.mjv_updateScene(
                 self.model,
                 self.data,
@@ -350,20 +361,6 @@ class SO101MujocoRobot(Robot):
                 mj.mjtCatBit.mjCAT_ALL,
                 self._glfw_scene,
             )
-
-            cam_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_CAMERA, cam_name)
-            if cam_id >= 0:
-                self._glfw_cam.type = mj.mjtCamera.mjCAMERA_FIXED
-                self._glfw_cam.fixedcamid = cam_id
-                mj.mjv_updateScene(
-                    self.model,
-                    self.data,
-                    self._glfw_opt,
-                    None,
-                    self._glfw_cam,
-                    mj.mjtCatBit.mjCAT_ALL,
-                    self._glfw_scene,
-                )
 
             mj.mjr_render(viewport, self._glfw_scene, self._glfw_ctx)
 
@@ -490,8 +487,13 @@ class SO101MujocoRobot(Robot):
             scaled_action[key] = val
 
         n_physics_steps = int((1.0 / self.config.record_fps) / self.physics_dt)
-        for _ in range(n_physics_steps):
+        n_frames = max(1, min(self.config.render_frames_per_action, n_physics_steps))
+        render_stride = n_physics_steps // n_frames
+
+        for step in range(n_physics_steps):
             mj.mj_step(self.model, self.data)
+            if n_frames > 1 and (step + 1) % render_stride == 0 and step + 1 < n_physics_steps:
+                self._render_glfw()
 
         self._render_glfw()
         return scaled_action

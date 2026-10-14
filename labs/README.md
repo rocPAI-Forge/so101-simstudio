@@ -1,6 +1,7 @@
 # Labs — development principles
 
 **Canonical template:** [lab01_pnp/](lab01_pnp/) (pick-and-place record → train → eval).  
+**Agent-generated data:** [lab01_pnp_agent/](lab01_pnp_agent/lab01_pnp_agent.md) — same task and eval as Lab 01, but expert trajectories come from scripted collectors and policy rollouts instead of human teleop. Data notes, the Home20 pose file, and the 193-episode Hub scripts live there. Home20 protocol and scores: [home20.md](lab01_pnp_agent/home20.md). Its `_env.sh` sources Lab 01's `_env.sh` and adds only those knobs. Collectors and `train_*.cmd` / `eval.cmd` stay in `lab01_pnp/`.  
 **Agent rule:** [`.cursor/rules/lab-development.mdc`](../.cursor/rules/lab-development.mdc).
 
 ## How to read these principles

@@ -47,5 +47,9 @@ extend-exclude = ["lerobot", "third_party"]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]
 
+# auto_collect_*.py must import LeRobot before mujoco (OSMesa + torch SIGSEGV).
+[tool.ruff.lint.per-file-ignores]
+"labs/lab01_pnp/auto_collect_*.py" = ["I001"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

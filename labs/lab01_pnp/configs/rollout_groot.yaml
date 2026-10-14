@@ -1,0 +1,62 @@
+# =============================================================================
+# Lab 01 — GR00T N1.7 full-range sim2sim eval (joint *.pos, no IK)
+# =============================================================================
+# No camera rename: GR00T concatenates whatever visual keys the dataset/robot
+# provides. Keep Lab 01 camera_front / camera_top / camera_wrist.
+# Inference: RTC is required for use_relative_actions (sync calls
+# GrootPolicy.select_action and raises). Official SO-101 groot rollout:
+# --inference.type=rtc --inference.rtc.execution_horizon=8 --inference.queue_threshold=0
+#
+#   LAB01_POLICY_PATH=./outputs/train/lab01_pnp_groot_n17/checkpoints/000020/pretrained_model \
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_groot.yaml \
+#   LAB01_EVAL_EPISODES=10 \
+#     ./labs/lab01_pnp/eval.cmd
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: position
+  home_gripper: -0.1
+  reset_mode: auto
+  reset_arm: home
+  reset_cube: random
+  cube_random_x_range: [0.26, 0.34]
+  cube_random_y_range: [0.165, 0.235]
+  cube_random_z: 0.0125
+  cube_random_yaw_range: [-45.0, 45.0]
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  cube_positions_path: configs/scenes/simple_pick/cube_positions.json
+  record_fps: 20
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+
+fps: 20
+task: "Pick up the cube and place it in the box."
+
+strategy:
+  type: base
+
+inference:
+  type: rtc
+  rtc:
+    enabled: true
+    execution_horizon: 8
+  queue_threshold: 0
+
+play_sounds: false
+display_data: false
+display_mode: rerun
+return_to_initial_position: false
+
+eval:
+  num_episodes: 20
+  episode_time_s: 60
+  reset_time_s: 3
+  stats_dataset_repo_id: alexhegit/so101-simstudio-lab01-pnp
+  stats_dataset_root: ./datasets/so101-simstudio-lab01-pnp
+  state_dim: 6

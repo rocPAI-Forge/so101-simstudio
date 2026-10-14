@@ -67,6 +67,16 @@ if [[ "$LAB01_EVAL_CONFIG" == *fastwam* || "$LAB01_POLICY_PATH" == *fastwam* ]];
         exit 1
     fi
 fi
+if [[ "$LAB01_EVAL_CONFIG" == *groot* || "$LAB01_POLICY_PATH" == *groot* ]]; then
+    export LAB01_GROOT=1
+    _lab01_need_rocm_torch=true
+    if ! "$PYTHON" -c "import transformers, peft, diffusers, timm, tree" 2>/dev/null; then
+        echo "GR00T extras missing." >&2
+        echo "  ./scripts/install-groot-deps.sh" >&2
+        echo "Do NOT run: uv pip install 'lerobot[groot]' (pulls CUDA torch)." >&2
+        exit 1
+    fi
+fi
 if [[ "$_lab01_need_rocm_torch" == true ]]; then
     if ! "$PYTHON" -c "import torch; hip=getattr(torch.version,'hip',None); assert hip and '+rocm' in torch.__version__" 2>/dev/null; then
         echo "ROCm torch missing or replaced by CUDA build." >&2
