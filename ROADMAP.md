@@ -123,6 +123,7 @@
 ### Home20
 
 - [x] One protocol: 20 frozen poses, `reset_arm: home`, gripper start 0.85, seeds 1000 / 1001 / 1002
+- [x] Home20 totals compare recipes on that protocol. They are not a ranking of model families
 - [x] Success is `final_success`. Report each seed /20 and the total /60
 - [x] Full-range redraws, the single demo pose, and gripper −0.1 runs stay off that column
 - [x] `LAB01_EPISODE_INIT` applies the frozen list over the random cube and the YAML home
