@@ -37,3 +37,8 @@ dist/
 
 # Local scratch (temp scripts, one-off experiments — never commit)
 .tmp/
+/tmp/
+
+# Per-host asset symlinks into ~/.cache (not portable)
+SO101/scenes/*/molmo
+SO101/scenes/*/scan2sim
