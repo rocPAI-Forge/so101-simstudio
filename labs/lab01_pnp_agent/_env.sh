@@ -24,5 +24,5 @@ LAB01_PI05_UNFREEZE_HF_REPO_ID="${LAB01_PI05_UNFREEZE_HF_REPO_ID:-alexhegit/so10
 LAB01_PI05_UNFREEZE_POLICY_PATH="${LAB01_PI05_UNFREEZE_POLICY_PATH:-/tmp/lab01_pi05_front_unfreezeA2_15k/checkpoints/005000/pretrained_model}"
 LAB01_GROOT_AGENT193_ABS_HF_REPO_ID="${LAB01_GROOT_AGENT193_ABS_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-groot-n17-agent193-abs10k}"
 LAB01_DM05_AGENT193_HF_REPO_ID="${LAB01_DM05_AGENT193_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k}"
-LAB01_DM05_AGENT193_POLICY_PATH="${LAB01_DM05_AGENT193_POLICY_PATH:-/tmp/lab01_dm05_10k/checkpoints/010000/pretrained_model}"
+LAB01_DM05_AGENT193_POLICY_PATH="${LAB01_DM05_AGENT193_POLICY_PATH:-/tmp/lab01_dm05_20k/checkpoints/020000/pretrained_model}"
 LAB01_GROOT_AGENT193_ABS_POLICY_PATH="${LAB01_GROOT_AGENT193_ABS_POLICY_PATH:-./outputs/train/lab01_pnp_groot_n17_state6_agent193_abs10k/checkpoints/010000/pretrained_model}"

@@ -29,7 +29,7 @@
 | `hf_model_card_pi05_agent193_unfreeze.md` | pi05 全量解冻（Home20 **34/60**）的 Hub 卡片 |
 | `hf_dataset_card_agent_yaw_v4_follow2.md` | 193 条 follow2 数据集的 Hub 卡片 |
 | `hf_model_card_groot_agent193_abs.md` | GR00T N1.7 绝对关节 10K 的 Hub 卡片 |
-| `hf_model_card_dm05_agent193.md` | DM0.5 10K（Home20 **25/60**）的 Hub 卡片 |
+| `hf_model_card_dm05_agent193.md` | DM0.5 20K（Home20 **37/60**）的 Hub 卡片；历史 Hub id 仍带 `10k` |
 | `viz/` | 覆盖图。`coverage_topview.png` 固定为 teleop 50 / 固定腕 100 / agent-yaw 100，不换入 v4 |
 | `media/` | 演示 mp4 和关键帧截图，由 `make_demo_media.py` 从数据集导出 |
 | `datasets/` | 指向仓库根 `datasets/` 下各 agent 数据集的软链接，不进 git |
