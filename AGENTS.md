@@ -13,14 +13,15 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
   - `teleoperators/so101_leader/`: Real SO-101 leader arm used as teleoperator input.
   - `common/`: Shared constants and action mapping utilities.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
+- **`plugins/lerobot_policy_external_vla/`**: Separately packaged LeRobot policy plugin for model-neutral external VLA inference. It proxies canonical SO-101 observations/actions to an in-process adapter or dependency-isolated sidecar; details in `docs/external_vla.md`.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
   - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`; ROSCon demos: `kitchen_counter`, `smart_drawer`).
   - Cameras: record via `robot.camera_names`; optional MJCF `overview` is GLFW teleop-only unless listed there; train/eval subset via `--rename_map` (see [SO101/scenes/README.md](SO101/scenes/README.md#cameras-record-vs-teleop-vs-train)).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
-- **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why.
+- **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why. `labs/lab01_pnp_agent/` holds the agent-generated trajectory line (agent-yaw datasets, ACT-follow, 193-episode Hub scripts, demo media). Home20 protocol and scores are only in `labs/lab01_pnp_agent/home20.md`. Its `_env.sh` sources `labs/lab01_pnp/_env.sh`. Collectors and the shared `train_*.cmd` / `eval.cmd` stay in `labs/lab01_pnp/`.
 - **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
 - **`third_party/joycon-robotics/`**: Upstream [box2ai-robotics/joycon-robotics](https://github.com/box2ai-robotics/joycon-robotics) git submodule (pinned to upstream `master`). **Do not commit project-specific edits inside the submodule.** SO-101 fixes (serial compatibility, English connect messages) live in `patches/joycon-robotics.patch` and are applied locally by `make joycon-sync` / `scripts/setup-joycon.sh`.
-- **`.tmp/`**: Local scratch (not committed). One-shot smoke helpers and temp logs may live here; do not point formal Hub datasets here.
+- **`.tmp/`**: Local scratch (not committed). One-shot smoke helpers and temp logs may live here; do not point formal Hub datasets here. A directory named `tmp/` is the same kind of scratch and stays out of the repo, at the root or under a lab.
 
 ## Setup
 
@@ -112,6 +113,9 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Joy-Con setup | `make joycon-sync` |
 | MolmoAct2 extras (ROCm-safe) | `./scripts/install-molmoact2-deps.sh` — **not** `uv pip install 'lerobot[molmoact2]'` |
 | MolmoAct2 eval processor patch | `git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch` (do not commit inside `lerobot/`) |
+| External VLA bundle | `.venv-rocm/bin/python -m simstudio.scripts.create_external_vla_bundle --manifest <manifest.json> --output <bundle_dir> --backend sidecar` |
+| External VLA sidecar | `python -m simstudio.policies.external_vla.sidecar --manifest <manifest.json>` (run in the model's native environment) |
+| External VLA benchmark | `.venv-rocm/bin/python -m simstudio.scripts.bench_external_vla --manifest <manifest.json> --backend sidecar` |
 | ROCm setup | `make rocm-sync` |
 
 ## Key Conventions

@@ -39,7 +39,7 @@ import pyarrow.parquet as pq
 REPO = Path(__file__).resolve().parents[2]
 DATASETS = REPO / "datasets"
 SCENE = REPO / "SO101" / "scenes" / "simple_pick" / "scene.xml"
-OUT_JSON = Path(__file__).resolve().parent / "viz" / "cube_pose_estimates.json"
+OUT_JSON = REPO / "labs" / "lab01_pnp_agent" / "viz" / "cube_pose_estimates.json"
 
 TELEOP = "so101-simstudio-lab01-pnp"
 AGENT = "so101-simstudio-lab01-pnp-agent"

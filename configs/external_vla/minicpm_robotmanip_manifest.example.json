@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "protocol_version": "1.0",
+  "adapter": "simstudio.policies.external_vla.adapters.minicpm_robotmanip:MiniCPMRobotManipAdapter",
+  "model_id": "openbmb/MiniCPM-RobotManip",
+  "model_revision": "29cb257541e9f96f493abe21174f8892e5dffe3f",
+  "required_cameras": [
+    "camera_front",
+    "camera_top",
+    "camera_wrist"
+  ],
+  "required_state_fields": [
+    "joint_positions"
+  ],
+  "control_fps": 20.0,
+  "action_horizon": 30,
+  "execution_horizon": 10,
+  "action_semantics": "absolute_joint_position",
+  "action_units": "radian",
+  "joint_names": [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll",
+    "gripper"
+  ],
+  "adapter_config": {
+    "embodiment_id": -1,
+    "state_indices": {
+      "shoulder_pan": -1,
+      "shoulder_lift": -1,
+      "elbow_flex": -1,
+      "wrist_flex": -1,
+      "wrist_roll": -1,
+      "gripper": -1
+    },
+    "action_indices": {
+      "shoulder_pan": -1,
+      "shoulder_lift": -1,
+      "elbow_flex": -1,
+      "wrist_flex": -1,
+      "wrist_roll": -1,
+      "gripper": -1
+    },
+    "prompt_template": "{task}",
+    "device": "cuda"
+  },
+  "normalization": {
+    "state_offset": [],
+    "state_scale": [],
+    "action_offset": [],
+    "action_scale": []
+  },
+  "joint_limits": {
+    "shoulder_pan": [-1.9198621772, 1.9198621772],
+    "shoulder_lift": [-1.745329252, 1.745329252],
+    "elbow_flex": [-1.69, 1.69],
+    "wrist_flex": [-1.6580628495, 1.6580627293],
+    "wrist_roll": [-2.743847297, 2.8412063094],
+    "gripper": [-0.1745329776, 1.7453291996]
+  }
+}

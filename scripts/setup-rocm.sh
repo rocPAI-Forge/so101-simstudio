@@ -4,7 +4,7 @@
 # This is the ONLY supported install path for SO-101 SimStudio.
 # CUDA (Linux) and macOS are not supported in the current release.
 #
-# Installs: ROCm torch → MuJoCo/LeRobot/SmolVLA deps → editable project + lerobot.
+# Installs: ROCm torch → MuJoCo/LeRobot/SmolVLA deps → editable project, lerobot, and policy plugins.
 #
 # Usage:
 #   ./scripts/setup-rocm.sh          # create venv and install all deps
@@ -88,6 +88,9 @@ uv pip install --python "$PY" --no-deps -e ".[smolvla]"
 
 info "Installing lerobot (editable, no-deps) ..."
 uv pip install --python "$PY" --no-deps -e "lerobot[kinematics,smolvla]"
+
+info "Installing external VLA policy bridge (editable, no-deps) ..."
+uv pip install --python "$PY" --no-deps -e "plugins/lerobot_policy_external_vla"
 
 # ── install dev/test deps ──────────────────────────────────────────────
 info "Installing dev/test deps ..."

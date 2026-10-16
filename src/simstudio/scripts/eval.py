@@ -327,12 +327,19 @@ def _run_episode(
     strategy: BaseStrategy,
     ctx: Any,
     episode_time_s: float,
+    frame_hook: Any = None,
+    stop_when: Any = None,
 ) -> dict[str, Any]:
     cfg = ctx.runtime.cfg
     robot = ctx.hardware.robot_wrapper
     engine = strategy._engine
     interpolator = strategy._interpolator
-    control_interval = interpolator.get_control_interval(cfg.fps)
+    get_interval = getattr(interpolator, "get_control_interval", None)
+    if get_interval is not None:
+        control_interval = get_interval(cfg.fps)
+    else:
+        # Current LeRobot main dropped this helper; the interval is unchanged.
+        control_interval = 1.0 / (float(cfg.fps) * interpolator.multiplier)
     inner = getattr(robot, "inner", robot)
     stage_tracker = _EpisodeStageTracker(inner)
     try:
@@ -370,6 +377,12 @@ def _run_episode(
     engine.get_action = timed_get_action  # type: ignore[method-assign]
     if orig_predict is not None:
         policy.predict_action_chunk = timed_predict_chunk  # type: ignore[method-assign]
+    takeover = None
+    if _env_flag("LAB01_EXPERT_TAKEOVER"):
+        from simstudio.scripts.expert_takeover import ExpertTakeover
+
+        takeover = ExpertTakeover()
+        logger.info("Expert takeover enabled dist<=%.3fm gripper_q>=%.2f", takeover.dist_m, takeover.open_q)
     # Count control ticks, not wall time. OSMesa/CPU GL can run at ~2 Hz; a
     # 60s wall-clock cap then only simulates ~6s (120 ticks) and truncates
     # grasps. fps=20 × 60s → 1200 ticks on any backend.
@@ -377,6 +390,7 @@ def _run_episode(
     max_ticks = max(1, int(round(episode_time_s * fps)))
     wall_cap_s = episode_time_s * 30.0
     start = time.perf_counter()
+    stop_reason = None
     engine.resume()
     try:
         while not ctx.runtime.shutdown_event.is_set():
@@ -395,11 +409,29 @@ def _run_episode(
             obs = robot.get_observation()
             obs_processed = strategy._process_observation_and_notify(ctx.processors, obs)
 
-            if strategy._handle_warmup(cfg.use_torch_compile, loop_start, control_interval):
+            warmup = strategy._handle_warmup
+            if "timer" in getattr(warmup, "__code__", type("c", (), {"co_varnames": ()})).co_varnames:
+                # Newer LeRobot paces compile warmup with a CycleTimer. This loop
+                # leaves torch.compile off, so that path is unused.
+                if cfg.use_torch_compile:
+                    raise RuntimeError("eval.py does not drive CycleTimer warmup; leave use_torch_compile off")
+                warming = False
+            else:
+                warming = warmup(cfg.use_torch_compile, loop_start, control_interval)
+            if warming:
                 continue
 
             sent = send_next_action(obs_processed, obs, ctx, interpolator)
+            if frame_hook is not None and sent is not None:
+                frame_hook(obs, sent)
             stage_tracker.update(sent)
+            if takeover is not None and takeover.consider(inner, stage_tracker):
+                stop_reason = "expert_takeover"
+                break
+            if stop_when is not None:
+                stop_reason = stop_when(inner, tick_n + 1)
+                if stop_reason:
+                    break
             if debug_left[0] > 0 and sent is not None:
                 debug_left[0] -= 1
                 names = list(getattr(inner, "JOINT_NAMES", []))
@@ -432,6 +464,7 @@ def _run_episode(
         "tick_n": float(tick_n),
         "tick_s": tick_s,
         "funnel": stage_tracker.result(),
+        "stop_reason": stop_reason,
     }
 
 
@@ -479,6 +512,31 @@ def _fitted_state_dim(step: Any) -> int | None:
         shape = getattr(value, "shape", None)
         return int(shape[-1]) if shape else len(value)
     return None
+
+
+def _apply_eval_seed() -> int | None:
+    """Seed Python, NumPy, and PyTorch from LAB01_EVAL_SEED.
+
+    SmolVLA draws a fresh Gaussian noise tensor for every action chunk. The
+    seed fixes that sequence at process start. RTC timing can still change
+    which observation is paired with which draw.
+    """
+    raw = os.environ.get("LAB01_EVAL_SEED", "").strip()
+    if not raw:
+        return None
+    seed = int(raw)
+    import random
+
+    import numpy as np
+    import torch
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    logger.info("Eval RNG seed set to %d", seed)
+    return seed
 
 
 def _env_flag(name: str) -> bool:
@@ -764,6 +822,45 @@ def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     )
 
 
+def _shrink_rollout_state_to_policy(ctx: Any) -> None:
+    """Drop extra ``.vel`` channels when the policy was trained on joint positions.
+
+    Current LeRobot rollout keeps both ``.pos`` and ``.vel`` motor keys. SO-101
+    publishes both, so the packed state is 12-D. Joint-position policies (6-D)
+    normalize against the position prefix only.
+    """
+    policy_dim = _policy_state_dim(ctx)
+    fitted_dim = _checkpoint_normalizer_fitted_state_dim(ctx)
+    if fitted_dim is not None:
+        policy_dim = fitted_dim
+    if policy_dim is None:
+        return
+    current = ctx.data.dataset_features.get("observation.state")
+    if not isinstance(current, dict):
+        return
+    names = list(current.get("names") or [])
+    if len(names) <= policy_dim:
+        return
+    pos_names = [name for name in names if str(name).endswith(".pos")]
+    keep = pos_names if len(pos_names) == policy_dim else names[:policy_dim]
+    updated = dict(current)
+    updated["names"] = keep
+    updated["shape"] = (policy_dim,)
+    ctx.data.dataset_features["observation.state"] = updated
+    hw_state = ctx.data.hw_features.get("observation.state")
+    if isinstance(hw_state, dict):
+        hw_updated = dict(hw_state)
+        hw_updated["names"] = keep
+        hw_updated["shape"] = (policy_dim,)
+        ctx.data.hw_features["observation.state"] = hw_updated
+    logger.info(
+        "Shrunk rollout observation.state from %d to %d dims: %s",
+        len(names),
+        policy_dim,
+        keep,
+    )
+
+
 def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], rename_map: dict) -> None:
     """Align normalizer ``observation.state`` stats with the policy input dimension.
 
@@ -808,6 +905,23 @@ def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], 
         )
         return
     logger.warning("NormalizerProcessorStep not found; skipping stats patch")
+
+
+def _maybe_success_recorder(robot: SO101MujocoRobot) -> Any:
+    """Append eval episodes that finish in the box when LAB01_RECORD_ROOT is set."""
+    root = os.environ.get("LAB01_RECORD_ROOT", "").strip()
+    if not root:
+        return None
+    lab = Path(__file__).resolve().parents[3] / "labs" / "lab01_pnp"
+    sys.path.insert(0, str(lab))
+    from auto_collect_yaw import ScriptedRecorder
+
+    repo_id = os.environ.get(
+        "LAB01_RECORD_REPO_ID",
+        "alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4",
+    )
+    logger.info("Recording successful eval episodes to %s", root)
+    return ScriptedRecorder(robot, repo_id=repo_id, root=Path(root), save_failures=False)
 
 
 def _load_episode_inits() -> list[dict[str, Any]] | None:
@@ -861,6 +975,7 @@ def _apply_episode_init(robot: SO101MujocoRobot, row: dict[str, Any]) -> None:
 def eval_main(cfg: RolloutConfig) -> None:
     if not isinstance(cfg.strategy, BaseStrategyConfig):
         raise ValueError("eval.py requires strategy.type=base (multi-episode loop is built-in)")
+    _apply_eval_seed()
 
     eval_settings = _EVAL_SETTINGS
     num_episodes = int(eval_settings["num_episodes"])
@@ -882,6 +997,7 @@ def eval_main(cfg: RolloutConfig) -> None:
     robot = ctx.hardware.robot_wrapper
     inner_robot = getattr(robot, "inner", robot)
     _expand_rollout_state_features(ctx, inner_robot)
+    _shrink_rollout_state_to_policy(ctx)
     _fix_preprocessor_normalizer_stats(ctx, eval_settings, cfg.rename_map)
     if _env_flag("LAB01_GRIPPER_SNAP"):
         _install_gripper_snap(ctx)
@@ -889,6 +1005,7 @@ def eval_main(cfg: RolloutConfig) -> None:
     if not isinstance(inner, SO101MujocoRobot):
         raise TypeError(f"eval.py expects so101_mujoco robot, got {type(inner)}")
     gripper_oracle = _install_gripper_oracle(inner) if _env_flag("LAB01_GRIPPER_ORACLE") else None
+    success_recorder = _maybe_success_recorder(inner)
 
     strategy = BaseStrategy(cfg.strategy)
     results: list[dict[str, Any]] = []
@@ -910,6 +1027,14 @@ def eval_main(cfg: RolloutConfig) -> None:
 
     try:
         strategy.setup(ctx)
+        if os.environ.get("LAB01_TAKEOVER"):
+            lab_dir = Path(__file__).resolve().parents[3] / "labs" / "lab01_pnp"
+            if str(lab_dir) not in sys.path:
+                sys.path.insert(0, str(lab_dir))
+            from collect_policy_takeover import run_takeover_campaign
+
+            run_takeover_campaign(strategy, ctx, inner, cfg)
+            return
         for ep in range(num_episodes):
             if ctx.runtime.shutdown_event.is_set():
                 break
@@ -924,7 +1049,14 @@ def eval_main(cfg: RolloutConfig) -> None:
                 gripper_oracle.reset()
             strategy._engine.reset()
             strategy._interpolator.reset()
-            timing = _run_episode(strategy, ctx, episode_time_s)
+            if success_recorder is not None:
+                success_recorder.begin_episode({"source": "eval_success", "eval_episode": ep})
+            timing = _run_episode(
+                strategy,
+                ctx,
+                episode_time_s,
+                frame_hook=None if success_recorder is None else success_recorder.on_tick,
+            )
 
             if gripper_oracle is not None:
                 logger.info(
@@ -984,9 +1116,13 @@ def eval_main(cfg: RolloutConfig) -> None:
                     f"closes={funnel['close_events']} cube=({fc['cube_x']:.3f},{fc['cube_y']:.3f})"
                 )
 
+            if success_recorder is not None:
+                success_recorder.end_episode(success=success, episode=ep)
             if ep < num_episodes - 1 and reset_time_s > 0:
                 _reset_pause(inner, reset_time_s, cfg.fps)
     finally:
+        if success_recorder is not None:
+            success_recorder.close()
         strategy.teardown(ctx)
         if cfg.display_data:
             shutdown_visualization()

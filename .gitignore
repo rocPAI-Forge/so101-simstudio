@@ -11,6 +11,7 @@ __pycache__/
 
 # Datasets (Hub / local LeRobot stores). Keep the SimStudio Python package.
 datasets/
+labs/lab01_pnp_agent/datasets/
 !src/simstudio/datasets/
 !src/simstudio/datasets/*.py
 
@@ -34,5 +35,12 @@ dist/
 *.log
 .venv
 
-# Local scratch (temp scripts, one-off experiments — never commit)
+# Local scratch (temp scripts, one-off experiments — never commit).
+# .tmp/ is the documented scratch dir. Any directory named tmp/ is the same
+# and stays out of the repo, at the root or nested under a lab.
 .tmp/
+tmp/
+
+# Per-host asset symlinks into ~/.cache (not portable)
+SO101/scenes/*/molmo
+SO101/scenes/*/scan2sim
