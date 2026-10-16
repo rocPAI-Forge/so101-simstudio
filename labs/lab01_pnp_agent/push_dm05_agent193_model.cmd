@@ -1,6 +1,6 @@
 #!/bin/bash
-# Upload the DM0.5 10K checkpoint (pure-model Home20 25/60).
-# Does not upload the 5000-step checkpoint.
+# Replace the historical DM0.5 10K Hub repo with the adopted 20K checkpoint
+# (pure-model Home20 37/60). The Hub id retains its historical 10k suffix.
 #
 #   LAB01_HF_UPLOAD_ENDPOINT=https://huggingface.co ./labs/lab01_pnp_agent/push_dm05_agent193_model.cmd
 #   ./labs/lab01_pnp_agent/push_dm05_agent193_model.cmd --card-only
@@ -15,7 +15,7 @@ fi
 
 CARD="$_AGENT_DIR/hf_model_card_dm05_agent193.md"
 REPO_ID="${LAB01_DM05_AGENT193_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k}"
-POLICY_PATH="${LAB01_DM05_AGENT193_POLICY_PATH:-/tmp/lab01_dm05_10k/checkpoints/010000/pretrained_model}"
+POLICY_PATH="${LAB01_DM05_AGENT193_POLICY_PATH:-/tmp/lab01_dm05_20k/checkpoints/020000/pretrained_model}"
 
 CARD_ONLY=false
 for arg in "$@"; do
@@ -34,14 +34,14 @@ if [[ -z "$HF" ]]; then
     exit 1
 fi
 
-echo "=== Push DM0.5 agent193 10K (Home20 25/60) ==="
+echo "=== Push DM0.5 agent193 20K (Home20 37/60) ==="
 echo "Hub: https://huggingface.co/$REPO_ID"
 "$HF" repo create "$REPO_ID" --type model --exist-ok
 if [[ "$CARD_ONLY" != true ]]; then
     [[ -f "$POLICY_PATH/model.safetensors" ]] || { echo "Missing $POLICY_PATH/model.safetensors" >&2; exit 1; }
     "$HF" upload "$REPO_ID" "$POLICY_PATH" . --repo-type model \
-        --commit-message "Add DM0.5 10K pretrained_model (Home20 25/60)"
+        --commit-message "Replace DM0.5 10K with 20K pretrained_model (Home20 37/60)"
 fi
 "$HF" upload "$REPO_ID" "$CARD" README.md --repo-type model \
-    --commit-message "Add DM0.5 agent193 model card (Home20 25/60)"
+    --commit-message "Update DM0.5 model card for 20K (Home20 37/60)"
 echo "Done: https://huggingface.co/$REPO_ID"

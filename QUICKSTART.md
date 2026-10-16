@@ -320,6 +320,9 @@ dataset:
 
 ## More
 
+- [Lab 01 — record / train / eval](labs/lab01_pnp/lab01_pnp.md)
+- [Lab 01 agent data (193 episodes)](labs/lab01_pnp_agent/lab01_pnp_agent.md)
+- [Home20 scores](labs/lab01_pnp_agent/home20.md)
 - [Architecture](DESIGN.md)
 - [Roadmap](ROADMAP.md)
 - [AGENTS.md](AGENTS.md)
