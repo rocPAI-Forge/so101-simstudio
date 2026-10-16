@@ -30,6 +30,7 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 |---|---|---|---|
 | ACT 6 维 | 只在前 140 条上，50K，从零训 | **18/20、17/20、18/20 = 53/60** | 对照。三次都是接近 20/20、闭合 20/20，漏在抬起之后 |
 | SmolVLA follow2 | 193 条上再训 2500 步，绝对关节 | **16/20、18/20、17/20 = 51/60** | 对照。当前采用的 SmolVLA 检查点 |
+| xVLA | 从 `lerobot/xvla-base` 全量训 10K，三路相机，绝对关节 | **15/20、17/20、15/20 = 47/60** | 闭合 57，抬起 49，到盒子上方 48。见下文 |
 | MolmoAct2，VLM LoRA | 10K，再从该权重训 20K。视觉和语言只训 LoRA，动作专家全量 | 10K **13/20、11/20、12/20 = 36/60**；20K **13/20、13/20、13/20 = 39/60** | 这条线的成绩。抬起 39，闭合 42 |
 | MolmoAct2，合并 LoRA 后全量 5000 | 从 39/60 的权重合并适配器，再训视觉和语言的原权重 | **8/20、6/20、9/20 = 23/60** | 负结果。抬起从 39 降到 25。不替换 39/60 |
 | GR00T N1.7 绝对关节，冻结骨干 10K | 从 `nvidia/GR00T-N1.7-3B` 训 10K，`use_relative_actions=false` | **7/20、2/20、5/20 = 14/60** | 合拢 45，抬起 17 |
@@ -46,7 +47,7 @@ SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**�
 
 ACT 日志 `outputs/eval/act_state6_v4_lab01_pnp_home20_g085_seed1000.log` 及 `seed1001`、`seed1002`。SmolVLA follow2 日志 `outputs/eval/smolvla_v4_actonly_follow2_lab01_pnp_home20_g085_seed1000.log` 及另外两个种子。这两份权重的下载链接在下面的表里。
 
-DM0.5 的训练和三种子漏斗在下面的 DM0.5 一节。下载链接在基座表里。
+xVLA 和 DM0.5 的训练、映射和三种子漏斗在下面各自的小节。下载链接在基座表里；xVLA 微调权重没有上传，所以该格留空。
 
 ### 可以定下来的话
 
@@ -81,6 +82,7 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 | JEPA 6 维（193 条） | [lerobot/VLA-JEPA-LIBERO](https://huggingface.co/lerobot/VLA-JEPA-LIBERO) | |
 | JEPA 7 维末端 | 同上 | |
 | DM0.5 20K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)（仓库名保留 `10k`，内容已替换为 20K） |
+| xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | |
 | LingBot-VA | [lerobot/lingbot_va_libero_long](https://huggingface.co/lerobot/lingbot_va_libero_long) | |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
@@ -295,6 +297,46 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 | 用时 | 2026-10-14 16:34 到 2026-10-15 01:42，约 9 小时 8 分。约 1.65 秒/步，每卡约 51 GB。结束时日志损失 0.013，约 0.61 个 epoch |
 
 `decay_steps` 必须等于这次的 `--steps`，否则余弦会把峰值再缩放一次。
+
+## xVLA
+
+基座是 [`lerobot/xvla-base`](https://huggingface.co/lerobot/xvla-base)。仓库钉住的 LeRobot v0.6.0 没有 xVLA；训练和评测使用 `/tmp/lerobot-main` 的更新实现，没有改子模块。微调权重在 `/tmp/lab01_xvla_10k/checkpoints/010000/pretrained_model`，尚未上传，因此上面的微调权重格留空。
+
+原基座声明 8 维 proprio 和 20 维动作。本次数据仍只取 15 维 `observation.state` 的前 6 个关节 `.pos`；xVLA 在模型入口把这 6 维补到原生 8 维。动作设为 `action_mode=auto`：保留预训练的 20 维动作头，只对真实的前 6 维计算损失，推理时再裁回 SO-101 的 6 维绝对关节动作。不要把 20 维原始输出直接发给机器人。
+
+三路相机都使用，训练和评测映射相同：
+
+| 数据集 | xVLA |
+|---|---|
+| `camera_top` | `image` |
+| `camera_wrist` | `image2` |
+| `camera_front` | `image3` |
+
+正式评测日志 `outputs/eval/xvla_agent193_10k_lab01_pnp_home20_g085_seed1000.log` 及 `seed1001`、`seed1002`。第一次自动评测没有把相机 `rename_map` 显式传给 rollout，在特征检查阶段退出，没有产生分数；下面的三份日志是修正映射后重跑的结果，均 `exit: 0`。
+
+| 种子 | 成功 | 4 cm 内 | 闭合 | 抬起 | 到盒子上方 | 掉落 |
+|---|---:|---:|---:|---:|---:|---:|
+| 1000 | 15/20 | 20 | 19 | 15 | 15 | 0 |
+| 1001 | 17/20 | 20 | 19 | 17 | 17 | 0 |
+| 1002 | 15/20 | 20 | 19 | 17 | 16 | 2 |
+| 合计 | **47/60** | **60** | **57** | **49** | **48** | **2** |
+
+松开后仍在盒内 48，某拍已放入 47，回合结束仍成功 47。这个 47/60 是下面这套训练配方在 Home20 上的结果，不是 xVLA 和其他模型的全面能力排名。
+
+配方：
+
+| | |
+|---|---|
+| 初始化 | `lerobot/xvla-base` |
+| 可训练参数 | 879,482,456；视觉、语言、policy transformer 和 soft prompts 全量打开 |
+| 数据 | 193 条；状态取 6 维关节 `.pos`，动作是 6 维绝对关节 |
+| 相机 | top、wrist、front，统一缩放到 224×224 |
+| 动作适配 | `action_mode=auto`，20 维预训练头只监督并输出前 6 个真实维度 |
+| chunk / `n_action_steps` | 30 / 30 |
+| 步数 / 批量 | 10000 / 每卡 4。4 张 A30 做 DDP，`dp_replicate=4`，有效批量 16 |
+| 学习率 | 峰值 `1e-4`，warmup 1000，`decay_steps=10000`，末端 `2.5e-6` |
+| dtype | bfloat16 |
+| 用时 | 2026-10-15 15:22 到 16:39，约 1 小时 17 分。约 2.15 步/秒，每卡峰值约 11.1 GB。结束时损失 0.008，约 1.22 个 epoch |
 
 ## 和 NVIDIA SO-101 GR00T 课程不是同一张考卷
 
