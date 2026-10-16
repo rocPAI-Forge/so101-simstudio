@@ -118,7 +118,7 @@
 - [x] Camera map recorded per policy (top+wrist or front). The dataset still stores the front camera
 - [x] 6-D absolute joint targets for sim2real-style policies. GR00T relative actions stayed near 0/60; absolute joints are the Home20 frame
 - [x] Frozen backbone, action-expert-only, LoRA, and full updates. pi05 full unfreeze **34/60** (expert-only was 12/60). MolmoAct2 LoRA **39/60**; the later full update fell to 23/60 and was not adopted
-- [x] xVLA full 10K with three cameras and a 20-D pretrained head adapted to 6-D absolute SO-101 joints: Home20 **47/60**. The finetune is local, not uploaded
+- [x] xVLA full 10K with three cameras and a 20-D pretrained head adapted to 6-D absolute SO-101 joints: Home20 **47/60**. The finetune is uploaded and linked from [home20.md](labs/lab01_pnp_agent/home20.md)
 - [x] Uploaded checkpoints linked from [home20.md](labs/lab01_pnp_agent/home20.md), including DM0.5 20K at **37/60** (the historical Hub id still ends in `10k`)
 
 ### Home20
