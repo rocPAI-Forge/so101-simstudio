@@ -178,6 +178,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 | MuJoCo recording GUI (`view_mode=mujoco`) | ✅ |
 | Rerun recording GUI (`view_mode=rerun`) | ✅ |
 | Lab 01 ACT / SmolVLA train + MuJoCo eval | ✅ |
+| External VLA inference plugin / sidecar | ✅ |
 | Agent-yaw 193-episode dataset + Home20 eval | ✅ |
 | Lab 01 MolmoAct2 / pi05 / GR00T / DM0.5 finetunes | ✅ |
 | Real follower hardware | 🔲 Planned |
@@ -196,6 +197,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 
 - [Quick start](QUICKSTART.md)
 - [Lab 01 — PnP record / train / eval](labs/lab01_pnp/lab01_pnp.md)
+- [External VLA inference](docs/external_vla.md)
 - [Lab 01 agent data](labs/lab01_pnp_agent/lab01_pnp_agent.md) · [Home20 scores](labs/lab01_pnp_agent/home20.md)
 - [Architecture](DESIGN.md)
 - [Roadmap](ROADMAP.md)

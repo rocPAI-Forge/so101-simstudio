@@ -334,7 +334,12 @@ def _run_episode(
     robot = ctx.hardware.robot_wrapper
     engine = strategy._engine
     interpolator = strategy._interpolator
-    control_interval = interpolator.get_control_interval(cfg.fps)
+    get_interval = getattr(interpolator, "get_control_interval", None)
+    if get_interval is not None:
+        control_interval = get_interval(cfg.fps)
+    else:
+        # Current LeRobot main dropped this helper; the interval is unchanged.
+        control_interval = 1.0 / (float(cfg.fps) * interpolator.multiplier)
     inner = getattr(robot, "inner", robot)
     stage_tracker = _EpisodeStageTracker(inner)
     try:
@@ -404,7 +409,16 @@ def _run_episode(
             obs = robot.get_observation()
             obs_processed = strategy._process_observation_and_notify(ctx.processors, obs)
 
-            if strategy._handle_warmup(cfg.use_torch_compile, loop_start, control_interval):
+            warmup = strategy._handle_warmup
+            if "timer" in getattr(warmup, "__code__", type("c", (), {"co_varnames": ()})).co_varnames:
+                # Newer LeRobot paces compile warmup with a CycleTimer. This loop
+                # leaves torch.compile off, so that path is unused.
+                if cfg.use_torch_compile:
+                    raise RuntimeError("eval.py does not drive CycleTimer warmup; leave use_torch_compile off")
+                warming = False
+            else:
+                warming = warmup(cfg.use_torch_compile, loop_start, control_interval)
+            if warming:
                 continue
 
             sent = send_next_action(obs_processed, obs, ctx, interpolator)
@@ -808,6 +822,45 @@ def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     )
 
 
+def _shrink_rollout_state_to_policy(ctx: Any) -> None:
+    """Drop extra ``.vel`` channels when the policy was trained on joint positions.
+
+    Current LeRobot rollout keeps both ``.pos`` and ``.vel`` motor keys. SO-101
+    publishes both, so the packed state is 12-D. Joint-position policies (6-D)
+    normalize against the position prefix only.
+    """
+    policy_dim = _policy_state_dim(ctx)
+    fitted_dim = _checkpoint_normalizer_fitted_state_dim(ctx)
+    if fitted_dim is not None:
+        policy_dim = fitted_dim
+    if policy_dim is None:
+        return
+    current = ctx.data.dataset_features.get("observation.state")
+    if not isinstance(current, dict):
+        return
+    names = list(current.get("names") or [])
+    if len(names) <= policy_dim:
+        return
+    pos_names = [name for name in names if str(name).endswith(".pos")]
+    keep = pos_names if len(pos_names) == policy_dim else names[:policy_dim]
+    updated = dict(current)
+    updated["names"] = keep
+    updated["shape"] = (policy_dim,)
+    ctx.data.dataset_features["observation.state"] = updated
+    hw_state = ctx.data.hw_features.get("observation.state")
+    if isinstance(hw_state, dict):
+        hw_updated = dict(hw_state)
+        hw_updated["names"] = keep
+        hw_updated["shape"] = (policy_dim,)
+        ctx.data.hw_features["observation.state"] = hw_updated
+    logger.info(
+        "Shrunk rollout observation.state from %d to %d dims: %s",
+        len(names),
+        policy_dim,
+        keep,
+    )
+
+
 def _fix_preprocessor_normalizer_stats(ctx: Any, eval_settings: dict[str, Any], rename_map: dict) -> None:
     """Align normalizer ``observation.state`` stats with the policy input dimension.
 
@@ -944,6 +997,7 @@ def eval_main(cfg: RolloutConfig) -> None:
     robot = ctx.hardware.robot_wrapper
     inner_robot = getattr(robot, "inner", robot)
     _expand_rollout_state_features(ctx, inner_robot)
+    _shrink_rollout_state_to_policy(ctx)
     _fix_preprocessor_normalizer_stats(ctx, eval_settings, cfg.rename_map)
     if _env_flag("LAB01_GRIPPER_SNAP"):
         _install_gripper_snap(ctx)

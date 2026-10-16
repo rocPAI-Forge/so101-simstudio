@@ -13,6 +13,7 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
   - `teleoperators/so101_leader/`: Real SO-101 leader arm used as teleoperator input.
   - `common/`: Shared constants and action mapping utilities.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
+- **`plugins/lerobot_policy_external_vla/`**: Separately packaged LeRobot policy plugin for model-neutral external VLA inference. It proxies canonical SO-101 observations/actions to an in-process adapter or dependency-isolated sidecar; details in `docs/external_vla.md`.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
   - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
@@ -109,6 +110,9 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Joy-Con setup | `make joycon-sync` |
 | MolmoAct2 extras (ROCm-safe) | `./scripts/install-molmoact2-deps.sh` — **not** `uv pip install 'lerobot[molmoact2]'` |
 | MolmoAct2 eval processor patch | `git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch` (do not commit inside `lerobot/`) |
+| External VLA bundle | `.venv-rocm/bin/python -m simstudio.scripts.create_external_vla_bundle --manifest <manifest.json> --output <bundle_dir> --backend sidecar` |
+| External VLA sidecar | `python -m simstudio.policies.external_vla.sidecar --manifest <manifest.json>` (run in the model's native environment) |
+| External VLA benchmark | `.venv-rocm/bin/python -m simstudio.scripts.bench_external_vla --manifest <manifest.json> --backend sidecar` |
 | ROCm setup | `make rocm-sync` |
 
 ## Key Conventions
