@@ -72,7 +72,23 @@ Same scene and success rule as the leader-teleop lab. Two data sources, one eval
 | Finetunes | Camera choice, 6-D absolute joints vs relative actions, and frozen / LoRA / full updates. Gains are per model; a full update is not always better |
 | **Home20** | 20 frozen cube poses, arm home, gripper start 0.85, seeds 1000 / 1001 / 1002. Quote `final_success` as /20 and /60 |
 
-Adopted Home20 totals on that protocol: ACT 6-D **53/60** (first 140 episodes only), SmolVLA **51/60**, xVLA **47/60**, MolmoAct2 LoRA **39/60**, DM0.5 20K **37/60**, pi05 full unfreeze **34/60**, GR00T N1.7 absolute **14/60** (uploaded frozen checkpoint; the unfrozen run is 15/60 and was not uploaded). These totals are not a ranking of the models. The task and the 20 poses are shared, and most rows use the 193 episodes, but step count, learning rate, cameras, which weights were trained, and absolute versus relative actions all differ. A higher number means that checkpoint did better on these 20 poses and three seeds. It does not measure which model is stronger in general. The only score table is [Home20](labs/lab01_pnp_agent/home20.md). The LeRobot submodule stays at v0.6.0; the DM0.5 and xVLA checkpoints are not loadable from that pin.
+#### Models evaluated
+
+These policy families have completed closed-loop evaluation in this Lab 01 scene. The canonical benchmark document is [Lab01-PnP-Home20](labs/lab01_pnp_agent/home20.md); it contains the protocol, per-seed results, stage funnels, training recipes, base models, and all available Hugging Face checkpoint links.
+
+| Model | Adopted Home20 result | Published finetune |
+|-------|------------------------|--------------------|
+| ACT 6-D | **53/60** — trained from scratch on the first 140 episodes | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-act-agent-yaw-v4) |
+| SmolVLA | **51/60** — 193 episodes, 2.5K follow2 finetune | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-smolvla-agent-yaw-follow2) |
+| xVLA | **47/60** — full 10K, three cameras | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k) |
+| MolmoAct2 | **39/60** — VLM LoRA 20K | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2-agent193-20k) |
+| DM0.5 | **37/60** — 20K, top + wrist cameras | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k) |
+| pi05 | **34/60** — full unfreeze | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-pi05-agent193-unfreeze) |
+| GR00T N1.7 | **14/60** — absolute joints, frozen backbone | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17-agent193-abs10k) |
+| FastWAM | **0/60** — 4K transfer trial | Not published |
+| VLA-JEPA | **0/60** — 6-D joint and 7-D end-effector trials | Not published |
+
+These totals are not a general model ranking. The scene and frozen poses are shared, but step count, learning rate, cameras, trainable weights, initialization, and action representation differ. A higher number only means that checkpoint performed better under this specific Home20 setup. The LeRobot submodule stays at v0.6.0; DM0.5 and xVLA require a newer LeRobot revision.
 
 ## Requirements
 
