@@ -47,7 +47,7 @@ SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**�
 
 ACT 日志 `outputs/eval/act_state6_v4_lab01_pnp_home20_g085_seed1000.log` 及 `seed1001`、`seed1002`。SmolVLA follow2 日志 `outputs/eval/smolvla_v4_actonly_follow2_lab01_pnp_home20_g085_seed1000.log` 及另外两个种子。这两份权重的下载链接在下面的表里。
 
-xVLA 和 DM0.5 的训练、映射和三种子漏斗在下面各自的小节。下载链接在基座表里；xVLA 微调权重没有上传，所以该格留空。
+xVLA 和 DM0.5 的训练、映射和三种子漏斗在下面各自的小节。下载链接在基座表里。
 
 ### 可以定下来的话
 
@@ -82,7 +82,7 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 | JEPA 6 维（193 条） | [lerobot/VLA-JEPA-LIBERO](https://huggingface.co/lerobot/VLA-JEPA-LIBERO) | |
 | JEPA 7 维末端 | 同上 | |
 | DM0.5 20K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)（仓库名保留 `10k`，内容已替换为 20K） |
-| xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | |
+| xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | [alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k) |
 | LingBot-VA | [lerobot/lingbot_va_libero_long](https://huggingface.co/lerobot/lingbot_va_libero_long) | |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
@@ -300,7 +300,7 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 
 ## xVLA
 
-基座是 [`lerobot/xvla-base`](https://huggingface.co/lerobot/xvla-base)。仓库钉住的 LeRobot v0.6.0 没有 xVLA；训练和评测使用 `/tmp/lerobot-main` 的更新实现，没有改子模块。微调权重在 `/tmp/lab01_xvla_10k/checkpoints/010000/pretrained_model`，尚未上传，因此上面的微调权重格留空。
+基座是 [`lerobot/xvla-base`](https://huggingface.co/lerobot/xvla-base)。仓库钉住的 LeRobot v0.6.0 没有 xVLA；训练和评测使用 `/tmp/lerobot-main` 的更新实现，没有改子模块。10K 微调权重已上传到 [`alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k`](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k)。
 
 原基座声明 8 维 proprio 和 20 维动作。本次数据仍只取 15 维 `observation.state` 的前 6 个关节 `.pos`；xVLA 在模型入口把这 6 维补到原生 8 维。动作设为 `action_mode=auto`：保留预训练的 20 维动作头，只对真实的前 6 维计算损失，推理时再裁回 SO-101 的 6 维绝对关节动作。不要把 20 维原始输出直接发给机器人。
 
