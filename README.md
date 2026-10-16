@@ -147,6 +147,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 | MuJoCo recording GUI (`view_mode=mujoco`) | ✅ |
 | Rerun recording GUI (`view_mode=rerun`) | ✅ |
 | Lab 01 ACT / SmolVLA train + MuJoCo eval | ✅ |
+| External VLA inference plugin / sidecar | ✅ |
 | Real follower hardware | 🔲 Planned |
 
 ## Version history
@@ -162,6 +163,7 @@ make smoke-joycon-record SIDE=right VIEW_MODE=mujoco
 
 - [Quick start](QUICKSTART.md)
 - [Lab 01 — PnP record / train / eval](labs/lab01_pnp/lab01_pnp.md)
+- [External VLA inference](docs/external_vla.md)
 - [Architecture](DESIGN.md)
 - [Roadmap](ROADMAP.md)
 - [Agent / dev guide](AGENTS.md)

@@ -1,0 +1,17 @@
+[project]
+name = "lerobot_policy_external_vla"
+version = "0.1.0"
+description = "LeRobot bridge for SimStudio's model-neutral external VLA runtime"
+requires-python = ">=3.12"
+dependencies = [
+    "lerobot",
+    "so101-simstudio>=0.1.2",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["lerobot_policy_external_vla*"]

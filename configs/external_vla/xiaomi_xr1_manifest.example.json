@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "protocol_version": "1.0",
+  "adapter": "simstudio.policies.external_vla.adapters.xiaomi_xr1:XiaomiXR1Adapter",
+  "model_id": "XiaomiRobotics/Xiaomi-Robotics-1-5B",
+  "model_revision": "ee21d524b5c52ac961d941e1bc7d6d92836c3d5e",
+  "required_cameras": [
+    "camera_front",
+    "camera_top",
+    "camera_wrist"
+  ],
+  "required_state_fields": [
+    "joint_positions",
+    "end_effector_xyz"
+  ],
+  "control_fps": 20.0,
+  "action_horizon": 30,
+  "execution_horizon": 10,
+  "action_semantics": "absolute_joint_position",
+  "action_units": "radian",
+  "joint_names": [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll",
+    "gripper"
+  ],
+  "adapter_config": {
+    "runtime_factory": "xr1_simstudio_bridge:make_runtime",
+    "ik_solver": "xr1_simstudio_bridge:solve_so101_chunk",
+    "runtime_kwargs": {},
+    "native_runtime_handles_normalization": true,
+    "arm_slot": "right",
+    "action_component_key": "right_ee",
+    "camera_mapping": {
+      "camera_front": "ego",
+      "camera_top": "wrist_left",
+      "camera_wrist": "wrist_right"
+    }
+  },
+  "normalization": {
+    "owner": "native_xr1_runtime"
+  },
+  "joint_limits": {
+    "shoulder_pan": [-1.9198621772, 1.9198621772],
+    "shoulder_lift": [-1.745329252, 1.745329252],
+    "elbow_flex": [-1.69, 1.69],
+    "wrist_flex": [-1.6580628495, 1.6580627293],
+    "wrist_roll": [-2.743847297, 2.8412063094],
+    "gripper": [-0.1745329776, 1.7453291996]
+  }
+}
