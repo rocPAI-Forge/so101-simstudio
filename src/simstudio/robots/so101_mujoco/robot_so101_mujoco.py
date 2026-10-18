@@ -429,7 +429,9 @@ class SO101MujocoRobot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected")
 
-        has_velocity_keys = any(k in action for k in ["vx", "vy", "vz", "yaw_rate", "gripper_delta"])
+        has_velocity_keys = any(
+            k in action for k in ["vx", "vy", "vz", "wrist_flex_rate", "yaw_rate", "gripper_delta"]
+        )
         has_position_keys = any(f"{jn}.pos" in action for jn in self.JOINT_NAMES)
 
         if has_position_keys:

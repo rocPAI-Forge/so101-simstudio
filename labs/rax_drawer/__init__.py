@@ -1,0 +1,1 @@
+"""RAX drawer lab prototype."""

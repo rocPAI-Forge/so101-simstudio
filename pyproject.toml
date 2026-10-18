@@ -50,6 +50,8 @@ ignore = ["E501"]
 # auto_collect_*.py must import LeRobot before mujoco (OSMesa + torch SIGSEGV).
 [tool.ruff.lint.per-file-ignores]
 "labs/lab01_pnp/auto_collect_*.py" = ["I001"]
+# Preserve LeRobot-before-MuJoCo import order for OSMesa/Torch safety.
+"labs/rax_drawer/environment.py" = ["I001"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
