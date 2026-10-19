@@ -37,6 +37,11 @@ MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.smoke --with-cameras
 
 # Optional feedback-driven pull across 0, 1, and 2 cm starts
 .venv-rocm/bin/python -m labs.rax_drawer.smoke --pull-demo
+
+# Live Lab01-style top/front/wrist camera window + scripted drawer pull
+DISPLAY=:0 .venv-rocm/bin/python -m labs.rax_drawer.live_gui
 ```
 
 The state/control smoke checks scene loading, the RAX tool contract, drawer sensor readings, reset from a displaced/moving drawer, episode-relative success scoring, action bounds, PNG packing, and a no-op action. The optional camera run also renders front/top/wrist frames and packages them as MCP image blocks. The default and camera modes do not attempt a grasp. The optional `--pull-demo` uses short positive-Y pull actions and checks success after each one across 0, 1, and 2 cm starts. All three start states open by at least 6 cm; this positive-control smoke is separate from the agent policy.
+
+The live GUI command opens the three task camera views (`top`, `front`, and `wrist`) in the SO101 MuJoCo camera grid, then replays a bounded positive-control pull. The completed scene stays visible until the window is closed. It is a deterministic control demonstration, not an autonomous RAX/LLM rollout. Run it from the active desktop session; `DISPLAY` should point at that session.

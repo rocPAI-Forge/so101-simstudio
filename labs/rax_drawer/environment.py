@@ -19,6 +19,7 @@ from simstudio.robots.so101_mujoco.robot_so101_mujoco import SO101MujocoRobot
 class DrawerTaskConfig:
     scene_path: Path = Path("SO101/scenes/smart_drawer/scene.xml")
     camera_names: tuple[str, ...] = ("front", "top", "wrist")
+    render_window: bool = False
     success_position_m: float = 0.06
     episode_limit_s: float = 45.0
     max_action_duration_s: float = 2.0
@@ -58,7 +59,7 @@ class RaxDrawerEnv:
             xml_path=self.scene_path,
             cube_positions_path=self.repo_root / "configs/scenes/smart_drawer/cube_positions.json",
             camera_names=list(self.task.camera_names),
-            render_window=False,
+            render_window=self.task.render_window,
             action_mode="velocity",
             ee_site_name="gripperframe",
         )
