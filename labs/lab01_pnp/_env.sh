@@ -214,31 +214,15 @@ LAB01_LINGBOT_EEF_SAVE_FREQ="${LAB01_LINGBOT_EEF_SAVE_FREQ:-100}"
 LAB01_LINGBOT_EEF_NUM_WORKERS="${LAB01_LINGBOT_EEF_NUM_WORKERS:-2}"
 
 # -----------------------------------------------------------------------------
-# 5c2) LingBot-VLA 2.0 — DAgger collect + finetune (issue #19)
-#    Collect: ./labs/lab01_pnp/collect_v2_dagger.cmd
-#    Finetune: ./labs/lab01_pnp/train_lingbot_vla_v2_dagger.cmd (side tree PR #3967)
-#    Base demos stay untouched; dagger root is a full copy under .tmp/.
+# 5c2) LingBot-VLA 2.0 — joint-slot path (issue #19)
+#    Side tree: PR #3967 + patches/lerobot-vla-v2-inverse-slot-offset.patch
+#    Ranked checkpoint: MI210 20K on the 193 follow2 demos (no DAgger).
+#    See labs/lab01_pnp/lingbot_vla_v2_adapt.md
 # -----------------------------------------------------------------------------
 LAB01_V2_BASE_DATASET_ROOT="${LAB01_V2_BASE_DATASET_ROOT:-./datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"
 LAB01_V2_BASE_DATASET_REPO_ID="${LAB01_V2_BASE_DATASET_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"
-LAB01_V2_DAGGER_DATASET_ROOT="${LAB01_V2_DAGGER_DATASET_ROOT:-./.tmp/datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-v2dagger}"
-# Train needs a Hub-resolvable repo_id (LeRobot get_safe_version); root is the
-# local dagger tree. Collect still tags episodes as local/... in spawns.
-LAB01_V2_DAGGER_DATASET_REPO_ID="${LAB01_V2_DAGGER_DATASET_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"
-LAB01_V2_POLICY_PATH="${LAB01_V2_POLICY_PATH:-/tmp/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000/pretrained_model}"
+LAB01_V2_POLICY_PATH="${LAB01_V2_POLICY_PATH:-./outputs/train/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000/pretrained_model}"
 LAB01_V2_SIDE_SRC="${LAB01_V2_SIDE_SRC:-/tmp/lerobot_vla_v2_src/src}"
-LAB01_V2_DAGGER_TARGET="${LAB01_V2_DAGGER_TARGET:-30}"
-LAB01_V2_DAGGER_MAX_ATTEMPTS="${LAB01_V2_DAGGER_MAX_ATTEMPTS:-120}"
-LAB01_V2_DAGGER_CLOSED_HOLD_TICKS="${LAB01_V2_DAGGER_CLOSED_HOLD_TICKS:-40}"
-LAB01_V2_DAGGER_POLICY_TAG="${LAB01_V2_DAGGER_POLICY_TAG:-lab01_lingbot_vla_v2_mi210_unfreeze20k/020000}"
-LAB01_V2_DAGGER_TRAIN_OUTPUT="${LAB01_V2_DAGGER_TRAIN_OUTPUT:-/tmp/lab01_lingbot_vla_v2_mi210_dagger10k}"
-LAB01_V2_DAGGER_TRAIN_STEPS="${LAB01_V2_DAGGER_TRAIN_STEPS:-10000}"
-LAB01_V2_DAGGER_TRAIN_EXPERT_ONLY="${LAB01_V2_DAGGER_TRAIN_EXPERT_ONLY:-true}"
-# Sampler repeat for the trailing DAgger episodes (0 = off). Base 193 + 29 DAgger.
-LAB01_V2_DAGGER_UPWEIGHT_LAST="${LAB01_V2_DAGGER_UPWEIGHT_LAST:-0}"
-LAB01_V2_DAGGER_UPWEIGHT_REPEAT="${LAB01_V2_DAGGER_UPWEIGHT_REPEAT:-4}"
-# Optional {episode_index: policy_prefix_frames}; sampler then starts at handover.
-LAB01_V2_DAGGER_SKIP_PREFIX_JSON="${LAB01_V2_DAGGER_SKIP_PREFIX_JSON:-}"
 
 # -----------------------------------------------------------------------------
 # 5d) Train (FastWAM) — train_fastwam.cmd

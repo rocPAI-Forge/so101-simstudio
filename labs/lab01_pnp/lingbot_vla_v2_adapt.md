@@ -45,7 +45,7 @@ Every V2 rollout before 2026-10-21 therefore sent an unsupervised channel as
 the gripper command. That channel is white noise around the dataset mean
 (≈0.55): ~50 close crossings per episode, the jaw settles near q≈0.56, and the
 cube is never lifted. Arm dims 0–4 were not affected. Apply the patch to the
-side checkout before any eval or DAgger collect:
+side checkout before any eval:
 
 ```bash
 git -C /tmp/lerobot_vla_v2_src apply "$PWD/patches/lerobot-vla-v2-inverse-slot-offset.patch"
@@ -76,22 +76,27 @@ tree, Home20 protocol (`home`, gripper 0.85, 60 s, EGL):
 
 | Sampler (`LAB01_FLOW_NOISE_SCALE` / `LAB01_FLOW_NUM_STEPS`) | Seeds 1000 / 1001 / 1002 | reach_8cm → near_4cm → close → lift_2cm → over_box (/60) |
 |---|---|---|
-| **0 / 10 (chosen)** | 19 / 20 / 19 = **58/60** | 60 → 60 → 60 → 58 → 58 |
+| **Default (noise ×1, 10 steps) — official / fair** | 11 / 8 / 6 = **25/60** | 60 → 59 → 56 → 28 → 27 |
+| 0 / 10 (eval-time note; optimistic) | 19 / 20 / 19 = **58/60** | 60 → 60 → 60 → 58 → 58 |
 | 0 / 3 | 19 / 18 / 18 = **55/60** | 60 → 60 → 60 → 58 → 55 |
 | 0.25 / 3 | 19 / 17 / 18 = **54/60** | 60 → 60 → 60 → 57 → 55 |
-| Default (noise ×1, 10 steps) | 11 / 8 / 6 = **25/60** | 60 → 59 → 56 → 28 → 27 |
 
 Logs: `outputs/eval/lingbot_vla_v2_mi210_unfreeze20k_slotfix_home20_g085_seed100{0,1,2}.log`
 (default) and `..._slotfix_noise<scale>_steps<n>_home20_g085_seed100{0,1,2}.log`.
-All four rows are in [`home20.md`](../lab01_pnp_agent/home20.md). With noise ×0
+The official Home20 cell is default-sampler **25/60** (same fair bar as other
+rows on [`home20.md`](../lab01_pnp_agent/home20.md)). The low-noise rows are an
+eval-time setting selected after looking at Home20 (seed-1000 sweep, then
+three-seed totals); they are optimistic and not cross-model comparable — other
+flow-matching policies on that page were not retuned this way. With noise ×0
 the seed no longer drives the sampler, so the three seeds are near-replicates,
-the same situation as ACT. The sampler rows are an eval-time setting; the other
-policies on that page used their default inference.
+the same situation as ACT.
 
-**V2 eval recipe:** `LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=10`. It has the
-highest total (58/60) and the cleanest failure map. Its two failures are single
-missed lifts on different spawns (spawn 4 on seed 1002 after four closes; spawn
-5 on seed 1000). Spawn 0 and spawn 1 pass on all three seeds, so the spawn-1
+**Fair ranking score:** default sampler **25/60** (no `LAB01_FLOW_*` overrides).
+**Annotated sampler note (not ranked):** `LAB01_FLOW_NOISE_SCALE=0
+LAB01_FLOW_NUM_STEPS=10` → **58/60**. It has the highest total and the cleanest
+failure map among the sweeps. Its two failures are single missed lifts on
+different spawns (spawn 4 on seed 1002 after four closes; spawn 5 on seed
+1000). Spawn 0 and spawn 1 pass on all three seeds, so the spawn-1
 hover-until-timeout stall seen under 0 / 3 (all three seeds) is gone. Under
 0 / 3 the failures are spawn 0 (no lift, two seeds) and spawn 1 (stall, three
 seeds). Under 0.25 / 3 they spread over spawns 0, 1, 5 (twice) and 7 (twice,
@@ -99,7 +104,7 @@ both after lifting the cube). Spawns 0 and 5 sit at
 x = 0.335 m, the farthest cubes in the list; spawn 5 is the only one that fails
 under all three low-noise samplers. There is no V2 eval `.cmd` in `labs/lab01_pnp/`
 yet (Home20 runs go through `.tmp/eval_lingbot_vla_v2_home20_campaign.sh`), so set
-the two env vars on the eval command.
+the two env vars on the eval command when reproducing the annotated row.
 
 The episode details below are from seed 1000. With the default sampler, eight
 of the nine failures close on air (jaw force ≈0 at the first close), and the
@@ -178,122 +183,18 @@ Eval: `PYTHONPATH=/tmp/lerobot_vla_v2_src/src` + `/tmp` `types.py` shim; wrapper
 gripper read-back (see the side-tree patch above). Train log:
 `/tmp/lab01_overnight_logs/v2_train_20261017_210446.log`.
 
-## Improve wave (post-5K → 20K → DAgger)
+## Improve wave (post-5K → 20K)
 
-Everything in this section was run **without** the inverse-slot patch. The
-"empty grasp" diagnosis and the DAgger handovers were driven by the noise
-gripper channel. The DAgger expert suffixes are still valid demos; the policy
-prefixes were rolled out with the broken gripper.
+Pre-patch Home20 on the MI210 20K checkpoint was **0/60** (close high, lift
+0). That looked like an empty-grasp / under-training problem; continuations and
+scripted DAgger on top of the 193 demos were tried while the inverse-slot bug
+was still unknown. After the patch, the **same** 20K weights on the **same**
+193 follow2 set score default-sampler **25/60** (official) — so the lift gap
+was gripper read-back, not missing recoveries. All V2 DAgger collect/finetune
+scripts, env knobs, and local DAgger trees were removed; do not revive them on
+pre-patch rollouts.
 
-**Diagnosis (pre-patch):**
-
-- Expert 193: **167/193** show EE \(z\) rise \(>2\,\mathrm{cm}\) after first close — demos contain lift.
-- Home20 first close (MI210 20K, n≈59): `normal_mm` p50 ≈ **27 mm** (standoff),
-  `max_min_jaw_n` p90 ≈ **0 N** (empty grasp), `dz_mm` p50 ≈ 10 mm (height secondary).
-  Report: `.tmp/v2_close_gap_diag/report.json`. Tracking: issue [#19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19).
-
-**Tried:**
-
-| Attempt | Result |
-|---------|--------|
-| `train_expert_only=false` on 4×A30 | **OOM** (~23.5 GB/GPU) |
-| Continue 5K→+20K expert-only (4×A30) | Home20 **0/60** (close↑, lift=0) |
-| Continue 5K→+20K full unfreeze (4×MI210) | Home20 **0/60** (close≈59/60, lift=0); ~28–32 GB/GPU |
-| More BC alone | **not** enough — need close→lift distribution |
-
-**Next (in progress):** scripted full DAgger on MI210 20K failure states.
-
-Close→handover uses **observed** `gripper.pos` (not the chattering V2 command)
-plus cumulative near-cube closed ticks (`min_dist`≲6 cm, soft ≤0.35 / hard ≤0.15,
-~20 ticks). Expert `_prepare_regrasp` lifts straight up first when EE is low
-(V2 empty-grasp basin). Smoke: `failed_close` → expert place → `.tmp/...-v2dagger`.
-
-```bash
-# Collect 30 recoveries into .tmp (does not touch Hub follow2)
-./labs/lab01_pnp/collect_v2_dagger.cmd
-# Smoke one episode:
-LAB01_V2_DAGGER_TARGET=1 LAB01_V2_DAGGER_MAX_ATTEMPTS=10 ./labs/lab01_pnp/collect_v2_dagger.cmd
-
-# Finetune from MI210 20K on follow2+dagger root
-./labs/lab01_pnp/train_lingbot_vla_v2_dagger.cmd
-```
-
-
-Gate: fixed-cube / seed1000 must show `lift_2cm` before full Home20 ranking.
-
-**DAgger 10K result (gate failed, not ranked):** 30 recoveries (222 episodes /
-153,484 frames), expert-only finetune from MI210 20K, 4×MI210, ~6 h. Home20
-seed1000 (EGL, `home`, gripper 0.85): **0/20**, funnel `reach_8cm=20 →
-near_4cm=8 → close_after_open=8 → lift_2cm=0`. This is worse than 20K
-(`near_4cm=19`, `close=19`): the model approaches the cube less often, and it
-still never lifts. The cube rises ≤5 mm at most. Weights
-`/tmp/lab01_lingbot_vla_v2_mi210_dagger10k/checkpoints/010000`, log
-`outputs/eval/lingbot_vla_v2_mi210_dagger10k_home20_g085_seed1000.log`.
-
-**Full unfreeze + DAgger 4× (gate failed, not ranked):** seed1000 **0/20**,
-funnel `reach_8cm=16 → near_4cm=4 → close=4 → lift_2cm=0`. It is worse again.
-The more DAgger weight the model gets, the worse it approaches. Likely cause:
-`--mode full` records V2's own prefix (approach + chattering close) as action
-labels, and that prefix is ~51% of DAgger frames. The model is trained to copy
-its own failure as well as the expert recovery. Next fix: train only on the
-expert suffix (mask frames before `intervention_start_frame`). Recipe used:
-
-```bash
-LAB01_V2_DAGGER_TRAIN_EXPERT_ONLY=false \
-LAB01_V2_DAGGER_UPWEIGHT_LAST=29 LAB01_V2_DAGGER_UPWEIGHT_REPEAT=4 \
-LAB01_V2_DAGGER_TRAIN_OUTPUT=/tmp/lab01_lingbot_vla_v2_mi210_dagger_unfreeze_up4_10k \
-  ./labs/lab01_pnp/train_lingbot_vla_v2_dagger.cmd
-```
-
-Both DAgger gates above also loaded clobbered eval stats (next section), so
-their `near_4cm` drop is confounded too. The clean-stats re-runs with the patch
-are in the table at the end of this section.
-
-**Suffix-only + 4× (first post-patch DAgger gate):** trained before the patch
-(training never calls the inverse step), gated after it. Same recipe as the
-full-unfreeze 4× run, plus
-`LAB01_V2_DAGGER_SKIP_PREFIX_JSON=.tmp/datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-v2dagger/dagger_handover.json`,
-so DAgger episodes are sampled only from `intervention_start_frame` on. Weights
-`/tmp/lab01_lingbot_vla_v2_mi210_dagger_suffix_up4_10k/checkpoints/010000`.
-Seed 1000, default sampler: **12/20**, funnel `20 → 20 → 17 → 13 → 12`, against
-11/20 for the 20K it started from. Two failures show a mode the 20K does not
-have: the jaw closes on the cube (~40 N), then reopens within the close window
-and drops it about 2 cm up. The recoveries were collected while V2's gripper was
-noise, so their prefix states are not ones the patched policy visits.
-
-**All DAgger checkpoints, patched + clean stats, seed 1000:**
-
-| Checkpoint | Default sampler | Noise ×0, 3 steps |
-|---|---|---|
-| 20K (start point, no DAgger) | 11/20 | **19/20** |
-| DAgger expert-only 10K | 7/20 (close 17, lift 11) | — |
-| DAgger full unfreeze 4× | 0/20 (close 4, lift 0) | — |
-| DAgger suffix-only 4× | 12/20 | 7/20 (close 16, lift 7) |
-
-Every DAgger finetune is worse than the 20K under the sampler that matters. The
-suffix-only run's default-sampler 12/20 is within noise of 11/20, and it falls
-from 19/20 to 7/20 at zero noise. This DAgger set is retired. If DAgger is
-needed again, re-collect it with the patched policy.
-
-## Dataset integrity incident (2026-10-20 → 21)
-
-`collect_v2_dagger.cmd` used to clone the base with `cp -al` (hardlinks). The
-recorder rewrites `meta/`, `data/` and `spawns.jsonl` in place, so DAgger
-episodes and stats leaked into the local Hub tree
-`datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2`: `meta/info.json`
-(claimed 223 episodes), `meta/stats.json`, both `data/` and `meta/episodes/`
-parquets, and `spawns.jsonl`. Videos were not touched.
-
-- Restored all seven files from the Hub on 2026-10-21. They are byte-identical
-  to a fresh Hub download, and `info.json` again says 193 episodes / 130,835
-  frames. Clobbered `stats.json` / `info.json` kept in
-  `.tmp/follow2_clobbered_backup/`.
-- The DAgger clone no longer shares inodes with the base, and the cmd now does
-  a full copy.
-- Eval patches `observation.state` normalizer stats from the base tree. The two
-  DAgger gates (2026-10-21 08:47 and 17:23) therefore ran with state stats off
-  by up to 0.085σ (wrist_roll / shoulder_pan). Checkpoint stats were never
-  affected; they equal the Hub stats.
+Issue [#19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19).
 
 ## Training preset caveat
 
