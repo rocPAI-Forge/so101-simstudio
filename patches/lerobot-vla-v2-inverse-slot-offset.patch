@@ -1,0 +1,19 @@
+diff --git a/src/lerobot/policies/lingbot_vla_v2/processor_lingbot_vla_v2.py b/src/lerobot/policies/lingbot_vla_v2/processor_lingbot_vla_v2.py
+index d2565647..0ce90d17 100644
+--- a/src/lerobot/policies/lingbot_vla_v2/processor_lingbot_vla_v2.py
++++ b/src/lerobot/policies/lingbot_vla_v2/processor_lingbot_vla_v2.py
+@@ -593,8 +593,13 @@ class LingbotVLAV2InverseSlotMappingProcessorStep(PolicyActionProcessorStep):
+         # Emit fp32 raw actions regardless of the model's prediction dtype (bf16):
+         # downstream envs and numpy expect float32 actions.
+         raw = action.new_zeros(*action.shape[:-1], raw_dim, dtype=torch.float32)
++        # Canonical offsets must advance over unfilled slots too: the forward
++        # mapping zero-fills them, so skipping them here reads the wrong dims.
+         offset = 0
+-        for _joint, dim, slot_spans in spans:
++        for _joint, dim, slot_spans in self._action_plan:
++            if not slot_spans:
++                offset += dim
++                continue
+             real = sum(end - start for _, start, end in slot_spans)
+             segment = action[..., offset : offset + real]
+             position = 0

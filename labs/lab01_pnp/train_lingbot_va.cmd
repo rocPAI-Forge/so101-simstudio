@@ -145,7 +145,11 @@ echo "attn:     $LAB01_LINGBOT_ATTN_MODE  peft: $LAB01_LINGBOT_USE_PEFT"
 echo "Channels: $LAB01_LINGBOT_USED_ACTION_CHANNEL_IDS"
 echo "Rename:   $LAB01_LINGBOT_RENAME_MAP"
 echo "Log:      $LAB01_LINGBOT_LOG"
-echo "Note:     LIBERO checkpoint is EEF-delta; Lab 01 joints occupy used channels 0-5."
+if [[ "${LAB01_LINGBOT_EEF_MODE:-false}" == "true" ]]; then
+    echo "Mode:     fair EEF delta + gripper labels; eval requires the SO-101 IK adapter."
+else
+    echo "Note:     UNFAIR legacy recipe: Lab 01 joints occupy EEF channels 0-5."
+fi
 echo ""
 
 _t0="$(date +%s)"

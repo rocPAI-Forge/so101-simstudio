@@ -31,6 +31,7 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 | ACT 6 维 | 只在前 140 条上，50K，从零训 | **18/20、17/20、18/20 = 53/60** | 对照。三次都是接近 20/20、闭合 20/20，漏在抬起之后 |
 | SmolVLA follow2 | 193 条上再训 2500 步，绝对关节 | **16/20、18/20、17/20 = 51/60** | 对照。当前采用的 SmolVLA 检查点 |
 | xVLA | 从 `lerobot/xvla-base` 全量训 10K，三路相机，绝对关节 | **15/20、17/20、15/20 = 47/60** | 闭合 57，抬起 49，到盒子上方 48。见下文 |
+| LingBot-VLA 2.0 关节槽，20K | 从下面的 5K 再全量训 20K（4×MI210），俯视加腕部，绝对关节。侧挂 PR#3967 加补丁 `patches/lerobot-vla-v2-inverse-slot-offset.patch` | 零噪声 3 步 **19/20、18/20、18/20 = 55/60**；默认采样 **11/20、8/20、6/20 = 25/60** | 零噪声：闭合 60，抬起 58，到盒子上方 55。默认采样：闭合 56，抬起 28，失败几乎都是夹空。零噪声是评测时的采样设置（`LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=3`），其它行都是默认推理。见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 | MolmoAct2，VLM LoRA | 10K，再从该权重训 20K。视觉和语言只训 LoRA，动作专家全量 | 10K **13/20、11/20、12/20 = 36/60**；20K **13/20、13/20、13/20 = 39/60** | 这条线的成绩。抬起 39，闭合 42 |
 | MolmoAct2，合并 LoRA 后全量 5000 | 从 39/60 的权重合并适配器，再训视觉和语言的原权重 | **8/20、6/20、9/20 = 23/60** | 负结果。抬起从 39 降到 25。不替换 39/60 |
 | GR00T N1.7 绝对关节，冻结骨干 10K | 从 `nvidia/GR00T-N1.7-3B` 训 10K，`use_relative_actions=false` | **7/20、2/20、5/20 = 14/60** | 合拢 45，抬起 17 |
@@ -42,6 +43,8 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 | FastWAM | 4K，视频网络冻结 | **0/60** | 4 cm 内合计 3/60，合拢 0 |
 | JEPA，冻结 Qwen，6 维关节 | 只训动作头，10K | **0/60** | 能靠近，闭环里不发合拢 |
 | JEPA，原生 7 维末端 | 冻结 Qwen，动作是末端位姿增量，10K | **0/60** | 三个种子的 `reach_8cm` 都是 0/20。比 6 维更差，这条线停止 |
+| LingBot-VA fair EEF | `libero_long` + PEFT，193 条 FK→7-D ΔEEF，10K；评测 IK | **0/20、0/20、0/20 = 0/60** | 不是 stuffed-joint。8 cm 合计 19/60，合拢 2/60。账本 [`lingbot_va_eef_adapt.md`](../lab01_pnp/lingbot_va_eef_adapt.md)；数据 [agent193-lingbot-eef](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent193-lingbot-eef) |
+| LingBot-VLA 2.0 关节槽，5K | `lingbot_vla_v2_base`，193 条关节，5K FSDP（侧挂 PR#3967） | ~~0/60~~ **作废** | 侧挂 PR 的逆槽映射有 bug：夹爪命令读的是规范维 14，不是 28，所以夹爪一直是噪声。打补丁后的成绩见上面 20K 那一行 |
 
 SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**，不是当前对照。未设种子的 ACT **17/20** 和 SmolVLA **12/20** 也不是这一列。
 
@@ -63,6 +66,8 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 
 因此 10 月 5 日停止了当时那一批微调，也不为了冲成功率去补轨迹。之后续了 pi05、GR00T 的全量解冻，以及 MolmoAct2 的一次全量对照。pi05 停在全量解冻那一行。GR00T 停在全量解冻那一行。MolmoAct2 仍引用 LoRA 那一行。再往后的 DM0.5 从旧 10K 的 **25/60** 训到 20K 的 **37/60**：抬起从 27 升到 41，但闭合从 59 降到 50。
 
+LingBot-VLA 2.0 原来的 0/60 不是模型的问题。侧挂 PR 的逆槽映射把夹爪命令读错了一维，夹爪一直收到噪声。修好以后，同一份 20K 权重用默认采样是 25/60，把初始噪声设为 0、去噪 3 步是 55/60。两者差在合拢那一刻的位置：默认采样的失败几乎都是夹空。这页其它策略都按各自的默认推理测，没有试过降低采样噪声。零噪声时种子不再改变采样，三次接近重复测量，和 ACT 一样。
+
 ## 基座和微调
 
 「基座」是这次实际加载的 Hugging Face 权重。pi05 的上游公共基座是 [`lerobot/pi05_base`](https://huggingface.co/lerobot/pi05_base)，训练加载的是它在真机抓放上的一版微调。ACT 没有基座。上传过的微调给出下载链接，用来复现或接着训。实验中间结果没有上传，微调权重一列留空。
@@ -83,7 +88,9 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 | JEPA 7 维末端 | 同上 | |
 | DM0.5 20K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)（仓库名保留 `10k`，内容已替换为 20K） |
 | xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | [alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k) |
-| LingBot-VA | [lerobot/lingbot_va_libero_long](https://huggingface.co/lerobot/lingbot_va_libero_long) | |
+| LingBot-VA fair EEF 10K | [lerobot/lingbot_va_libero_long](https://huggingface.co/lerobot/lingbot_va_libero_long) | 本地 `/tmp/lab01_lingbot_eef_agent193/checkpoints/010000`（未上 Hub） |
+| LingBot-VLA 2.0 joint-slot 5K | [lerobot/lingbot_vla_v2_base](https://huggingface.co/lerobot/lingbot_vla_v2_base) | 本地 `/tmp/lab01_lingbot_vla_v2_agent193/checkpoints/005000`（未上 Hub）；[`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
+| LingBot-VLA 2.0 joint-slot 20K | 同上，从 5K 继续 | 本地 `/tmp/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000`（未上 Hub） |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
 
