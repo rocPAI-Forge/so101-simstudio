@@ -18,7 +18,7 @@
 #   4) Train ACT — train_act.cmd
 #   5) Train MolmoAct2 — train_molmoact2.cmd (DORobot / MI300X)
 #   5b) Train VLA-JEPA — train_vla_jepa.cmd (DORobot / MI300X)
-#   5c) Train LingBot-VA — train_lingbot_va.cmd (DORobot / MI300X)
+#   5c) LingBot-VLA 2.0 — side tree + inverse-slot patch (issue #19)
 #   5d) Train FastWAM — train_fastwam.cmd (DORobot / MI300X)
 #   5e) Train GR00T N1.7 — train_groot.cmd (smoke default; MI300X overrides)
 #   6) Eval     — eval.cmd (any LeRobot policy)
@@ -175,38 +175,9 @@ if [[ -z "${LAB01_JEPA_REINIT_MODULES:-}" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 5c) Train (LingBot-VA) — train_lingbot_va.cmd
-#    Base: lerobot/lingbot_va_libero_long (2 cams image/image2, 30-d EEF layout).
-#    Lab 01 default is the **unfair stuffed-joint recipe** (joints in 0–5).
-#    The fair FK→ΔEEF + IK adapter path was retired; do not revive it.
-#    Ranked LingBot progress on Lab 01 is LingBot-VLA 2.0 (section 5c2).
-#    Extras: ./scripts/install-lingbot-va-deps.sh  (not pip install -e '.[lingbot_va]')
-#    20K@32 fits MI300X VRAM (~155 GB) but ~200 s/step. For a ~10 h window use
-#    labs/lab01_pnp/campaign_lingbot_fastwam_10h.cmd (bs4, 4 h cap, save every 200).
-# -----------------------------------------------------------------------------
-LAB01_LINGBOT_OUTPUT="${LAB01_LINGBOT_OUTPUT:-./outputs/train/lab01_pnp_lingbot_va}"
-LAB01_LINGBOT_BASE="${LAB01_LINGBOT_BASE:-lerobot/lingbot_va_libero_long}"
-LAB01_LINGBOT_STEPS="${LAB01_LINGBOT_STEPS:-20000}"
-LAB01_LINGBOT_BATCH_SIZE="${LAB01_LINGBOT_BATCH_SIZE:-32}"
-LAB01_LINGBOT_SAVE_FREQ="${LAB01_LINGBOT_SAVE_FREQ:-2000}"
-LAB01_LINGBOT_NUM_WORKERS="${LAB01_LINGBOT_NUM_WORKERS:-8}"
-LAB01_LINGBOT_ATTN_MODE="${LAB01_LINGBOT_ATTN_MODE:-flex}"
-LAB01_LINGBOT_USE_PEFT="${LAB01_LINGBOT_USE_PEFT:-true}"
-LAB01_LINGBOT_PEFT_TARGET_MODULES="${LAB01_LINGBOT_PEFT_TARGET_MODULES:-all-linear}"
-LAB01_LINGBOT_PEFT_R="${LAB01_LINGBOT_PEFT_R:-16}"
-LAB01_LINGBOT_PEFT_ALPHA="${LAB01_LINGBOT_PEFT_ALPHA:-32}"
-LAB01_LINGBOT_AUGMENT_QUANTILE_STATS="${LAB01_LINGBOT_AUGMENT_QUANTILE_STATS:-true}"
-if [[ -z "${LAB01_LINGBOT_USED_ACTION_CHANNEL_IDS:-}" ]]; then
-  LAB01_LINGBOT_USED_ACTION_CHANNEL_IDS='[0,1,2,3,4,5]'
-fi
-if [[ -z "${LAB01_LINGBOT_RENAME_MAP:-}" ]]; then
-  LAB01_LINGBOT_RENAME_MAP='{"observation.images.camera_top":"observation.images.image","observation.images.camera_wrist":"observation.images.image2"}'
-fi
-
-# -----------------------------------------------------------------------------
-# 5c2) LingBot-VLA 2.0 — joint-slot path (issue #19)
+# 5c) LingBot-VLA 2.0 — joint-slot path (issue #19; ranked LingBot on Lab 01)
 #    Side tree: PR #3967 + patches/lerobot-vla-v2-inverse-slot-offset.patch
-#    Ranked checkpoint: MI210 20K on the 193 follow2 demos (no DAgger).
+#    Ranked: MI210 20K on 193 follow2 demos, default Home20 sampler → 25/60.
 #    See labs/lab01_pnp/lingbot_vla_v2_adapt.md
 # -----------------------------------------------------------------------------
 LAB01_V2_BASE_DATASET_ROOT="${LAB01_V2_BASE_DATASET_ROOT:-./datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"

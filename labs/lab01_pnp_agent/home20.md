@@ -42,8 +42,7 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 | FastWAM | 4K，视频网络冻结 | **0/60** | 4 cm 内合计 3/60，合拢 0 |
 | JEPA，冻结 Qwen，6 维关节 | 只训动作头，10K | **0/60** | 能靠近，闭环里不发合拢 |
 | JEPA，原生 7 维末端 | 冻结 Qwen，动作是末端位姿增量，10K | **0/60** | 三个种子的 `reach_8cm` 都是 0/20。比 6 维更差，这条线停止 |
-| LingBot-VLA 2.0 关节槽，20K | 从下面的 5K 再全量训 20K（4×MI210），193 条，俯视加腕部，绝对关节。侧挂 PR#3967 加补丁 `patches/lerobot-vla-v2-inverse-slot-offset.patch` | **11/20、8/20、6/20 = 25/60** | 默认推理，和其它行同一标准。8 cm 内 60，4 cm 内 59，闭合 56，抬起 28，到盒子上方 27；失败几乎都是夹空。另测了评测时的采样设置，不和其它行比：零噪声 10 步（`LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=10`）19/20、20/20、19/20 = 58/60，零噪声 3 步 55/60，噪声 0.25、3 步 54/60。这个配方是看 Home20 的结果选的（先在种子 1000 上扫，再按三个种子的合计挑），数字偏乐观；页上其它流匹配的行都没测过降低噪声。见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
-| LingBot-VLA 2.0 关节槽，5K | `lingbot_vla_v2_base`，193 条关节，5K FSDP（侧挂 PR#3967） | ~~0/60~~ **作废** | 侧挂 PR 的逆槽映射有 bug：夹爪命令读的是规范维 14，不是 28，所以夹爪一直是噪声。打补丁后的成绩见上面 20K 那一行 |
+| LingBot-VLA 2.0 关节槽，20K | 从 5K 再全量训 20K（4×MI210），193 条 follow2，俯视加腕部，绝对关节。侧挂 PR#3967 + `patches/lerobot-vla-v2-inverse-slot-offset.patch` | **11/20、8/20、6/20 = 25/60** | 默认推理。8 cm 内 60，4 cm 内 59，闭合 56，抬起 28，到盒子上方 27；失败几乎都是夹空。补丁前同权重的闭环成绩作废（夹爪读错维）。见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 
 SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**，不是当前对照。未设种子的 ACT **17/20** 和 SmolVLA **12/20** 也不是这一列。
 
@@ -65,7 +64,7 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 
 因此 10 月 5 日停止了当时那一批微调，也不为了冲成功率去补轨迹。之后续了 pi05、GR00T 的全量解冻，以及 MolmoAct2 的一次全量对照。pi05 停在全量解冻那一行。GR00T 停在全量解冻那一行。MolmoAct2 仍引用 LoRA 那一行。再往后的 DM0.5 从旧 10K 的 **25/60** 训到 20K 的 **37/60**：抬起从 27 升到 41，但闭合从 59 降到 50。
 
-LingBot-VLA 2.0 原来的 0/60 不是模型的问题。侧挂 PR 的逆槽映射把夹爪命令读错了一维，夹爪一直收到噪声。修好以后，正式成绩按默认采样记 **25/60**（和其它行同一标准）。另测了评测时的采样设置，不和其它行比：初始噪声 0、去噪 10 步是 58/60（3 步是 55/60）；这个配方是看 Home20 的结果选的，数字偏乐观。两者差在合拢那一刻的位置：默认采样的失败几乎都是夹空。零噪声 10 步只漏了两次，都是一次没抬起，分别在位姿 4 和 5。位姿 5 在 x = 0.335，是这 20 个点里最远的之一。这页其它策略都按各自的默认推理测，没有试过降低采样噪声。零噪声时种子不再改变采样，三次接近重复测量，和 ACT 一样。
+LingBot-VLA 2.0：侧挂 PR 曾把夹爪读错一维，补丁前闭环 0/60 作废。打上 `patches/lerobot-vla-v2-inverse-slot-offset.patch` 后，同一份 193→20K 权重用默认推理是 **25/60**（和其它行同一标准）。路径见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md)。
 
 ## 基座和微调
 
@@ -87,8 +86,7 @@ LingBot-VLA 2.0 原来的 0/60 不是模型的问题。侧挂 PR 的逆槽映射
 | JEPA 7 维末端 | 同上 | |
 | DM0.5 20K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)（仓库名保留 `10k`，内容已替换为 20K） |
 | xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | [alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k) |
-| LingBot-VLA 2.0 joint-slot 5K | [lerobot/lingbot_vla_v2_base](https://huggingface.co/lerobot/lingbot_vla_v2_base) | 本地 `/tmp/lab01_lingbot_vla_v2_agent193/checkpoints/005000`（未上 Hub）；[`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
-| LingBot-VLA 2.0 joint-slot 20K | 同上，从 5K 继续 | 本地 `outputs/train/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000`（未上 Hub） |
+| LingBot-VLA 2.0 joint-slot 20K | [lerobot/lingbot_vla_v2_base](https://huggingface.co/lerobot/lingbot_vla_v2_base)（经 5K 再训） | 本地 `outputs/train/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000`（未上 Hub）；[`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
 
