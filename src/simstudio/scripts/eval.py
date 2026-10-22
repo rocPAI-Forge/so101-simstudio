@@ -1043,10 +1043,6 @@ def eval_main(cfg: RolloutConfig) -> None:
     inner = getattr(robot, "inner", robot)
     if not isinstance(inner, SO101MujocoRobot):
         raise TypeError(f"eval.py expects so101_mujoco robot, got {type(inner)}")
-    if _env_flag("LAB01_LINGBOT_EEF_ADAPTER"):
-        from simstudio.policies.lingbot_eef import install_lingbot_eef_adapter
-
-        install_lingbot_eef_adapter(ctx, inner)
     gripper_oracle = _install_gripper_oracle(inner) if _env_flag("LAB01_GRIPPER_ORACLE") else None
     success_recorder = _maybe_success_recorder(inner)
 

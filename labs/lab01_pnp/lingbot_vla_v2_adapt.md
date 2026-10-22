@@ -1,9 +1,10 @@
 # LingBot-VLA 2.0 adaptation for SO-101 (Lab 01)
 
-Experimental joint-slot path. **Not** the same pipeline as
-[`lingbot_va_eef_adapt.md`](lingbot_va_eef_adapt.md) (LIBERO 7-D ΔEEF).
+Experimental joint-slot path for Lab 01. Distinct from LingBot-VA
+(`lerobot/lingbot_va_*`, official LIBERO 7-D ΔEEF); that family's fair FK→ΔEEF
+adapter was retired. Ranked LingBot work here is **VLA 2.0 + inverse-slot patch**.
 
-| | LingBot-**VA** | LingBot-**VLA 2.0** |
+| | LingBot-**VA** (not ranked) | LingBot-**VLA 2.0** |
 |---|---|---|
 | Hub base | `lerobot/lingbot_va_*` | [`lerobot/lingbot_vla_v2_base`](https://huggingface.co/lerobot/lingbot_vla_v2_base) |
 | Action language | LIBERO 7-D ΔEEF | **55-D slots** |

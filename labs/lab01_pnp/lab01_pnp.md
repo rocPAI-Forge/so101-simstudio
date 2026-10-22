@@ -587,7 +587,7 @@ The LIBERO checkpoint is an **end-effector delta** policy with a fixed 30-d acti
 | `camera_front` | unused |
 | 6 joint channels | `used_action_channel_ids=[0,1,2,3,4,5]` (LIBERO used 0–6) |
 
-Closed-loop eval still sends those six numbers as SO-101 `*.pos`. Quote this mapping next to any success rate: it is a **joint-space stuffing** of an EEF-pretrained stack, not a fair LIBERO transfer. The 10 h campaign stopped at **600 / 8000** steps (~0.11 epoch); the 20-ep eval failed on an import error, so the §6.4 row stays *pending* (not a measured 0%). **Do not treat this recipe as the LingBot-VA Lab 01 path.** The intended adaptation (reuse teleop videos, FK→EEF labels, 7 channels, eval IK) is specified in a follow-up PR / `labs/lab01_pnp/lingbot_va_eef_adapt.md` once that lands. Mechanism: **§6.4.2**. Follow-up: [issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9).
+Closed-loop eval still sends those six numbers as SO-101 `*.pos`. Quote this mapping next to any success rate: it is a **joint-space stuffing** of an EEF-pretrained stack, not a fair LIBERO transfer. The 10 h campaign stopped at **600 / 8000** steps (~0.11 epoch); the 20-ep eval failed on an import error, so the §6.4 row stays *pending* (not a measured 0%). **Do not treat this recipe as a ranked LingBot path.** A fair FK→ΔEEF + IK adapter was tried and **retired** (not kept in-tree). Ranked LingBot progress on Lab 01 is **LingBot-VLA 2.0** joint slots + inverse-slot patch — [`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md), [issue #19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19). Mechanism notes: **§6.4.2**. Legacy VA tracking: [issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9).
 
 **Defaults (single MI300X 192 GB):** `batch_size=32`, `steps=20000`, `save_freq=2000`, `attn_mode=flex` (required for the block-causal train masks), LoRA via `--peft.*` (`use_peft` on the policy config stays false so the Hub checkpoint loads as a full model). Frozen UMT5 stays on CPU. Action postprocessor uses QUANTILES — `train_lingbot_va.cmd` augments `meta/stats.json` with `q01`/`q99` if missing.
 
@@ -779,7 +779,7 @@ SmolVLA full-range is **11/50 (22%)**, not a rounded-only figure.
 | VLA-JEPA 6-D BC 10K → unfreeze Qwen 10K | Fixed cube; demo-mean `home_joints` | `home` | Sync | OSMesa | 3 | **0/3 (0%)** | Continue from BC 010000; `freeze_qwen=false`, WM off, lr 3e-5, chunk 30. Funnel: `reach_8cm=3/3 → near_4cm=3/3 → close_after_open=0/3`. Log `/mnt/doscratch/outputs/eval/jepa_bc_unfreeze_funnel_matched3.log` |
 | VLA-JEPA 6-D BC 10K → unfreeze Qwen 10K | Fixed cube; demo-mean `home_joints` | `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same ckpt; worse than freeze-Qwen BC 1/10. Funnel: `reach_8cm=10/10 → near_4cm=6/10 → close=0/10`. Log `.../jepa_bc_unfreeze_demostart10.log` |
 | VLA-JEPA 6-D BC 10K → unfreeze Qwen 10K | Fixed cube; keyboard `home` | `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same ckpt; `near_4cm=0/10`. Log `.../jepa_bc_unfreeze_fixed10.log`. Intervention ledger: §6.4.2 |
-| LingBot-VA 20K LoRA (joints in ch 0–5) | Full-range random | `home` | Sync | EGL | 20 | *pending* | **Not a fair EEF transfer.** Campaign stopped at 600/8000; eval ImportError. Same 50-ep joint dataset stuffed into LIBERO EEF channels. See §6.4.2; adaptation spec is a follow-up PR. |
+| LingBot-VA 20K LoRA (joints in ch 0–5) | Full-range random | `home` | Sync | EGL | 20 | *pending* | **Not ranked.** Campaign stopped at 600/8000; eval ImportError. Joints stuffed into LIBERO EEF channels. Fair EEF adapter retired; see §6.4.2 / VLA 2.0. |
 | FastWAM 4K 6-D (freeze video expert, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 20 | **0/20 (0%)** | MI300X; `n_action_steps=32`, `rollout_fastwam.yaml`; cube never leaves spawn (`z≈0.015`). Policy infer **33.5 Hz** (2631 calls). EGL `EGL_BAD_ALLOC` — OSMesa. Log `/mnt/doscratch/outputs/eval/fastwam_osmesa20.log`; ckpt `.../004000/` |
 | FastWAM 20K 6-D (resume 4K, freeze video, bs4) | Full-range random | keyboard `home` | Sync | OSMesa | 10 | **0/10 (0%)** | Same YAML / `n_action_steps=32`; cube still `z≈0.015`. Infer **35.8 Hz** (1207 calls). Log `/mnt/doscratch/outputs/eval/fastwam_osmesa10_20k.log`; ckpt `.../020000/` |
 | FastWAM 20K 6-D | Full-range random | demo-mean `home_joints` | Sync | OSMesa | 10 | **0/10 (0%)** | `rollout_fastwam_demo_start.yaml`, `n_action_steps=10`; cube still `z≈0.015`. Infer **18.1 Hz** (1133 calls; shorter chunks). Log `.../fastwam_osmesa10_20k_demo.log` |
@@ -941,13 +941,13 @@ Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that e
 | Family | Lab 01 examples | Fine-tune on this dataset | Typical Lab 01 outcome |
 |--------|-----------------|---------------------------|------------------------|
 | **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints), **GR00T N1.7** (`new_embodiment`, 10K keeper) | Direct: `action` = robot command (GR00T zero-pads to `max_action_dim`) | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). **GR00T 10K: 0/10, approach yes / grasp no.** Extra 30K + vis-unfreeze 20K worse. Ledger: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
-| **End-effector** | LingBot-VA (`lingbot_va_libero_long`) | **Not** direct. Official LIBERO channels 0–6 are Δxyz + rotation + gripper; joints must be remapped, eval needs IK. | Current `used_action_channel_ids=[0–5]` **stuffs joints into EEF slots**. Campaign 600 steps, eval never completed. This is a **missing adapter**, not the same diagnosis as JEPA/FastWAM. |
+| **End-effector** | LingBot-VA (`lingbot_va_libero_long`) | **Not** direct. Official LIBERO channels 0–6 are Δxyz + rotation + gripper. | Current `used_action_channel_ids=[0–5]` **stuffs joints into EEF slots**. Campaign 600 steps, eval never completed. A fair FK→ΔEEF + IK adapter was tried then **retired** from the tree. Ranked LingBot work moved to **LingBot-VLA 2.0** joint slots ([`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md)). |
 
 Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
 
 **Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative, [issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)), **GR00T N1.7 10K** (negative, [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17); [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6)). **Not** on Hub: FastWAM (pad7 unfreeze-4 lives on DORobot only; [issue #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8)), LingBot-VA ([issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)), Molmo 6-D as a separate repo, JEPA unfreeze, GR00T 30K / vis-20K.
 
-**Follow-up (not this analysis).** LingBot-VA EEF adapter: `lingbot_va_eef_adapt.md` (separate PR if not merged) — [issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9). GR00T N1.7 on the same joint dataset: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md) — [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6). Do not treat `train_lingbot_va.cmd` (joints in 0–5) as a fair LingBot path; do not load GR00T N1.5 on this LeRobot pin.
+**Follow-up (not this analysis).** LingBot-VA fair EEF adapter: **retired** ([issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)). Ranked LingBot path: [`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md) — [issue #19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19). GR00T N1.7 on the same joint dataset: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md) — [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6). Do not treat `train_lingbot_va.cmd` (joints in 0–5) as a ranked LingBot path; do not load GR00T N1.5 on this LeRobot pin.
 
 ##### Log index (durable)
 
@@ -1094,7 +1094,7 @@ Published Lab 01 reference assets (`alexhegit`):
 | VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) ([issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)) |
 | GR00T N1.7 (10K; negative result) | [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17) |
 | MolmoAct2 | [alexhegit/so101-simstudio-lab01-pnp-molmoact2](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2) |
-| FastWAM / LingBot-VA | **Not published.** FastWAM pad7 unfreeze-4 is DORobot-only (0% closed-loop). LingBot-VA has no fair EEF checkpoint. |
+| FastWAM / LingBot-VA | **Not published.** FastWAM pad7 unfreeze-4 is DORobot-only (0% closed-loop). LingBot-VA fair EEF path retired; ranked LingBot is VLA 2.0 (local 20K, not on Hub yet). |
 
 Commands in §7.1–7.2 keep `alexhegit/...` as copy-paste examples; replace the namespace with yours when working under your own Hub account.
 
@@ -1239,7 +1239,7 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `groot_n1_7_adapt.md` | GR00T N1.7 Lab 01 notes (`new_embodiment`, 6-D joints) |
 | `train_groot.cmd` | GR00T N1.7 fine-tune (smoke default 20 steps / bs1) |
 | `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
-| `train_lingbot_va.cmd` | LingBot-VA stuffed-joint recipe (not a fair EEF transfer; §6.4.2) |
+| `train_lingbot_va.cmd` | LingBot-VA stuffed-joint recipe (not ranked; §6.4.2). Fair EEF adapter retired. |
 | `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |
 | `campaign_lingbot_fastwam_10h.cmd` | Time-boxed LingBot-VA + FastWAM train (bs4) then 20-ep EGL eval |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |

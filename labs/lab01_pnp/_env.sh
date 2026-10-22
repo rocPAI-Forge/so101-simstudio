@@ -177,11 +177,9 @@ fi
 # -----------------------------------------------------------------------------
 # 5c) Train (LingBot-VA) — train_lingbot_va.cmd
 #    Base: lerobot/lingbot_va_libero_long (2 cams image/image2, 30-d EEF layout).
-#    Lab 01 status: the current default (joints in channels 0–5) is the
-#    **unfair stuffed-joint recipe**, not a fair EEF transfer (runbook §6.4.2).
-#    Do not treat a pending/failed campaign eval as LingBot-VA Lab 01 success.
-#    Fair path: convert teleop joints→EEF labels, 7 channels, eval IK
-#    (follow-up adaptation PR / lingbot_va_eef_adapt.md).
+#    Lab 01 default is the **unfair stuffed-joint recipe** (joints in 0–5).
+#    The fair FK→ΔEEF + IK adapter path was retired; do not revive it.
+#    Ranked LingBot progress on Lab 01 is LingBot-VLA 2.0 (section 5c2).
 #    Extras: ./scripts/install-lingbot-va-deps.sh  (not pip install -e '.[lingbot_va]')
 #    20K@32 fits MI300X VRAM (~155 GB) but ~200 s/step. For a ~10 h window use
 #    labs/lab01_pnp/campaign_lingbot_fastwam_10h.cmd (bs4, 4 h cap, save every 200).
@@ -204,14 +202,6 @@ fi
 if [[ -z "${LAB01_LINGBOT_RENAME_MAP:-}" ]]; then
   LAB01_LINGBOT_RENAME_MAP='{"observation.images.camera_top":"observation.images.image","observation.images.camera_wrist":"observation.images.image2"}'
 fi
-LAB01_LINGBOT_EEF_DATASET_ROOT="${LAB01_LINGBOT_EEF_DATASET_ROOT:-./.tmp/lab01_lingbot_eef_agent193}"
-LAB01_LINGBOT_EEF_DATASET_REPO_ID="${LAB01_LINGBOT_EEF_DATASET_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-agent193-lingbot-eef}"
-# Push: ./labs/lab01_pnp/push_lingbot_eef_dataset.cmd
-LAB01_LINGBOT_EEF_OUTPUT="${LAB01_LINGBOT_EEF_OUTPUT:-/tmp/lab01_lingbot_eef_agent193}"
-LAB01_LINGBOT_EEF_STEPS="${LAB01_LINGBOT_EEF_STEPS:-500}"
-LAB01_LINGBOT_EEF_BATCH_SIZE="${LAB01_LINGBOT_EEF_BATCH_SIZE:-1}"
-LAB01_LINGBOT_EEF_SAVE_FREQ="${LAB01_LINGBOT_EEF_SAVE_FREQ:-100}"
-LAB01_LINGBOT_EEF_NUM_WORKERS="${LAB01_LINGBOT_EEF_NUM_WORKERS:-2}"
 
 # -----------------------------------------------------------------------------
 # 5c2) LingBot-VLA 2.0 — joint-slot path (issue #19)

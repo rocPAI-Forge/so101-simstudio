@@ -1,7 +1,8 @@
 #!/bin/bash
 # Lab 01 — LingBot-VA stuffed-joint fine-tune (NOT a fair EEF transfer).
 # Joints occupy used_action_channel_ids 0–5. Official LIBERO layout is EEF
-# Δ + gripper on channels 0–6. See runbook §6.4.2 and lingbot_va_eef_adapt.md.
+# Δ + gripper on channels 0–6. The fair FK→ΔEEF + IK adapter path was retired;
+# see runbook §6.4.2. Ranked LingBot work is LingBot-VLA 2.0 (lingbot_vla_v2_adapt.md).
 #
 # Defaults target DORobot / single Instinct MI300X (192 GB HBM). Knobs:
 # labs/lab01_pnp/_env.sh (section 5c). Override via LAB01_LINGBOT_* env vars.
@@ -145,11 +146,7 @@ echo "attn:     $LAB01_LINGBOT_ATTN_MODE  peft: $LAB01_LINGBOT_USE_PEFT"
 echo "Channels: $LAB01_LINGBOT_USED_ACTION_CHANNEL_IDS"
 echo "Rename:   $LAB01_LINGBOT_RENAME_MAP"
 echo "Log:      $LAB01_LINGBOT_LOG"
-if [[ "${LAB01_LINGBOT_EEF_MODE:-false}" == "true" ]]; then
-    echo "Mode:     fair EEF delta + gripper labels; eval requires the SO-101 IK adapter."
-else
-    echo "Note:     UNFAIR legacy recipe: Lab 01 joints occupy EEF channels 0-5."
-fi
+echo "Note:     UNFAIR legacy recipe: Lab 01 joints occupy EEF channels 0-5."
 echo ""
 
 _t0="$(date +%s)"
