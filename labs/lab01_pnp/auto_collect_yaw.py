@@ -1091,11 +1091,27 @@ def _prepare_regrasp(
     diagonal 3-DOF descent stalls.  A high horizontal move followed by a
     vertical descent keeps clear of the cube and returns to the same reachable
     low basin used by the nominal expert.
+
+    V2 empty-grasp often leaves EE near the table (z≲2 cm); lift straight up
+    first so the horizontal standoff move is not stuck in that low basin.
     """
     set_grip(robot, GRIPPER_OPEN, steps=24)
-    standoff_xy, _normal = _face_standoff(cube_xy, cube_yaw_deg, _site_pos(robot)[:2])
+    cur = _site_pos(robot)
     q_now = _q_arm(robot)
     wrist_target = q_now[3:5].copy()
+    if float(cur[2]) < 0.08:
+        servo_xyz(
+            robot,
+            np.array([float(cur[0]), float(cur[1]), 0.12]),
+            gripper=GRIPPER_OPEN,
+            steps=100,
+            phase="regrasp-lift-out",
+            lock_wrist=True,
+            wrist_target=wrist_target,
+            prevent_overshoot=False,
+            max_step=1.0,
+        )
+    standoff_xy, _normal = _face_standoff(cube_xy, cube_yaw_deg, _site_pos(robot)[:2])
     high_z = max(float(_site_pos(robot)[2]), 0.10)
     servo_xyz(
         robot,

@@ -28,3 +28,5 @@ LAB01_DM05_AGENT193_POLICY_PATH="${LAB01_DM05_AGENT193_POLICY_PATH:-/tmp/lab01_d
 LAB01_XVLA_AGENT193_HF_REPO_ID="${LAB01_XVLA_AGENT193_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k}"
 LAB01_XVLA_AGENT193_POLICY_PATH="${LAB01_XVLA_AGENT193_POLICY_PATH:-/tmp/lab01_xvla_10k/checkpoints/010000/pretrained_model}"
 LAB01_GROOT_AGENT193_ABS_POLICY_PATH="${LAB01_GROOT_AGENT193_ABS_POLICY_PATH:-./outputs/train/lab01_pnp_groot_n17_state6_agent193_abs10k/checkpoints/010000/pretrained_model}"
+# LingBot-VLA 2.0 (overrides stay in ../lab01_pnp/_env.sh section 5c; Hub id mirrored here for agent cards/push)
+LAB01_V2_HF_REPO_ID="${LAB01_V2_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k}"

@@ -1,0 +1,27 @@
+{
+  "state_slots": {
+    "arm.position": {
+      "origin_keys": [{"observation.state": {"start": 0, "end": 5}}],
+      "subtract_state": false
+    },
+    "effector.position": {
+      "origin_keys": [{"observation.state": {"start": 5, "end": 6}}],
+      "subtract_state": false
+    }
+  },
+  "action_slots": {
+    "arm.position": {
+      "origin_keys": [{"action": {"start": 0, "end": 5}}],
+      "subtract_state": false
+    },
+    "effector.position": {
+      "origin_keys": [{"action": {"start": 5, "end": 6}}],
+      "subtract_state": false
+    }
+  },
+  "camera_map": {
+    "observation.images.camera_top": "camera_top",
+    "observation.images.camera_wrist": "camera_wrist_left"
+  },
+  "notes": "SO-101 5 arm joints + gripper into V2 55-D arm/effector slots; joint-space path (no LIBERO EEF). camera_wrist_right left unused/zero."
+}
