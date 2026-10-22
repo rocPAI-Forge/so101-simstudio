@@ -47,7 +47,7 @@ platform terms applicable to your workflow.
 | Modification | Location | Notes |
 |--------------|----------|-------|
 | Convex collision hulls (CoACD) | `assets/collision/*_hull_*.stl` | Gripper collision fix; see [asset_processing.md](asset_processing.md) |
-| Scene definitions | `scenes/<scene_id>/` | Project task layouts (e.g. `simple_pick`) |
+| Scene definitions | `scenes/<scene_id>/` | Project task layouts (`simple_pick`, `kitchen_counter`, `smart_drawer`) |
 | Joint / motor defaults | `joints_properties.xml`, MJCF `<default>` blocks | Tuned for sim + LeRobot parity |
 
 CoACD reference: https://colin97.github.io/CoACD/
@@ -59,6 +59,27 @@ CoACD reference: https://colin97.github.io/CoACD/
 Per-scene MJCF under `scenes/` (table, cube, cameras) is **project-authored**
 unless otherwise noted in the scene directory. Default scene: `simple_pick`.
 
+### kitchen_counter (ROSCon demo)
+
+Adapted from Text2MuJoCo showcase
+[`01-button-cube-box`](https://github.com/ShawnJoeng/Text2Mujoco) (MIT):
+workbench, start button, open place-box. Geometry is reseated so the bench top
+is at **z = 0**; SO-101 and the `simple_pick` cameras replace their industrial
+arm. Scan2Sim ginger/garlic were not kept (decimated scans showed cracked
+surfaces; Text2MuJoCo has no food meshes).
+
+License text: `assets/kitchen_counter/LICENSE-Text2Mujoco`.
+
+### smart_drawer (ROSCon demo, keyboard teleop validated)
+
+Adapted from Text2MuJoCo showcase
+[`02-smart-drawer`](https://github.com/ShawnJoeng/Text2Mujoco) (MIT): bench +
+cabinet with a sliding lower drawer (slide range 0–8 cm toward the arm). SO-101
+is remounted via `so101_drawer_mount.xml` in front of the handle (facing −Y).
+Green unlock is static; red/yellow tray tools are visual-only.
+
+License text: `assets/smart_drawer/LICENSE-Text2Mujoco`.
+
 ---
 
 ## License summary
@@ -66,6 +87,8 @@ unless otherwise noted in the scene directory. Default scene: `simple_pick`.
 | Content | License |
 |---------|---------|
 | Original SimStudio scene and project-specific MJCF edits | Apache-2.0 (see root [LICENSE](../LICENSE)) |
+| Text2MuJoCo `01-button-cube-box` workcell (adapted) | MIT ([ShawnJoeng/Text2Mujoco](https://github.com/ShawnJoeng/Text2Mujoco)) |
+| Text2MuJoCo `02-smart-drawer` workcell (adapted) | MIT ([ShawnJoeng/Text2Mujoco](https://github.com/ShawnJoeng/Text2Mujoco)) |
 | SO-101 robot design lineage (SO-ARM100) | Apache-2.0 ([TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)) |
 | LeRobot integration patterns and upstream SO-101 docs | Apache-2.0 ([huggingface/lerobot](https://github.com/huggingface/lerobot)) |
 

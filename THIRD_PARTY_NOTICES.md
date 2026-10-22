@@ -132,6 +132,8 @@ Summary:
 | Onshape → robot export (see XML header in `so101_new_calib.xml`) | — | CAD export metadata; verify Onshape export terms for your use case |
 | CoACD convex decomposition | — | Algorithm used for gripper collision hulls; see `SO101/asset_processing.md` |
 | Scene layouts (`SO101/scenes/`) | Apache-2.0 (this project) | Project-authored task scenes |
+| [Text2MuJoCo](https://github.com/ShawnJoeng/Text2Mujoco) `01-button-cube-box` | MIT | Adapted under `SO101/scenes/kitchen_counter/`; see `assets/kitchen_counter/LICENSE-Text2Mujoco` |
+| [Text2MuJoCo](https://github.com/ShawnJoeng/Text2Mujoco) `02-smart-drawer` | MIT | Adapted under `SO101/scenes/smart_drawer/`; see `assets/smart_drawer/LICENSE-Text2Mujoco` |
 
 ---
 
@@ -140,7 +142,7 @@ Summary:
 | Category | Verdict | Action |
 |----------|---------|--------|
 | Apache-2.0 (LeRobot, MuJoCo, datasets, pyarrow, SO-ARM100 lineage) | Compatible | Retain copyright and license notices |
-| MIT (joycon-robotics Python, BetterJoy) | Compatible | Include MIT notice in distributions |
+| MIT (joycon-robotics Python, BetterJoy, Text2MuJoCo workcell) | Compatible | Include MIT notice in distributions |
 | BSD-3-Clause / PSF (NumPy, SciPy, PyTorch, evdev) | Compatible | Retain copyright notices |
 | LGPL-3.0 (pynput) | Generally acceptable as **separate** Python library dependency | Document in notices; provide LGPL text and source access per LGPL if you distribute binaries |
 | GPL-2.0 / GPL-3.0 (optional joycon kernel tools) | **Not part of default install** | Do not combine into a single proprietary binary without separate GPL compliance; document if you ship them |

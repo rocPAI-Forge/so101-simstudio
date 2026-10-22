@@ -1,5 +1,7 @@
 .PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync \
-	smoke-keyboard-record smoke-keyboard-replay smoke-keyboard-teleop smoke-joycon-record smoke-leader-record smoke-leader-teleop
+	smoke-keyboard-record smoke-keyboard-replay smoke-keyboard-teleop smoke-keyboard-teleop-kitchen \
+	smoke-keyboard-teleop-smart-drawer \
+	smoke-joycon-record smoke-leader-record smoke-leader-teleop
 
 SMOKE := scripts/smoke
 EPISODES ?= 3
@@ -64,6 +66,12 @@ smoke-keyboard-replay:
 
 smoke-keyboard-teleop:
 	$(SMOKE)/keyboard_teleop.sh
+
+smoke-keyboard-teleop-kitchen:
+	$(SMOKE)/keyboard_teleop_kitchen.sh
+
+smoke-keyboard-teleop-smart-drawer:
+	$(SMOKE)/keyboard_teleop_smart_drawer.sh
 
 smoke-joycon-record:
 	$(SMOKE)/joycon_record.sh $(EPISODES) $(RESUME) $(SIDE) $(VIEW_MODE)

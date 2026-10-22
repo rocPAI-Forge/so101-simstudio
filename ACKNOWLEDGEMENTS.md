@@ -22,6 +22,7 @@ and [SO101/ATTRIBUTION.md](SO101/ATTRIBUTION.md).
 |---------|---------------|-------------------|
 | [**SO-ARM100 / SO-101**](https://github.com/TheRobotStudio/SO-ARM100) | The Robot Studio | Open-hardware arm design; mesh and URDF lineage for the simulated SO-101 |
 | [**CoACD**](https://github.com/SarahWeiii/CoACD) | CoACD authors | Approximate convex decomposition for gripper collision geometry |
+| [**Text2MuJoCo**](https://github.com/ShawnJoeng/Text2Mujoco) | ShawnJoeng | `01-button-cube-box` → `kitchen_counter`; `02-smart-drawer` → `smart_drawer` |
 
 ## Teleoperation & input
 

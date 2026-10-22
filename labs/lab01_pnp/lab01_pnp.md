@@ -296,6 +296,10 @@ MI300X-scale: same command with `--batch_size=64 --steps=50000 --num_workers=8 -
 
 `--policy.empty_cameras=1` matches the base model’s fourth padded camera slot.
 
+To record extra scene cams (e.g. `overview`) and train on a **subset** only
+(map just those keys; leave others out of `--rename_map`), see
+[SO101/scenes/README.md — Cameras](../../SO101/scenes/README.md#cameras-record-vs-teleop-vs-train).
+
 **Tune via env or CLI overrides:**
 
 ```bash

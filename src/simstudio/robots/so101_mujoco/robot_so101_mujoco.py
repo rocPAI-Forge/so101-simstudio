@@ -313,9 +313,15 @@ class SO101MujocoRobot(Robot):
         self._glfw_ctx = mj.MjrContext(self.model, mj.mjtFontScale.mjFONTSCALE_150)
         glfw.make_context_current(None)
 
+        # Display grid may include MJCF ``overview`` even when it is not in
+        # camera_names (teleop awareness only; not written to observations).
+        glfw_cam_names = list(self.config.camera_names)
+        overview_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_CAMERA, "overview")
+        if overview_id >= 0 and "overview" not in glfw_cam_names:
+            glfw_cam_names.append("overview")
         self._glfw_cam_ids = {
             name: mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_CAMERA, name)
-            for name in self.config.camera_names
+            for name in glfw_cam_names
         }
 
         logger.info("GLFW visualization window created")
@@ -338,10 +344,11 @@ class SO101MujocoRobot(Robot):
             "top": (0, cam_height),
             "front": (cam_width, cam_height),
             "wrist": (0, 0),
+            "overview": (cam_width, 0),
         }
 
-        for cam_name in self.config.camera_names:
-            if cam_name not in camera_positions:
+        for cam_name in camera_positions:
+            if cam_name not in self._glfw_cam_ids:
                 continue
 
             x, y = camera_positions[cam_name]

@@ -15,7 +15,8 @@ SO-101 simulation studio: expert trajectory generation with MuJoCo and LeRobot.
 - **`src/lerobot_robot_so101_mujoco/`** / **`src/lerobot_teleoperator_so101_keyboard/`**: Namespace plugin packages. They re-export the implementations but live inside the same project distribution, so LeRobot's distribution-based discovery does **not** pick them up automatically. Project wrapper scripts import the config classes explicitly to register them before delegating to LeRobot.
 - **`plugins/lerobot_policy_external_vla/`**: Separately packaged LeRobot policy plugin for model-neutral external VLA inference. It proxies canonical SO-101 observations/actions to an in-process adapter or dependency-isolated sidecar; details in `docs/external_vla.md`.
 - **`SO101/`**: MuJoCo robot assets and scene definitions.
-  - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`).
+  - `scenes/<scene_id>/scene.xml`: per-scene MJCF (default: `simple_pick`; ROSCon demos: `kitchen_counter`, `smart_drawer`).
+  - Cameras: record via `robot.camera_names`; optional MJCF `overview` is GLFW teleop-only unless listed there; train/eval subset via `--rename_map` (see [SO101/scenes/README.md](SO101/scenes/README.md#cameras-record-vs-teleop-vs-train)).
 - **`configs/`**: Recording configs; scene layout data under `configs/scenes/<scene_id>/`.
 - **`labs/`**: Self-contained labs (runbook + scripts + lab-only configs). Conventions in [labs/README.md](labs/README.md); **template** lab: `labs/lab01_pnp/`. Defaults are reusable; diverge when lab goals require it and document why. `labs/lab01_pnp_agent/` holds the agent-generated trajectory line (agent-yaw datasets, ACT-follow, 193-episode Hub scripts, demo media). Home20 protocol and scores are only in `labs/lab01_pnp_agent/home20.md`. Its `_env.sh` sources `labs/lab01_pnp/_env.sh`. Collectors and the shared `train_*.cmd` / `eval.cmd` stay in `labs/lab01_pnp/`.
 - **`scripts/`**: Environment setup scripts (ROCm, Joy-Con patch install, etc.).
@@ -90,6 +91,8 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Format | `make rocm-format` |
 | Test | `make rocm-test` |
 | MuJoCo preview | `.venv-rocm/bin/python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml` |
+| Smoke: kitchen teleop | `make smoke-keyboard-teleop-kitchen` |
+| Smoke: smart-drawer teleop | `make smoke-keyboard-teleop-smart-drawer` |
 | Smoke: keyboard record | `make smoke-keyboard-record VIEW_MODE=mujoco` |
 | Smoke: keyboard replay | `make smoke-keyboard-replay` |
 | Smoke: keyboard teleop | `make smoke-keyboard-teleop` |
