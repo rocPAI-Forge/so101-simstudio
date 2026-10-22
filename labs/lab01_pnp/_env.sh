@@ -182,8 +182,10 @@ fi
 # -----------------------------------------------------------------------------
 LAB01_V2_BASE_DATASET_ROOT="${LAB01_V2_BASE_DATASET_ROOT:-./datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"
 LAB01_V2_BASE_DATASET_REPO_ID="${LAB01_V2_BASE_DATASET_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"
+LAB01_V2_HF_REPO_ID="${LAB01_V2_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k}"
 LAB01_V2_POLICY_PATH="${LAB01_V2_POLICY_PATH:-./outputs/train/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000/pretrained_model}"
-LAB01_V2_SIDE_SRC="${LAB01_V2_SIDE_SRC:-/tmp/lerobot_vla_v2_src/src}"
+LAB01_V2_SIDE_ROOT="${LAB01_V2_SIDE_ROOT:-/tmp/lerobot_vla_v2_src}"
+LAB01_V2_SIDE_SRC="${LAB01_V2_SIDE_SRC:-${LAB01_V2_SIDE_ROOT}/src}"
 
 # -----------------------------------------------------------------------------
 # 5d) Train (FastWAM) — train_fastwam.cmd

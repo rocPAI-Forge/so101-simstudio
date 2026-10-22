@@ -42,7 +42,7 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 | FastWAM | 4K，视频网络冻结 | **0/60** | 4 cm 内合计 3/60，合拢 0 |
 | JEPA，冻结 Qwen，6 维关节 | 只训动作头，10K | **0/60** | 能靠近，闭环里不发合拢 |
 | JEPA，原生 7 维末端 | 冻结 Qwen，动作是末端位姿增量，10K | **0/60** | 三个种子的 `reach_8cm` 都是 0/20。比 6 维更差，这条线停止 |
-| LingBot-VLA 2.0 关节槽，20K | 从 5K 再全量训 20K（4×MI210），193 条 follow2，俯视加腕部，绝对关节。侧挂 PR#3967 + `patches/lerobot-vla-v2-inverse-slot-offset.patch` | **11/20、8/20、6/20 = 25/60** | 默认推理。8 cm 内 60，4 cm 内 59，闭合 56，抬起 28，到盒子上方 27；失败几乎都是夹空。补丁前同权重的闭环成绩作废（夹爪读错维）。见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
+| LingBot-VLA 2.0 关节槽，20K | 从 5K 再全量训 20K（4×MI210），193 条 follow2，俯视加腕部，绝对关节。侧挂 PR#3967 + `patches/lerobot-vla-v2-inverse-slot-offset.patch` | **11/20、8/20、6/20 = 25/60** | 默认推理。8 cm 内 60，4 cm 内 59，闭合 56，抬起 28，到盒子上方 27；失败几乎都是夹空。补丁前同权重的闭环成绩作废（夹爪读错维）。权重 [lingbot-vla-v2-agent193-20k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k)；复现 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 
 SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**，不是当前对照。未设种子的 ACT **17/20** 和 SmolVLA **12/20** 也不是这一列。
 
@@ -86,7 +86,7 @@ LingBot-VLA 2.0：侧挂 PR 曾把夹爪读错一维，补丁前闭环 0/60 作�
 | JEPA 7 维末端 | 同上 | |
 | DM0.5 20K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)（仓库名保留 `10k`，内容已替换为 20K） |
 | xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | [alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k) |
-| LingBot-VLA 2.0 joint-slot 20K | [lerobot/lingbot_vla_v2_base](https://huggingface.co/lerobot/lingbot_vla_v2_base)（经 5K 再训） | 本地 `outputs/train/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000`（未上 Hub）；[`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
+| LingBot-VLA 2.0 joint-slot 20K | [lerobot/lingbot_vla_v2_base](https://huggingface.co/lerobot/lingbot_vla_v2_base)（经 5K 再训） | [alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k)；[`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
 

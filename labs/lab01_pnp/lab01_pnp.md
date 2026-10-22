@@ -918,7 +918,7 @@ Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that e
 
 Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
 
-**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative, [issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)), **GR00T N1.7 10K** (negative, [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17); [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6)). **Not** on Hub: FastWAM ([issue #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8)), LingBot-VLA 2.0 20K (local only; [#19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19)), Molmo 6-D as a separate repo, JEPA unfreeze, GR00T 30K / vis-20K.
+**Hub.** Published: dataset, SmolVLA, ACT 15-D/6-D, MolmoAct2, VLA-JEPA BC 10K (negative, [issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)), **GR00T N1.7 10K** (negative, [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17); [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6)). **Not** on Hub: FastWAM ([issue #8](https://github.com/rocPAI-Forge/so101-simstudio/issues/8)), Molmo 6-D as a separate repo, JEPA unfreeze, GR00T 30K / vis-20K. LingBot-VLA 2.0 20K is on Hub ([#19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19)).
 
 **Follow-up (not this analysis).** Ranked LingBot: [`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md) — [issue #19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19). LingBot-VA Lab 01 path closed — [issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9). GR00T N1.7: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md) — [issue #6](https://github.com/rocPAI-Forge/so101-simstudio/issues/6). Do not load GR00T N1.5 on this LeRobot pin.
 
@@ -1067,7 +1067,7 @@ Published Lab 01 reference assets (`alexhegit`):
 | VLA-JEPA (6-D BC 10K; transfer failure) | [alexhegit/so101-simstudio-lab01-pnp-vla-jepa](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-vla-jepa) ([issue #7](https://github.com/rocPAI-Forge/so101-simstudio/issues/7)) |
 | GR00T N1.7 (10K; negative result) | [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17) |
 | MolmoAct2 | [alexhegit/so101-simstudio-lab01-pnp-molmoact2](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2) |
-| FastWAM / LingBot-VLA 2.0 | FastWAM: **not published** (0% closed-loop). VLA 2.0: local MI210 20K, Home20 **25/60**, not on Hub yet — [`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md). |
+| FastWAM / LingBot-VLA 2.0 | FastWAM: **not published** (0% closed-loop). VLA 2.0: Home20 **25/60** — [lingbot-vla-v2-agent193-20k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k); [`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md). |
 
 Commands in §7.1–7.2 keep `alexhegit/...` as copy-paste examples; replace the namespace with yours when working under your own Hub account.
 
@@ -1213,6 +1213,9 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `train_groot.cmd` | GR00T N1.7 fine-tune (smoke default 20 steps / bs1) |
 | `train_vla_jepa.cmd` | VLA-JEPA fine-tune from LIBERO (transfer-failure recipes in `_env.sh`) |
 | `lingbot_vla_v2_adapt.md` | LingBot-VLA 2.0 authoritative path (patch + 193→20K → Home20 25/60) |
+| `setup_lingbot_vla_v2_side_tree.cmd` | Fetch PR #3967 side tree + apply inverse-slot patch |
+| `eval_lingbot_vla_v2_home20.cmd` | Home20 seeds 1000–1002 for the ranked V2 checkpoint |
+| `push_lingbot_vla_v2_agent193_model.cmd` | Upload / refresh Hub 20K weights + card |
 | `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
