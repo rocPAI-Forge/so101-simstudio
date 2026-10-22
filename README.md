@@ -84,11 +84,12 @@ These policy families have completed closed-loop evaluation in this Lab 01 scene
 | MolmoAct2 | **39/60** — VLM LoRA 20K | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-molmoact2-agent193-20k) |
 | DM0.5 | **37/60** — 20K, top + wrist cameras | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k) |
 | pi05 | **34/60** — full unfreeze | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-pi05-agent193-unfreeze) |
+| LingBot-VLA 2.0 | **25/60** — joint slots, 20K; needs PR #3967 side tree + inverse-slot patch | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k) |
 | GR00T N1.7 | **14/60** — absolute joints, frozen backbone | [Checkpoint](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17-agent193-abs10k) |
 | FastWAM | **0/60** — 4K transfer trial | Not published |
 | VLA-JEPA | **0/60** — 6-D joint and 7-D end-effector trials | Not published |
 
-These totals are not a general model ranking. The scene and frozen poses are shared, but step count, learning rate, cameras, trainable weights, initialization, and action representation differ. A higher number only means that checkpoint performed better under this specific Home20 setup. The LeRobot submodule stays at v0.6.0; DM0.5 and xVLA require a newer LeRobot revision.
+These totals are not a general model ranking. The scene and frozen poses are shared, but step count, learning rate, cameras, trainable weights, initialization, and action representation differ. A higher number only means that checkpoint performed better under this specific Home20 setup. The LeRobot submodule stays at v0.6.0; DM0.5, xVLA, and LingBot-VLA 2.0 need a newer LeRobot revision (V2: see [`lingbot_vla_v2_adapt.md`](labs/lab01_pnp/lingbot_vla_v2_adapt.md)).
 
 ## Requirements
 

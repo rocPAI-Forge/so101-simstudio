@@ -120,6 +120,7 @@
 - [x] Frozen backbone, action-expert-only, LoRA, and full updates. pi05 full unfreeze **34/60** (expert-only was 12/60). MolmoAct2 LoRA **39/60**; the later full update fell to 23/60 and was not adopted
 - [x] xVLA full 10K with three cameras and a 20-D pretrained head adapted to 6-D absolute SO-101 joints: Home20 **47/60**. The finetune is uploaded and linked from [home20.md](labs/lab01_pnp_agent/home20.md)
 - [x] Uploaded checkpoints linked from [home20.md](labs/lab01_pnp_agent/home20.md), including DM0.5 20K at **37/60** (the historical Hub id still ends in `10k`)
+- [x] LingBot-VLA 2.0 joint-slot 20K on the 193 set: Home20 **25/60** after the inverse-slot patch (PR #3967 side tree). Hub: `alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k`. Reproduce: [`lingbot_vla_v2_adapt.md`](labs/lab01_pnp/lingbot_vla_v2_adapt.md) ([issue #19](https://github.com/rocPAI-Forge/so101-simstudio/issues/19))
 
 ### Home20
 
@@ -132,11 +133,11 @@
 ### Other
 
 - [x] Agent line lives in `labs/lab01_pnp_agent/`; train/eval entry points stay in `labs/lab01_pnp/`
-- [x] Lab 01 entry points for MolmoAct2, pi05, GR00T N1.7, VLA-JEPA, FastWAM
+- [x] Lab 01 entry points for MolmoAct2, pi05, GR00T N1.7, VLA-JEPA, FastWAM, LingBot-VLA 2.0 (`setup_` / `eval_` / `push_` cmds)
 - [x] Instinct MI210 / MI300 / MI300X eval notes: `MUJOCO_GL=osmesa`
 - [x] MuJoCo GLFW window no longer vsync-blocks the control loop
 - [x] Directories named `tmp/` stay untracked
-- [x] Pinned LeRobot remains v0.6.0. DM0.5 and xVLA are not in that pin
+- [x] Pinned LeRobot remains v0.6.0. DM0.5, xVLA, and LingBot-VLA 2.0 are not in that pin
 
 ## Evolution
 

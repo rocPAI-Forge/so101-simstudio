@@ -1,6 +1,6 @@
 # Lab01-PnP-Home20
 
-日期：2026-10-14
+日期：2026-10-22
 
 这是评测协议，也是 193 条这条线上的成绩页。20 个方块位姿冻在 [`configs/smolvla_v4_div50_home20_spawns.json`](configs/smolvla_v4_div50_home20_spawns.json)。训练数据是仓库根 `datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2`，**193 条 / 130835 帧**。旧路径 `labs/lab01_pnp/configs/smolvla_v4_div50_home20_spawns.json` 是指向这份清单的符号链接。
 
