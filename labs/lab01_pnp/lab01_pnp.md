@@ -1032,7 +1032,7 @@ LAB01_GRIPPER_ORACLE=1 ./labs/lab01_pnp/eval_vla_jepa_gui.cmd
 
 # Flow-matching sampler (LingBot-VLA v2-style sample_actions): scale the initial noise
 # (0 = deterministic chunk) and/or override denoise steps. Quote both next to any score.
-LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=3 ./labs/lab01_pnp/eval.cmd
+LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=10 ./labs/lab01_pnp/eval.cmd
 ```
 
 | Override | Example |

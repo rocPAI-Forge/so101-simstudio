@@ -70,20 +70,36 @@ informative.
 
 ## Post-patch results (2026-10-21 → 22)
 
-MI210 20K (`/tmp/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000`),
-patched side tree, Home20 protocol (`home`, gripper 0.85, 60 s, EGL):
+MI210 20K (`outputs/train/lab01_lingbot_vla_v2_agent193_mi210_unfreeze20k/checkpoints/020000`,
+local, not on the Hub; copied out of `/tmp` with `training_state/`), patched side
+tree, Home20 protocol (`home`, gripper 0.85, 60 s, EGL):
 
-| Sampler | Seeds 1000 / 1001 / 1002 | reach_8cm → near_4cm → close → lift_2cm → over_box (/60) |
+| Sampler (`LAB01_FLOW_NOISE_SCALE` / `LAB01_FLOW_NUM_STEPS`) | Seeds 1000 / 1001 / 1002 | reach_8cm → near_4cm → close → lift_2cm → over_box (/60) |
 |---|---|---|
+| **0 / 10 (chosen)** | 19 / 20 / 19 = **58/60** | 60 → 60 → 60 → 58 → 58 |
+| 0 / 3 | 19 / 18 / 18 = **55/60** | 60 → 60 → 60 → 58 → 55 |
+| 0.25 / 3 | 19 / 17 / 18 = **54/60** | 60 → 60 → 60 → 57 → 55 |
 | Default (noise ×1, 10 steps) | 11 / 8 / 6 = **25/60** | 60 → 59 → 56 → 28 → 27 |
-| `LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=3` | 19 / 18 / 18 = **55/60** | 60 → 60 → 60 → 58 → 55 |
 
 Logs: `outputs/eval/lingbot_vla_v2_mi210_unfreeze20k_slotfix_home20_g085_seed100{0,1,2}.log`
-and `..._slotfix_noise0_steps3_home20_g085_seed100{0,1,2}.log`. Both rows are in
-[`home20.md`](../lab01_pnp_agent/home20.md). With noise ×0 the seed no longer
-drives the sampler, so the three seeds are near-replicates, the same situation as
-ACT. The zero-noise row is an eval-time setting; the other policies on that page
-used their default inference.
+(default) and `..._slotfix_noise<scale>_steps<n>_home20_g085_seed100{0,1,2}.log`.
+All four rows are in [`home20.md`](../lab01_pnp_agent/home20.md). With noise ×0
+the seed no longer drives the sampler, so the three seeds are near-replicates,
+the same situation as ACT. The sampler rows are an eval-time setting; the other
+policies on that page used their default inference.
+
+**V2 eval recipe:** `LAB01_FLOW_NOISE_SCALE=0 LAB01_FLOW_NUM_STEPS=10`. It has the
+highest total (58/60) and the cleanest failure map. Its two failures are single
+missed lifts on different spawns (spawn 4 on seed 1002 after four closes; spawn
+5 on seed 1000). Spawn 0 and spawn 1 pass on all three seeds, so the spawn-1
+hover-until-timeout stall seen under 0 / 3 (all three seeds) is gone. Under
+0 / 3 the failures are spawn 0 (no lift, two seeds) and spawn 1 (stall, three
+seeds). Under 0.25 / 3 they spread over spawns 0, 1, 5 (twice) and 7 (twice,
+both after lifting the cube). Spawns 0 and 5 sit at
+x = 0.335 m, the farthest cubes in the list; spawn 5 is the only one that fails
+under all three low-noise samplers. There is no V2 eval `.cmd` in `labs/lab01_pnp/`
+yet (Home20 runs go through `.tmp/eval_lingbot_vla_v2_home20_campaign.sh`), so set
+the two env vars on the eval command.
 
 The episode details below are from seed 1000. With the default sampler, eight
 of the nine failures close on air (jaw force ≈0 at the first close), and the
@@ -124,7 +140,7 @@ Less noise helps monotonically down to ≤0.25. One step (the plain conditional
 mean) is worse: 13/20, with drops after lift. Three or more steps are needed. The
 spawn-1 stall under (0, 3) does not appear under (0, 10) or (0.25, 3), so it is
 a property of that exact deterministic trajectory, not of zero noise in general.
-Seeds 1001/1002 for (0.25, 3) and (0, 10) are running.
+Seeds 1001/1002 for (0.25, 3) and (0, 10) are in the three-seed table above.
 
 At 20K the default sampler also has a mean +14 mm \(z\) bias at the expert close
 frame. Its samples close before the descent ends. The error is still
@@ -230,8 +246,8 @@ LAB01_V2_DAGGER_TRAIN_OUTPUT=/tmp/lab01_lingbot_vla_v2_mi210_dagger_unfreeze_up4
 ```
 
 Both DAgger gates above also loaded clobbered eval stats (next section), so
-their `near_4cm` drop is confounded too. Clean-stats re-runs with the patch are
-running (`.tmp/v2_dagger_regates_cleanstats.sh`).
+their `near_4cm` drop is confounded too. The clean-stats re-runs with the patch
+are in the table at the end of this section.
 
 **Suffix-only + 4× (first post-patch DAgger gate):** trained before the patch
 (training never calls the inverse step), gated after it. Same recipe as the
