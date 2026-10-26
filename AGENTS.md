@@ -113,6 +113,7 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Joy-Con setup | `make joycon-sync` |
 | MolmoAct2 extras (ROCm-safe) | `./scripts/install-molmoact2-deps.sh` — **not** `uv pip install 'lerobot[molmoact2]'` |
 | MolmoAct2 eval processor patch | `git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch` (do not commit inside `lerobot/`) |
+| LingBot-VLA v2 side tree + patch | `./labs/lab01_pnp/setup_lingbot_vla_v2_side_tree.cmd` then `./labs/lab01_pnp/eval_lingbot_vla_v2_home20.cmd` (Home20 25/60; Hub: `alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k`) |
 | External VLA bundle | `.venv-rocm/bin/python -m simstudio.scripts.create_external_vla_bundle --manifest <manifest.json> --output <bundle_dir> --backend sidecar` |
 | External VLA sidecar | `python -m simstudio.policies.external_vla.sidecar --manifest <manifest.json>` (run in the model's native environment) |
 | External VLA benchmark | `.venv-rocm/bin/python -m simstudio.scripts.bench_external_vla --manifest <manifest.json> --backend sidecar` |

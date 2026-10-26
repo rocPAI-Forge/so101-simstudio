@@ -1,6 +1,6 @@
 # Lab01-PnP-Home20
 
-日期：2026-10-14
+日期：2026-10-22
 
 这是评测协议，也是 193 条这条线上的成绩页。20 个方块位姿冻在 [`configs/smolvla_v4_div50_home20_spawns.json`](configs/smolvla_v4_div50_home20_spawns.json)。训练数据是仓库根 `datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2`，**193 条 / 130835 帧**。旧路径 `labs/lab01_pnp/configs/smolvla_v4_div50_home20_spawns.json` 是指向这份清单的符号链接。
 
@@ -42,6 +42,7 @@ ACT 的 53/60 用的是前 140 条，不是这 193 条。其余行都在这 193 
 | FastWAM | 4K，视频网络冻结 | **0/60** | 4 cm 内合计 3/60，合拢 0 |
 | JEPA，冻结 Qwen，6 维关节 | 只训动作头，10K | **0/60** | 能靠近，闭环里不发合拢 |
 | JEPA，原生 7 维末端 | 冻结 Qwen，动作是末端位姿增量，10K | **0/60** | 三个种子的 `reach_8cm` 都是 0/20。比 6 维更差，这条线停止 |
+| LingBot-VLA 2.0 关节槽，20K | 从 5K 再全量训 20K（4×MI210），193 条 follow2，俯视加腕部，绝对关节。侧挂 PR#3967 + `patches/lerobot-vla-v2-inverse-slot-offset.patch` | **11/20、8/20、6/20 = 25/60** | 默认推理。8 cm 内 60，4 cm 内 59，闭合 56，抬起 28，到盒子上方 27；失败几乎都是夹空。补丁前同权重的闭环成绩作废（夹爪读错维）。权重 [lingbot-vla-v2-agent193-20k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k)；复现 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 
 SmolVLA 上一档 actonly 3K（171 条）是 **16/20、15/20、14/20 = 45/60**，不是当前对照。未设种子的 ACT **17/20** 和 SmolVLA **12/20** 也不是这一列。
 
@@ -63,6 +64,10 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 
 因此 10 月 5 日停止了当时那一批微调，也不为了冲成功率去补轨迹。之后续了 pi05、GR00T 的全量解冻，以及 MolmoAct2 的一次全量对照。pi05 停在全量解冻那一行。GR00T 停在全量解冻那一行。MolmoAct2 仍引用 LoRA 那一行。再往后的 DM0.5 从旧 10K 的 **25/60** 训到 20K 的 **37/60**：抬起从 27 升到 41，但闭合从 59 降到 50。
 
+LingBot-VLA 2.0：侧挂 PR 曾把夹爪读错一维，补丁前闭环 0/60 作废。打上 `patches/lerobot-vla-v2-inverse-slot-offset.patch` 后，同一份 193→20K 权重用默认推理是 **25/60**（和其它行同一标准）。路径见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md)。
+
+LingBot-VA（LIBERO ΔEEF）在 SO-101 上已暂停：fair EEF 的 Home20 仍是 **0/60**（约 19/60 进 8 cm、约 2/60 合拢），派生 EEF 数据和适配器已从仓库去掉（[#9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)）。这类笛卡尔动作更匹配 7 自由度笛卡尔控制的臂（例如 openARM 一类双臂），而不是 SO-101 的 5+1；本页排名用的 LingBot 是上面的 VLA 2.0。
+
 ## 基座和微调
 
 「基座」是这次实际加载的 Hugging Face 权重。pi05 的上游公共基座是 [`lerobot/pi05_base`](https://huggingface.co/lerobot/pi05_base)，训练加载的是它在真机抓放上的一版微调。ACT 没有基座。上传过的微调给出下载链接，用来复现或接着训。实验中间结果没有上传，微调权重一列留空。
@@ -83,7 +88,7 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 | JEPA 7 维末端 | 同上 | |
 | DM0.5 20K | [lerobot/dm05_base](https://huggingface.co/lerobot/dm05_base) | [alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k)（仓库名保留 `10k`，内容已替换为 20K） |
 | xVLA 10K | [lerobot/xvla-base](https://huggingface.co/lerobot/xvla-base) | [alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k) |
-| LingBot-VA | [lerobot/lingbot_va_libero_long](https://huggingface.co/lerobot/lingbot_va_libero_long) | |
+| LingBot-VLA 2.0 joint-slot 20K | [lerobot/lingbot_vla_v2_base](https://huggingface.co/lerobot/lingbot_vla_v2_base)（经 5K 再训） | [alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k)；[`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md) |
 
 训练数据：[alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2)。50 条 teleop 上的旧 GR00T 在 [alexhegit/so101-simstudio-lab01-pnp-groot-n17](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-groot-n17)，不要和绝对关节仓库混用。
 

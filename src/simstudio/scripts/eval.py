@@ -766,6 +766,44 @@ def _fix_groot_inference_timesteps(ctx: Any) -> None:
         logger.info("Patched GR00T inference knobs on %s", patched)
 
 
+def _install_flow_sampler_overrides(ctx: Any) -> None:
+    """Diagnostic flow-matching sampler knobs (LingBot-VLA v2-style ``sample_actions``).
+
+    ``LAB01_FLOW_NOISE_SCALE`` multiplies the initial noise (0 = deterministic
+    chunk); ``LAB01_FLOW_NUM_STEPS`` overrides the denoise step count. Quote both
+    next to any score measured with them on.
+    """
+    import torch
+
+    scale_raw = os.environ.get("LAB01_FLOW_NOISE_SCALE", "").strip()
+    steps_raw = os.environ.get("LAB01_FLOW_NUM_STEPS", "").strip()
+    if not scale_raw and not steps_raw:
+        return
+    policy = getattr(getattr(ctx, "policy", None), "policy", None)
+    model = getattr(policy, "model", None)
+    if model is None or not hasattr(model, "sample_actions"):
+        raise RuntimeError("LAB01_FLOW_* needs a policy whose .model exposes sample_actions(noise=...)")
+    if steps_raw:
+        policy.config.num_steps = int(steps_raw)
+    if scale_raw:
+        scale = float(scale_raw)
+        sample_actions = model.sample_actions
+
+        def scaled_sample_actions(*args: Any, noise: Any = None, **kwargs: Any) -> Any:
+            if noise is None:
+                state = args[4] if len(args) > 4 else kwargs["state"]
+                shape = (state.shape[0], policy.config.n_action_steps, policy.config.max_action_dim)
+                noise = torch.randn(shape, device=state.device, dtype=state.dtype) * scale
+            return sample_actions(*args, noise=noise, **kwargs)
+
+        model.sample_actions = scaled_sample_actions
+    logger.info(
+        "Flow sampler overrides: noise_scale=%s num_steps=%s",
+        scale_raw or "1",
+        policy.config.num_steps,
+    )
+
+
 def _expand_rollout_state_features(ctx: Any, robot: Any) -> None:
     """Include vel/ee in rollout ``observation.state`` when the policy expects them.
 
@@ -994,6 +1032,7 @@ def eval_main(cfg: RolloutConfig) -> None:
     _preserve_vla_jepa_finetune_dims()
     ctx = build_rollout_context(cfg, signal_handler.shutdown_event)
     _fix_groot_inference_timesteps(ctx)
+    _install_flow_sampler_overrides(ctx)
     robot = ctx.hardware.robot_wrapper
     inner_robot = getattr(robot, "inner", robot)
     _expand_rollout_state_features(ctx, inner_robot)

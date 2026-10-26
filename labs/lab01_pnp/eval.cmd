@@ -49,12 +49,11 @@ if [[ "$LAB01_EVAL_CONFIG" == *molmoact2* || "$LAB01_POLICY_PATH" == *molmoact2*
         exit 1
     fi
 fi
-if [[ "$LAB01_EVAL_CONFIG" == *lingbot* || "$LAB01_POLICY_PATH" == *lingbot* ]]; then
+if [[ "$LAB01_EVAL_CONFIG" == *lingbot_vla_v2* || "$LAB01_POLICY_PATH" == *lingbot_vla_v2* || "$LAB01_POLICY_PATH" == *vla_v2* ]]; then
     _lab01_need_rocm_torch=true
-    if ! "$PYTHON" -c "import transformers, diffusers, accelerate, peft" 2>/dev/null; then
-        echo "LingBot-VA extras missing (transformers / diffusers / accelerate / peft)." >&2
-        echo "  ./scripts/install-lingbot-va-deps.sh" >&2
-        echo "Do NOT run: pip install -e '.[lingbot_va]' (pulls CUDA torch)." >&2
+    if [[ ! -d "${LAB01_V2_SIDE_SRC:-/tmp/lerobot_vla_v2_src/src}" ]]; then
+        echo "LingBot-VLA 2.0 needs the PR #3967 side tree (see lingbot_vla_v2_adapt.md)." >&2
+        echo "  Apply patches/lerobot-vla-v2-inverse-slot-offset.patch before eval." >&2
         exit 1
     fi
 fi
@@ -80,7 +79,7 @@ fi
 if [[ "$_lab01_need_rocm_torch" == true ]]; then
     if ! "$PYTHON" -c "import torch; hip=getattr(torch.version,'hip',None); assert hip and '+rocm' in torch.__version__" 2>/dev/null; then
         echo "ROCm torch missing or replaced by CUDA build." >&2
-        echo "  ./scripts/install-lerobot-extra-deps.sh --repair-torch lingbot_va fastwam" >&2
+        echo "  ./scripts/install-lerobot-extra-deps.sh --repair-torch fastwam" >&2
         echo "  # or full reset: make rocm-sync" >&2
         exit 1
     fi
