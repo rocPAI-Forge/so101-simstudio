@@ -66,6 +66,8 @@ FastWAM 和两版 JEPA 的 0/60 不是再加轨迹就能补上的。FastWAM 的�
 
 LingBot-VLA 2.0：侧挂 PR 曾把夹爪读错一维，补丁前闭环 0/60 作废。打上 `patches/lerobot-vla-v2-inverse-slot-offset.patch` 后，同一份 193→20K 权重用默认推理是 **25/60**（和其它行同一标准）。路径见 [`lingbot_vla_v2_adapt.md`](../lab01_pnp/lingbot_vla_v2_adapt.md)。
 
+LingBot-VA（LIBERO ΔEEF）在 SO-101 上已暂停：fair EEF 的 Home20 仍是 **0/60**（约 19/60 进 8 cm、约 2/60 合拢），派生 EEF 数据和适配器已从仓库去掉（[#9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)）。这类笛卡尔动作更匹配 7 自由度笛卡尔控制的臂（例如 openARM 一类双臂），而不是 SO-101 的 5+1；本页排名用的 LingBot 是上面的 VLA 2.0。
+
 ## 基座和微调
 
 「基座」是这次实际加载的 Hugging Face 权重。pi05 的上游公共基座是 [`lerobot/pi05_base`](https://huggingface.co/lerobot/pi05_base)，训练加载的是它在真机抓放上的一版微调。ACT 没有基座。上传过的微调给出下载链接，用来复现或接着训。实验中间结果没有上传，微调权重一列留空。

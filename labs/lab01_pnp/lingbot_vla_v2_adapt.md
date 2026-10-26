@@ -7,6 +7,12 @@ Same shape as other joint-space finetunes (e.g. GR00T N1.7): **193 follow2 demos
 → finetune → Home20 default eval**. The Lab 01–specific gate is the side-tree
 **inverse-slot patch** (upstream gripper read-back bug).
 
+LingBot-VA (`lingbot_va_*`, LIBERO ΔEEF) is **paused** on SO-101 Lab 01: fair-EEF
+Home20 stayed **0/60** (sparse reach / IK); adapter and derived EEF dataset are
+gone ([issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)). That
+action language fits **7-DoF Cartesian** arms (e.g. openARM-class dual-arm) better
+than SO-101’s 5+1 joint arm — revisit VA there, not as this table’s ranking path.
+
 ## Reproduce Home20 25/60 (eval only)
 
 ```bash

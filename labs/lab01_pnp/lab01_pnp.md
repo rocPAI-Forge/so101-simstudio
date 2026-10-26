@@ -587,8 +587,14 @@ GR00T N1.7 absolute joints. Full contract: [`lingbot_vla_v2_adapt.md`](lingbot_v
 Knobs: `_env.sh` section 5c (`LAB01_V2_*`). Rollout:
 `configs/rollout_lingbot_vla_v2.yaml`.
 
-LingBot-VA (`lingbot_va_*`) stuffed-joint / EEF-adapter experiments are **out of
-tree** and not ranked ([issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)).
+LingBot-VA (`lingbot_va_*`) stuffed-joint / fair-EEF trials are **out of tree** and
+**paused** on SO-101 ([issue #9](https://github.com/rocPAI-Forge/so101-simstudio/issues/9)).
+Fair EEF Home20 stayed **0/60** (≈19/60 reach_8cm, ≈2/60 close); the derived EEF
+dataset was removed. LIBERO-style ΔEEF matches **7-DoF Cartesian** control better
+than SO-101’s 5+1 arm (every 6-DoF increment must IK-project onto a lower-DoF
+manifold). Prefer openARM-class dual-arm platforms for a future VA line; keep Lab
+01 ranked LingBot on VLA 2.0. “Better fit” is action-language alignment, not a
+promise that VA will score well without open-loop / controller checks.
 
 ### FastWAM training (lab01-pnp, MI300X) — DORobot
 
@@ -918,7 +924,7 @@ Lab 01 teleop is **joint-position IL** (`action` = 6× `*.pos`). Policies that e
 | Family | Lab 01 examples | Fine-tune on this dataset | Typical Lab 01 outcome |
 |--------|-----------------|---------------------------|------------------------|
 | **Joint-space** | ACT, SmolVLA, MolmoAct2 (6-D), VLA-JEPA, FastWAM (pad 6→7 joints), **GR00T N1.7** (`new_embodiment`, 10K keeper) | Direct: `action` = robot command (GR00T zero-pads to `max_action_dim`) | ACT/Molmo work. JEPA/FastWAM still fail — **not** because they output EEF, but because of LIBERO→SO-101 vision/action-head transfer on 50 episodes (reinit/pad, frozen or drifted features, `lambda_video=0` / unused WM). **GR00T 10K: 0/10, approach yes / grasp no.** Extra 30K + vis-unfreeze 20K worse. Ledger: [`groot_n1_7_adapt.md`](groot_n1_7_adapt.md). |
-| **End-effector (retired on Lab 01)** | LingBot-VA (`lingbot_va_*`) | Official LIBERO is ΔEEF; Lab 01 trials (stuffed joints / fair adapter) are **out of tree**. | Ranked LingBot is **LingBot-VLA 2.0** joint slots ([`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md)). |
+| **End-effector (paused on Lab 01)** | LingBot-VA (`lingbot_va_*`) | Official LIBERO is ΔEEF; fair EEF Home20 **0/60** (sparse reach / IK); adapter + derived dataset removed. | Better action-language fit on **7-DoF Cartesian** arms (e.g. openARM dual-arm) than SO-101 5+1. Ranked LingBot here: **VLA 2.0** ([`lingbot_vla_v2_adapt.md`](lingbot_vla_v2_adapt.md)). |
 
 Cameras: JEPA/FastWAM/LingBot all rename `top→image`, `wrist→image2` and drop `front`. That is key-name alignment only (top-down ≠ LIBERO agentview). For joint models it was a **second-order** issue (FastWAM still responded to cube pixels). For LingBot it remains OOD, but the **first-order** block is action language.
 
