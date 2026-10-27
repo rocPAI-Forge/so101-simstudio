@@ -1,8 +1,12 @@
+import pickle
+
 import numpy as np
 import torch
 
 from simstudio.datasets.slice_obs_state import (
+    _ObservationStateSliceWorkerInit,
     apply_slice_to_metadata,
+    install_observation_state_slice,
     slice_feature_spec,
     slice_stats_entry,
     slice_vector,
@@ -46,6 +50,34 @@ class _Meta:
         self.stats = {
             "observation.state": {"mean": np.arange(15, dtype=np.float32)},
         }
+
+
+def test_install_slices_getitem_and_getitems():
+    class _DS:
+        def __init__(self):
+            self.meta = _Meta()
+
+        def __getitem__(self, idx):
+            return {"observation.state": torch.arange(15.0), "index": idx}
+
+        def __getitems__(self, indices):
+            return [{"observation.state": torch.arange(15.0), "index": i} for i in indices]
+
+    install_observation_state_slice(_DS, 6)
+    row = _DS()[3]
+    assert row["observation.state"].tolist() == list(range(6))
+    assert row["index"] == 3
+    assert _DS().meta.features["observation.state"]["shape"] == [6]
+    batch = _DS().__getitems__([1, 2])
+    assert [item["index"] for item in batch] == [1, 2]
+    assert batch[0]["observation.state"].shape == (6,)
+
+
+def test_worker_init_survives_spawn_pickle():
+    hook = _ObservationStateSliceWorkerInit(6, None)
+    restored = pickle.loads(pickle.dumps(hook))
+    assert restored.dim == 6
+    assert restored.previous is None
 
 
 def test_apply_slice_to_metadata():

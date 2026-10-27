@@ -68,34 +68,104 @@ def apply_slice_to_metadata(meta: Any, dim: int) -> None:
     )
 
 
+def install_observation_state_slice(dataset_cls: type, dim: int) -> None:
+    """Slice ``observation.state`` on a dataset class after rows are loaded.
+
+    Metadata is sliced **after** ``__init__``: HuggingFace needs the on-disk
+    schema to cast columns. Policy construction reads ``dataset.meta``
+    afterwards, so it still sees ``dim``.
+
+    Newer LeRobot loads training batches through ``__getitems__``, which does
+    not call ``__getitem__``. Wrap both when ``__getitems__`` exists.
+    """
+    if dim <= 0:
+        return
+
+    orig_init = dataset_cls.__init__
+    orig_getitem = dataset_cls.__getitem__
+
+    def init_then_slice(self, *args, **kwargs):
+        orig_init(self, *args, **kwargs)
+        apply_slice_to_metadata(self.meta, dim)
+
+    def _slice_item(item: dict) -> dict:
+        if isinstance(item, dict) and OBS_STATE in item:
+            item[OBS_STATE] = slice_vector(item[OBS_STATE], dim)
+        return item
+
+    def getitem_and_slice(self, idx):
+        return _slice_item(orig_getitem(self, idx))
+
+    dataset_cls.__init__ = init_then_slice  # type: ignore[method-assign]
+    dataset_cls.__getitem__ = getitem_and_slice  # type: ignore[method-assign]
+
+    orig_getitems = getattr(dataset_cls, "__getitems__", None)
+    if orig_getitems is not None:
+
+        def getitems_and_slice(self, indices):
+            return [_slice_item(item) for item in orig_getitems(self, indices)]
+
+        dataset_cls.__getitems__ = getitems_and_slice  # type: ignore[method-assign]
+
+
+_dataloader_slice_dim: int | None = None
+
+
+class _ObservationStateSliceWorkerInit:
+    """Re-apply the slice inside a DataLoader worker.
+
+    LeRobot defaults to ``spawn``. A nested function cannot be pickled across
+    that boundary. Workers also re-import ``LeRobotDataset`` and do not see a
+    monkeypatch done only in the parent, so batches stay 15-D while the
+    normalizer stats were sliced to ``dim``.
+    """
+
+    def __init__(self, dim: int, previous: Any | None) -> None:
+        self.dim = dim
+        self.previous = previous
+
+    def __call__(self, worker_id: int) -> None:
+        from lerobot.datasets.lerobot_dataset import LeRobotDataset
+
+        install_observation_state_slice(LeRobotDataset, self.dim)
+        if self.previous is not None:
+            self.previous(worker_id)
+
+
+def _install_dataloader_worker_slice(dim: int) -> None:
+    """Attach the picklable worker hook to later DataLoader construction."""
+    global _dataloader_slice_dim
+    if _dataloader_slice_dim == dim:
+        return
+    _dataloader_slice_dim = dim
+
+    from torch.utils.data import DataLoader
+
+    orig_init = DataLoader.__init__
+
+    def init_with_slice(self, *args, **kwargs):
+        num_workers = kwargs.get("num_workers", 0)
+        if num_workers:
+            kwargs["worker_init_fn"] = _ObservationStateSliceWorkerInit(
+                dim,
+                kwargs.get("worker_init_fn"),
+            )
+        orig_init(self, *args, **kwargs)
+
+    DataLoader.__init__ = init_with_slice  # type: ignore[method-assign]
+
+
 def patch_lerobot_observation_state_dim(dim: int) -> None:
-    """Monkeypatch LeRobot dataset load so ACT trains on a state prefix.
+    """Monkeypatch LeRobot dataset load so training sees a state prefix.
 
     Call this before constructing the dataset (i.e. before ``lerobot-train``).
     Does not rewrite parquet or videos.
-
-    Metadata is sliced **after** parquet load: HuggingFace needs the on-disk
-    15-D schema to cast columns. Policy construction reads ``dataset.meta``
-    afterwards, so it still sees ``dim``.
     """
     if dim <= 0:
         return
 
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
-    orig_init = LeRobotDataset.__init__
-    orig_getitem = LeRobotDataset.__getitem__
-
-    def init_then_slice(self, *args, **kwargs):
-        orig_init(self, *args, **kwargs)
-        apply_slice_to_metadata(self.meta, dim)
-
-    def getitem_and_slice(self, idx):
-        item = orig_getitem(self, idx)
-        if OBS_STATE in item:
-            item[OBS_STATE] = slice_vector(item[OBS_STATE], dim)
-        return item
-
-    LeRobotDataset.__init__ = init_then_slice  # type: ignore[method-assign]
-    LeRobotDataset.__getitem__ = getitem_and_slice  # type: ignore[method-assign]
+    install_observation_state_slice(LeRobotDataset, dim)
+    _install_dataloader_worker_slice(dim)
     logger.info("Will slice observation.state to %d dims after parquet load", dim)

@@ -1,0 +1,52 @@
+# =============================================================================
+# Lab 01 — DM0.5 Home20 eval (193-episode fine-tune, 6-D absolute joints)
+# =============================================================================
+# Top and wrist cameras only. The front camera is recorded and rendered, and
+# is not a model input. Chunk / n_action_steps 10. Stats stay on the 193 set.
+#
+#   LAB01_LEROBOT_SRC=/path/to/lerobot \
+#   LAB01_POLICY_PATH=./outputs/train/lab01_dm05_agent193_20k/checkpoints/020000/pretrained_model \
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_dm05.yaml \
+#   LAB01_N_ACTION_STEPS=10 \
+#   LAB01_HOME20_TAG=dm05_base_agent193_20k \
+#     ./labs/lab01_pnp/eval_home20.cmd
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: position
+  home_gripper: 0.85
+  reset_mode: auto
+  reset_arm: home
+  reset_cube: fixed
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  record_fps: 20
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: false
+
+fps: 20
+task: "Pick up the cube and place it in the box"
+
+strategy:
+  type: base
+
+inference:
+  type: sync
+
+play_sounds: false
+display_data: false
+display_mode: rerun
+return_to_initial_position: false
+
+eval:
+  num_episodes: 20
+  episode_time_s: 60
+  reset_time_s: 3
+  stats_dataset_repo_id: alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2
+  stats_dataset_root: ./datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2
+  state_dim: 6

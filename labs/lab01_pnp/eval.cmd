@@ -25,6 +25,9 @@ set -euo pipefail
 _LAB01_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$_LAB01_DIR/../../scripts/quicktest/_common.sh"
 source "$_LAB01_DIR/_env.sh"
+if [[ -n "${LAB01_PYTHON:-}" ]]; then
+    PYTHON="$LAB01_PYTHON"
+fi
 
 export MUJOCO_GL="$LAB01_MUJOCO_GL"
 # Headless backends must not see a DISPLAY or MuJoCo may pick GLX/GLFW instead.
@@ -66,6 +69,12 @@ if [[ "$LAB01_EVAL_CONFIG" == *fastwam* || "$LAB01_POLICY_PATH" == *fastwam* ]];
         echo "Do NOT run: pip install -e '.[fastwam]' (pulls CUDA torch)." >&2
         exit 1
     fi
+fi
+if [[ "$LAB01_EVAL_CONFIG" == *xvla* || "$LAB01_POLICY_PATH" == *xvla* ]]; then
+    lab01_use_lerobot_src xvla
+fi
+if [[ "$LAB01_EVAL_CONFIG" == *dm05* || "$LAB01_POLICY_PATH" == *dm05* ]]; then
+    lab01_use_lerobot_src dm05
 fi
 if [[ "$LAB01_EVAL_CONFIG" == *groot* || "$LAB01_POLICY_PATH" == *groot* ]]; then
     export LAB01_GROOT=1
@@ -112,6 +121,10 @@ echo "Stats dataset:     $LAB01_DATASET_ROOT"
 echo "Log:               $LAB01_EVAL_LOG"
 echo ""
 
+_tee=(tee)
+if [[ "${LAB01_EVAL_LOG_APPEND:-}" == "1" ]]; then
+    _tee=(tee -a)
+fi
 "$PYTHON" -m simstudio.scripts.eval \
     --config "$LAB01_EVAL_CONFIG" \
     --policy.path="$LAB01_POLICY_PATH" \
@@ -120,5 +133,5 @@ echo ""
     --eval.stats_dataset_root="$LAB01_DATASET_ROOT" \
     --robot.render_window="$LAB01_RENDER_WINDOW" \
     "${EXTRA_ARGS[@]}" \
-    "$@" 2>&1 | tee "$LAB01_EVAL_LOG"
+    "$@" 2>&1 | "${_tee[@]}" "$LAB01_EVAL_LOG"
 exit "${PIPESTATUS[0]}"

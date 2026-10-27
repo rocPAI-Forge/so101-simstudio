@@ -18,7 +18,7 @@
 
 全范围新抽（不设 `LAB01_EPISODE_INIT`）是另一列。单个演示位姿 `(0.27, 0.20, yaw −8°)` 也不是这一列。
 
-`LAB01_HOME20_SPAWNS` 在本目录 `_env.sh` 里，默认就是这份清单。训练和评测入口仍是 `../lab01_pnp/train_*.cmd` 和 `eval.cmd`。A30 上的分数用 `.venv-cuda` 和 `MUJOCO_GL=egl` 直接调用 `simstudio.scripts.eval`。`eval.cmd` 会优先选 ROCm 环境，不用于这些数字。
+`LAB01_HOME20_SPAWNS` 在本目录 `_env.sh` 里，默认就是这份清单。训练入口是 `../lab01_pnp/train_*.cmd`。这 20 个点、三个种子的评测入口是 `../lab01_pnp/eval_home20.cmd`。已发表的 xVLA 和 DM0.5 分数是在 NVIDIA GPU 上用 `.venv-cuda` 和 `MUJOCO_GL=egl` 跑的；`eval_home20.cmd` 默认就是这组设置。ROCm 环境用 `LAB01_PYTHON` 指到 `.venv-rocm/bin/python`。Instinct 上 EGL 分配失败时把 `LAB01_MUJOCO_GL` 设为 `osmesa`。
 
 ## 成绩
 
@@ -266,7 +266,21 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 
 ## DM0.5
 
-基座是 [`lerobot/dm05_base`](https://huggingface.co/lerobot/dm05_base)。仓库里钉住的 LeRobot 是 v0.6.0，没有 DM0.5，这次训练用的是一份更新的 LeRobot 检出，没有写进子模块。相机是俯视和腕部，前方相机在数据里但不进模型。`add_state=true`，绝对关节，chunk 和 `n_action_steps` 都是 10。图像缩到 448×448。
+基座是 [`lerobot/dm05_base`](https://huggingface.co/lerobot/dm05_base)。钉住的 LeRobot v0.6.0 子模块没有 DM0.5。发表这次用的是 LeRobot `24f15b92b556cb861ca65e989462e23505a701bd`（2026-10-12），当时放在 `/tmp/lerobot-main`，没有写进子模块。复现：
+
+```bash
+git clone https://github.com/huggingface/lerobot.git /path/to/lerobot
+git -C /path/to/lerobot checkout 24f15b92b556cb861ca65e989462e23505a701bd
+LAB01_LEROBOT_SRC=/path/to/lerobot ./labs/lab01_pnp/train_dm05.cmd
+LAB01_LEROBOT_SRC=/path/to/lerobot \
+LAB01_POLICY_PATH=./outputs/train/lab01_dm05_agent193_20k/checkpoints/020000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_dm05.yaml \
+LAB01_N_ACTION_STEPS=10 \
+LAB01_HOME20_TAG=dm05_repro \
+  ./labs/lab01_pnp/eval_home20.cmd
+```
+
+`LAB01_HOME20_TAG` 不要用 `dm05_base_agent193_20k`，那三个种子的日志已经在 `outputs/eval/`。相机是俯视和腕部，前方相机在数据里但不进模型。`add_state=true`，绝对关节，chunk 和 `n_action_steps` 都是 10。图像缩到 448×448。发表训练是 4 张 MI210、`.venv-rocm`；发表评测是一张 NVIDIA GPU、`.venv-cuda`。
 
 评测是纯模型 Home20，没有专家接管。20K 日志 `outputs/eval/dm05_base_agent193_20k_lab01_pnp_home20_g085_seed1000.log` 及 `seed1001`、`seed1002`。2026-10-15 03:49 跑完。
 
@@ -300,7 +314,22 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 
 ## xVLA
 
-基座是 [`lerobot/xvla-base`](https://huggingface.co/lerobot/xvla-base)。仓库钉住的 LeRobot v0.6.0 没有 xVLA；训练和评测使用 `/tmp/lerobot-main` 的更新实现，没有改子模块。10K 微调权重已上传到 [`alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k`](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k)。
+基座是 [`lerobot/xvla-base`](https://huggingface.co/lerobot/xvla-base)。钉住的 v0.6.0 里已有 `policies/xvla`，但和发表这次用的实现不是同一份。发表训练和评测使用 LeRobot `24f15b92b556cb861ca65e989462e23505a701bd`，当时放在 `/tmp/lerobot-main`。10K 微调权重已上传到 [`alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k`](https://huggingface.co/alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k)。复现：
+
+```bash
+LAB01_LEROBOT_SRC=/path/to/lerobot \
+LAB01_PYTHON=.venv-cuda/bin/python \
+  ./labs/lab01_pnp/train_xvla.cmd
+LAB01_LEROBOT_SRC=/path/to/lerobot \
+LAB01_PYTHON=.venv-cuda/bin/python \
+LAB01_POLICY_PATH=./outputs/train/lab01_xvla_agent193_10k/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_xvla.yaml \
+LAB01_N_ACTION_STEPS=30 \
+LAB01_HOME20_TAG=xvla_repro \
+  ./labs/lab01_pnp/eval_home20.cmd
+```
+
+`train_xvla.cmd` 会把 Hub 基座收成一份本地配置：`action_mode=auto`，动作维改成 6，权重仍指向 `lerobot/xvla-base`。LeRobot 检出与 DM0.5 相同。发表训练是 4 张 A30。
 
 原基座声明 8 维 proprio 和 20 维动作。本次数据仍只取 15 维 `observation.state` 的前 6 个关节 `.pos`；xVLA 在模型入口把这 6 维补到原生 8 维。动作设为 `action_mode=auto`：保留预训练的 20 维动作头，只对真实的前 6 维计算损失，推理时再裁回 SO-101 的 6 维绝对关节动作。不要把 20 维原始输出直接发给机器人。
 
@@ -368,6 +397,10 @@ GR00T 的调度器和 pi05 不同。`GrootConfig.get_scheduler_preset` 用 `max_
 | `push_pi05_agent193_unfreeze_model.cmd` | pi05 全量解冻 |
 | `push_groot_agent193_abs_model.cmd` | GR00T 绝对关节、冻结骨干 10K |
 | `push_dm05_agent193_model.cmd` | DM0.5 20K（历史 Hub id 仍带 `10k`） |
+| `push_xvla_agent193_model.cmd` | xVLA 10K |
 | `push_agent_yaw_follow2_dataset.cmd` | 193 条数据集 |
+| `../lab01_pnp/train_dm05.cmd` | DM0.5 20K 训练。需要 `LAB01_LEROBOT_SRC` |
+| `../lab01_pnp/train_xvla.cmd` | xVLA 10K 训练。需要 `LAB01_LEROBOT_SRC` |
+| `../lab01_pnp/eval_home20.cmd` | Home20 三个种子。xVLA / DM0.5 的 rollout YAML 在 `labs/lab01_pnp/configs/` |
 
 50 条 teleop 数据集和对应的 ACT / SmolVLA / MolmoAct2 / GR00T / JEPA 上传脚本仍在 `labs/lab01_pnp/`。Hub 卡片 `hf_model_card_*.md`、`hf_dataset_card_*.md` 是上传稿，不在这里维护对照表。

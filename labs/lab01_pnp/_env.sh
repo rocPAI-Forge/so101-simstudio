@@ -21,7 +21,8 @@
 #   5c) Train LingBot-VA — train_lingbot_va.cmd (DORobot / MI300X)
 #   5d) Train FastWAM — train_fastwam.cmd (DORobot / MI300X)
 #   5e) Train GR00T N1.7 — train_groot.cmd (smoke default; MI300X overrides)
-#   6) Eval     — eval.cmd (any LeRobot policy)
+#   5f) Train xVLA / DM0.5 — train_xvla.cmd / train_dm05.cmd (193-ep Home20)
+#   6) Eval     — eval.cmd (any LeRobot policy); eval_home20.cmd for the frozen 20 poses
 #   7) Hub      — push_*.cmd
 # =============================================================================
 
@@ -295,6 +296,104 @@ LAB01_GROOT_RENAME_MAP="${LAB01_GROOT_RENAME_MAP:-}"
 LAB01_GROOT_PROCESSOR_MODEL="${LAB01_GROOT_PROCESSOR_MODEL:-}"
 LAB01_GROOT_TUNE_VISUAL="${LAB01_GROOT_TUNE_VISUAL:-false}"
 LAB01_GROOT_TUNE_LLM="${LAB01_GROOT_TUNE_LLM:-false}"
+
+# -----------------------------------------------------------------------------
+# 5f) xVLA and DM0.5 — train_xvla.cmd / train_dm05.cmd / eval_home20.cmd
+#    The pinned submodule is LeRobot v0.6.0. These two runs need a newer tree:
+#    LAB01_LEROBOT_REV (Home20 used this commit). Clone it and set
+#    LAB01_LEROBOT_SRC to that checkout. Do not point this at lerobot/.
+#    Defaults below are the published 193-episode recipes, not a short smoke.
+#    Dataset is the agent-yaw follow2 set, not the 50-episode teleop root.
+# -----------------------------------------------------------------------------
+LAB01_LEROBOT_REV="${LAB01_LEROBOT_REV:-24f15b92b556cb861ca65e989462e23505a701bd}"
+LAB01_LEROBOT_SRC="${LAB01_LEROBOT_SRC:-}"
+LAB01_AGENT193_DATASET_NAME="${LAB01_AGENT193_DATASET_NAME:-so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2}"
+LAB01_AGENT193_DATASET_ROOT="${LAB01_AGENT193_DATASET_ROOT:-./datasets/${LAB01_AGENT193_DATASET_NAME}}"
+LAB01_AGENT193_DATASET_REPO_ID="${LAB01_AGENT193_DATASET_REPO_ID:-${LAB01_DATASET_HF_USER}/${LAB01_AGENT193_DATASET_NAME}}"
+
+# xVLA: lerobot/xvla-base, action_mode=auto, 6-D absolute joints, 3 cameras, 10K.
+# Published hardware: 4× NVIDIA A30, .venv-cuda. Set LAB01_PYTHON to that interpreter.
+LAB01_XVLA_BASE="${LAB01_XVLA_BASE:-lerobot/xvla-base}"
+LAB01_XVLA_ADAPTED_BASE="${LAB01_XVLA_ADAPTED_BASE:-./outputs/train/xvla_base_so101}"
+LAB01_XVLA_OUTPUT="${LAB01_XVLA_OUTPUT:-./outputs/train/lab01_xvla_agent193_10k}"
+LAB01_XVLA_LOG="${LAB01_XVLA_LOG:-./outputs/train/lab01_xvla_agent193_10k.log}"
+LAB01_XVLA_JOB_NAME="${LAB01_XVLA_JOB_NAME:-lab01_xvla_agent193_10k}"
+LAB01_XVLA_STEPS="${LAB01_XVLA_STEPS:-10000}"
+LAB01_XVLA_BATCH_SIZE="${LAB01_XVLA_BATCH_SIZE:-4}"
+LAB01_XVLA_NPROC="${LAB01_XVLA_NPROC:-4}"
+LAB01_XVLA_SAVE_FREQ="${LAB01_XVLA_SAVE_FREQ:-5000}"
+LAB01_XVLA_NUM_WORKERS="${LAB01_XVLA_NUM_WORKERS:-2}"
+LAB01_XVLA_CHUNK_SIZE="${LAB01_XVLA_CHUNK_SIZE:-30}"
+LAB01_XVLA_N_ACTION_STEPS="${LAB01_XVLA_N_ACTION_STEPS:-30}"
+LAB01_XVLA_LR="${LAB01_XVLA_LR:-1e-4}"
+LAB01_XVLA_WARMUP="${LAB01_XVLA_WARMUP:-1000}"
+LAB01_XVLA_DECAY_STEPS="${LAB01_XVLA_DECAY_STEPS:-10000}"
+LAB01_XVLA_DECAY_LR="${LAB01_XVLA_DECAY_LR:-2.5e-6}"
+LAB01_XVLA_MASTER_PORT="${LAB01_XVLA_MASTER_PORT:-29551}"
+if [[ -z "${LAB01_XVLA_RENAME_MAP:-}" ]]; then
+  LAB01_XVLA_RENAME_MAP='{"observation.images.camera_top":"observation.images.image","observation.images.camera_wrist":"observation.images.image2","observation.images.camera_front":"observation.images.image3"}'
+fi
+
+# DM0.5: lerobot/dm05_base, top+wrist, absolute joints, 20K.
+# Published train: 4× AMD Instinct MI210, .venv-rocm. Published eval: one NVIDIA GPU.
+LAB01_DM05_BASE="${LAB01_DM05_BASE:-lerobot/dm05_base}"
+LAB01_DM05_OUTPUT="${LAB01_DM05_OUTPUT:-./outputs/train/lab01_dm05_agent193_20k}"
+LAB01_DM05_LOG="${LAB01_DM05_LOG:-./outputs/train/lab01_dm05_agent193_20k.log}"
+LAB01_DM05_JOB_NAME="${LAB01_DM05_JOB_NAME:-lab01_dm05_base_20k}"
+LAB01_DM05_STEPS="${LAB01_DM05_STEPS:-20000}"
+LAB01_DM05_BATCH_SIZE="${LAB01_DM05_BATCH_SIZE:-1}"
+LAB01_DM05_NPROC="${LAB01_DM05_NPROC:-4}"
+LAB01_DM05_SAVE_FREQ="${LAB01_DM05_SAVE_FREQ:-10000}"
+LAB01_DM05_NUM_WORKERS="${LAB01_DM05_NUM_WORKERS:-2}"
+LAB01_DM05_CHUNK_SIZE="${LAB01_DM05_CHUNK_SIZE:-10}"
+LAB01_DM05_N_ACTION_STEPS="${LAB01_DM05_N_ACTION_STEPS:-10}"
+LAB01_DM05_LR="${LAB01_DM05_LR:-2.5e-5}"
+LAB01_DM05_WARMUP="${LAB01_DM05_WARMUP:-400}"
+LAB01_DM05_DECAY_STEPS="${LAB01_DM05_DECAY_STEPS:-20000}"
+LAB01_DM05_DECAY_LR="${LAB01_DM05_DECAY_LR:-2.5e-6}"
+LAB01_DM05_MASTER_PORT="${LAB01_DM05_MASTER_PORT:-29541}"
+if [[ -z "${LAB01_DM05_IMAGE_KEYS:-}" ]]; then
+  LAB01_DM05_IMAGE_KEYS='["observation.images.camera_top","observation.images.camera_wrist"]'
+fi
+
+# Home20 eval loop (eval_home20.cmd). Empty tag refuses to clobber old logs.
+LAB01_HOME20_TAG="${LAB01_HOME20_TAG:-}"
+LAB01_HOME20_SEEDS="${LAB01_HOME20_SEEDS:-1000 1001 1002}"
+
+# Prepend a newer LeRobot checkout when a policy is not in the v0.6.0 pin.
+# $1 is the policy package name under src/lerobot/policies/.
+lab01_use_lerobot_src() {
+    local name="$1"
+    local root="${LAB01_LEROBOT_SRC}"
+    if [[ -z "$root" ]]; then
+        echo "LAB01_LEROBOT_SRC is empty. xVLA and DM0.5 need LeRobot ${LAB01_LEROBOT_REV}, not the pinned v0.6.0 submodule." >&2
+        echo "  git clone https://github.com/huggingface/lerobot.git /path/to/lerobot" >&2
+        echo "  git -C /path/to/lerobot checkout ${LAB01_LEROBOT_REV}" >&2
+        echo "  LAB01_LEROBOT_SRC=/path/to/lerobot ./labs/lab01_pnp/train_${name}.cmd" >&2
+        exit 1
+    fi
+    local pkg="${root}/src/lerobot/policies/${name}"
+    if [[ ! -d "$pkg" ]]; then
+        echo "No ${pkg}." >&2
+        echo "Checkout ${LAB01_LEROBOT_REV} and point LAB01_LEROBOT_SRC at that tree." >&2
+        exit 1
+    fi
+    if [[ "$name" == "xvla" ]] && ! grep -q 'action_mode.lower() == "auto"' "${pkg}/modeling_xvla.py"; then
+        echo "This xVLA tree has no action_mode=auto. The Home20 run needs ${LAB01_LEROBOT_REV}." >&2
+        exit 1
+    fi
+    if git -C "$root" rev-parse HEAD >/dev/null 2>&1; then
+        local head
+        head="$(git -C "$root" rev-parse HEAD)"
+        if [[ "$head" != "$LAB01_LEROBOT_REV" && "${LAB01_LEROBOT_ALLOW_OTHER_REV:-}" != "1" ]]; then
+            echo "LeRobot at $root is ${head:0:12}." >&2
+            echo "The published Home20 run used ${LAB01_LEROBOT_REV}." >&2
+            echo "Check out that commit, or set LAB01_LEROBOT_ALLOW_OTHER_REV=1 to continue on this tree." >&2
+            exit 1
+        fi
+    fi
+    export PYTHONPATH="${root}/src${PYTHONPATH:+:$PYTHONPATH}"
+}
 
 # -----------------------------------------------------------------------------
 # 6) Eval — eval.cmd (policy-agnostic)
