@@ -55,6 +55,14 @@ The side-camera clip below is explore scene 0 (cabinet shifted −1.2 cm / +2.5 
 
 ![Open and close the lower drawer](media/open_close.gif)
 
+The 3×2 clip runs the same program on six explore layouts, from −10° to +9.4° and shifts of about 2–3 cm. Each cell is the overhead view above the side view. All six finished within 0.5 cm of that episode's start.
+
+![Six cabinet placements, overhead and side](media/open_close_grid.gif)
+
+The same clip with English captions is `media/open_close_grid_en.gif`.
+
+![Six cabinet placements with English captions](media/open_close_grid_en.gif)
+
 ## Setup
 
 On the target Linux host, use the repository's normal setup (including submodules and `make rocm-sync`). The tested environment on halo used Python 3.12, Torch `2.14.1+rocm7.2`, and MuJoCo `3.16.0`.
