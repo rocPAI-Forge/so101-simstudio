@@ -51,6 +51,10 @@ On Halo the detached `real/franka` checkout is `~/Repo/RAX/rax-drawer-runtime`, 
 
 `open_close.py` is the non-privileged program for this task. It finds the lower handle from the overhead color and depth, pulls along that bar's horizontal normal toward the fixed arm mount, then pushes back to the grasp point. It does not read the drawer joint. Develop against `manifests/explore.json`. The locked held-out file `manifests/test.json` is only for the final score. On 2026-10-29 that program succeeded on 16 of 20 test scenes (0 unreachable). The same program succeeded on 37 of 50 explore scenes; that explore number is not the reported rate.
 
+The side-camera clip below is explore scene 0 (cabinet shifted −1.2 cm / +2.5 cm and yawed −4.2°). That run finished 0.46 cm from the start with handle contact on both the pull and the return.
+
+![Open and close the lower drawer](media/open_close.gif)
+
 ## Setup
 
 On the target Linux host, use the repository's normal setup (including submodules and `make rocm-sync`). The tested environment on halo used Python 3.12, Torch `2.14.1+rocm7.2`, and MuJoCo `3.16.0`.
