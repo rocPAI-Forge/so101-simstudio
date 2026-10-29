@@ -37,7 +37,7 @@ Do not send the raw 20-D model output directly to the robot.
 - Learning rate: peak `1e-4`, warmup 1000, cosine decay over 10,000 steps to `2.5e-6`
 - Final training loss: 0.008
 
-The pinned SO-101 SimStudio LeRobot v0.6.0 submodule does not include xVLA. Use a newer LeRobot revision that provides `lerobot.policies.xvla`.
+Train and evaluate with LeRobot `24f15b92` via `labs/lab01_pnp/train_xvla.cmd` and `labs/lab01_pnp/eval_home20.cmd` (`LAB01_LEROBOT_SRC`). The pinned v0.6.0 xVLA sources differ from that revision.
 
 ## Home20 evaluation
 

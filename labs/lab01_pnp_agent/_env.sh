@@ -23,6 +23,8 @@ LAB01_PI05_AGENT193_POLICY_PATH="${LAB01_PI05_AGENT193_POLICY_PATH:-./outputs/tr
 LAB01_PI05_UNFREEZE_HF_REPO_ID="${LAB01_PI05_UNFREEZE_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-pi05-agent193-unfreeze}"
 LAB01_PI05_UNFREEZE_POLICY_PATH="${LAB01_PI05_UNFREEZE_POLICY_PATH:-/tmp/lab01_pi05_front_unfreezeA2_15k/checkpoints/005000/pretrained_model}"
 LAB01_GROOT_AGENT193_ABS_HF_REPO_ID="${LAB01_GROOT_AGENT193_ABS_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-groot-n17-agent193-abs10k}"
+# Push scripts still default to the historical /tmp checkpoints from the
+# published run. train_dm05.cmd / train_xvla.cmd write under outputs/train/.
 LAB01_DM05_AGENT193_HF_REPO_ID="${LAB01_DM05_AGENT193_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-dm05-agent193-10k}"
 LAB01_DM05_AGENT193_POLICY_PATH="${LAB01_DM05_AGENT193_POLICY_PATH:-/tmp/lab01_dm05_20k/checkpoints/020000/pretrained_model}"
 LAB01_XVLA_AGENT193_HF_REPO_ID="${LAB01_XVLA_AGENT193_HF_REPO_ID:-alexhegit/so101-simstudio-lab01-pnp-xvla-agent193-10k}"

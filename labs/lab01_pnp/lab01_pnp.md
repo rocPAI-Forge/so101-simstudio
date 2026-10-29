@@ -647,6 +647,34 @@ Resume 4K→20K on MI300X: **4 h 19 min** remaining steps, last log **loss ~0.11
 
 **ROCm extras:** both policies use `./scripts/install-lerobot-extra-deps.sh`, which pins the current `torch==…+rocm` / `torchvision` via `--constraints` and never re-resolves CUDA wheels. If a CUDA leak already happened, add `--repair-torch`.
 
+### xVLA and DM0.5 (193-episode Home20)
+
+These two fine-tunes are not in the pinned LeRobot v0.6.0 submodule. The published runs used LeRobot `24f15b92b556cb861ca65e989462e23505a701bd`. Clone that commit and set `LAB01_LEROBOT_SRC`. Dataset is the 193-episode follow2 set, not the 50-episode teleop root. Recipes and scores: [`../lab01_pnp_agent/home20.md`](../lab01_pnp_agent/home20.md).
+
+```bash
+git clone https://github.com/huggingface/lerobot.git /path/to/lerobot
+git -C /path/to/lerobot checkout 24f15b92b556cb861ca65e989462e23505a701bd
+
+# xVLA 10K (published on 4× A30). Defaults in _env.sh section 5f.
+LAB01_LEROBOT_SRC=/path/to/lerobot \
+LAB01_PYTHON=.venv-cuda/bin/python \
+  ./labs/lab01_pnp/train_xvla.cmd
+
+# DM0.5 20K (published on 4× MI210).
+LAB01_LEROBOT_SRC=/path/to/lerobot \
+  ./labs/lab01_pnp/train_dm05.cmd
+
+# Home20, seeds 1000/1001/1002. Pick a new LAB01_HOME20_TAG.
+LAB01_LEROBOT_SRC=/path/to/lerobot \
+LAB01_POLICY_PATH=./outputs/train/lab01_xvla_agent193_10k/checkpoints/010000/pretrained_model \
+LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_xvla.yaml \
+LAB01_N_ACTION_STEPS=30 \
+LAB01_HOME20_TAG=xvla_repro \
+  ./labs/lab01_pnp/eval_home20.cmd
+```
+
+`train_xvla.cmd` rewrites a local `config.json` (`action_mode=auto`, 6-D action) and symlinks the `lerobot/xvla-base` weights. `train_dm05.cmd` loads `lerobot/dm05_base` with top and wrist cameras. Both slice on-disk 15-D state to the first 6 joint positions.
+
 ---
 
 ## 6. Policy eval in MuJoCo (sim2sim)
@@ -654,6 +682,8 @@ Resume 4K→20K on MI300X: **4 h 19 min** remaining steps, last log **loss ~0.11
 One entry point: **`./labs/lab01_pnp/eval.cmd`**. Swap `LAB01_POLICY_PATH` + matching
 `LAB01_EVAL_CONFIG` for SmolVLA, ACT, or another LeRobot policy; optional
 `LAB01_N_ACTION_STEPS` when you need to override the checkpoint.
+The frozen 20-pose, three-seed protocol is **`./labs/lab01_pnp/eval_home20.cmd`**
+(xVLA and DM0.5 need `LAB01_LEROBOT_SRC`; see the section above).
 
 Closed-loop rollout: load a fine-tuned checkpoint, run inference at 20 Hz in MuJoCo with the same cameras and position-control actions as training.
 
@@ -1227,6 +1257,10 @@ Cards: `hf_dataset_card.md`, `hf_model_card_smolvla.md`, `hf_model_card_act.md`,
 | `eval_lingbot_vla_v2_home20.cmd` | Home20 seeds 1000–1002 for the ranked V2 checkpoint |
 | `push_lingbot_vla_v2_agent193_model.cmd` | Upload / refresh Hub 20K weights + card |
 | `train_fastwam.cmd` | FastWAM fine-tune from `fastwam_base` (MI300X; freeze video expert) |
+| `train_xvla.cmd` | xVLA 10K on the 193-episode set (`LAB01_LEROBOT_SRC`; Home20 47/60) |
+| `train_dm05.cmd` | DM0.5 20K on the 193-episode set (`LAB01_LEROBOT_SRC`; Home20 37/60) |
+| `eval_home20.cmd` | Home20 seeds 1000/1001/1002 (`rollout_xvla.yaml` / `rollout_dm05.yaml`) |
+| `campaign_lingbot_fastwam_10h.cmd` | Time-boxed LingBot-VA + FastWAM train (bs4) then 20-ep EGL eval |
 | `configs/` | Lab-local **eval** YAMLs + `cube_positions_demo_fixed.json` |
 | `eval.cmd` | Policy-agnostic sim2sim eval (`LAB01_POLICY_PATH` + `LAB01_EVAL_CONFIG`) |
 | `hz_bench.cmd` | Headless closed-loop Hz sweep across keepers (wraps `eval.cmd`) |
