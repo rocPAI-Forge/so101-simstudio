@@ -16,11 +16,11 @@ This lab adds a task-level environment and RAX-style robot backend for opening t
 
 `RaxDrawerEnv` wraps the existing `SO101MujocoRobot` and the scene `SO101/scenes/smart_drawer/scene.xml`.
 
-1. It configures velocity control, the existing `front`, `top`, and `wrist` cameras, and the actual `gripperframe` site for end-effector control and pose reporting.
+1. It configures velocity control and the control cameras: overhead `top` (Gemini 336L depth, 1280×800), `side` (color, 640×480), and gripper `wrist`. Observations given to a controller are joint state, camera calibration, color frames, and overhead depth. Drawer-joint position is used only to score the episode.
 2. `reset()` sends the arm to its home pose, resets the scene block, puts the drawer at the requested opening, clears its velocity, advances the simulation briefly to settle, and then records that settled position as the episode baseline.
-3. `observe()` returns the drawer sensor value, baseline-relative opening, success threshold, joint positions/velocities, end-effector position, and optionally three RGB camera frames.
-4. `step()` clamps world-frame velocity and gripper/wrist actions, advances a bounded duration through the existing robot controller, and returns a fresh observation plus termination/success state.
-5. `check_success()` compares the drawer's sensor reading with the reset baseline. It does not rely on the action requested or the seed.
+3. `observe()` returns joint positions and velocities, camera calibration, color frames for `top`, `side`, and `wrist`, and overhead depth in millimeters. It does not return the drawer joint or the handle pose.
+4. `step()` clamps world-frame velocity and gripper/wrist actions, advances a bounded duration through the existing robot controller, and returns a fresh observation plus termination state.
+5. `check_success()` is the episode score: lower-handle contact while pulling, at least 6 cm of opening, then a return to within 5 mm of this episode's start. The controller does not receive the drawer position used for that score.
 
 The supported action fields are `vx`, `vy`, `vz` in m/s, `wrist_flex_rate` and `yaw_rate` in rad/s, and `gripper_delta` in the SO101 velocity controller's rate convention. Positive Y pulls the drawer toward the robot; negative `gripper_delta` closes the gripper.
 
@@ -45,7 +45,9 @@ For RAX integration, register the backend in a runtime branch that contains `ser
 BACKENDS["so101_drawer"] = "labs.rax_drawer.backend:RaxDrawerBackend"
 ```
 
-Put both the RAX runtime root and this repository root on `PYTHONPATH`, and configure the service to use this repository's `.venv-rocm/bin/python`. Start a session with `robot="so101_drawer"` and this directory's `TASK.md` as its task description. Optional backend settings include `scene_path`, `camera_names`, `success_position_m`, `episode_limit_s`, and action limits. A detached `origin/real/franka` worktree was used to validate the RAX frontend call path; registry wiring is still a runtime-side integration step and is not part of this repository's commits.
+Put both the RAX runtime root and this repository root on `PYTHONPATH`, and configure the service to use this repository's `.venv-rocm/bin/python`. Start a session with `robot="so101_drawer"` and this directory's `TASK.md` as its task description. Optional backend settings include `scene_path`, `camera_names`, `success_position_m`, `episode_limit_s`, and action limits.
+
+On Halo the detached `real/franka` checkout is `~/Repo/RAX/rax-drawer-runtime`, and its `services/backends.py` registers `so101_drawer`. Headless rendering uses `MUJOCO_GL=osmesa`. A controller that opened the drawer by servoing to a fixed world Y is withdrawn: it used the drawer joint and a measured coordinate, so it is not a valid RAX generalization policy.
 
 ## Setup
 
@@ -63,7 +65,7 @@ The smoke checks scene loading, the RAX tool contract, drawer sensor reads, rese
 ### Reproduce the checks
 
 ```bash
-# Render and package front/top/wrist camera frames (headless EGL)
+# Render and package top/side/wrist frames plus top depth (headless EGL)
 MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.smoke --with-cameras
 
 # Positive-control pull at 0, 1, and 2 cm initial drawer openings
@@ -73,7 +75,7 @@ MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.smoke --with-cameras
 DISPLAY=:0 .venv-rocm/bin/python -m labs.rax_drawer.live_gui
 ```
 
-`live_gui` opens the Lab01 task views (`top`, `front`, and `wrist`) in the SO101 MuJoCo camera grid, omits this scene's optional fourth `overview` pane, runs the same bounded positive-control pull, then leaves the completed state visible until the window is closed. If started from SSH rather than a desktop terminal, use the active session's `DISPLAY` and `XAUTHORITY` values so the window is shown on the logged-in desktop. The camera smoke uses EGL; the live window uses GLFW.
+`live_gui` opens the scene cameras in the SO101 MuJoCo camera grid. The control views are overhead `top` and `wrist`; `front` and `overview` stay available for viewing. It runs the same bounded positive-control pull, then leaves the completed state visible until the window is closed. If started from SSH rather than a desktop terminal, use the active session's `DISPLAY` and `XAUTHORITY` values so the window is shown on the logged-in desktop. The camera smoke uses EGL; the live window uses GLFW.
 
 ## Verified result
 

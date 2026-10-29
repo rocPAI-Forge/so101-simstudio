@@ -15,43 +15,71 @@ import numpy as np
 from .environment import DrawerTaskConfig, RaxDrawerEnv
 
 
+def _chunk(kind: bytes, payload: bytes) -> bytes:
+    body = kind + payload
+    return struct.pack(">I", len(payload)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+
+
 def _png(rgb: np.ndarray) -> bytes:
     image = np.asarray(rgb, dtype=np.uint8)
     if image.ndim != 3 or image.shape[2] != 3:
         raise ValueError(f"expected HxWx3 RGB frame, got {image.shape}")
     height, width, _ = image.shape
-
-    def chunk(kind: bytes, payload: bytes) -> bytes:
-        body = kind + payload
-        return struct.pack(">I", len(payload)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
-
     rows = b"".join(b"\x00" + image[y].tobytes() for y in range(height))
     return (
         b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(rows))
-        + chunk(b"IEND", b"")
+        + _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + _chunk(b"IDAT", zlib.compress(rows))
+        + _chunk(b"IEND", b"")
     )
+
+
+def _png16(depth_mm: np.ndarray) -> bytes:
+    image = np.asarray(depth_mm, dtype=np.uint16)
+    if image.ndim != 2:
+        raise ValueError(f"expected HxW depth frame, got {image.shape}")
+    height, width = image.shape
+    rows = b"".join(b"\x00" + image[y].astype(">u2").tobytes() for y in range(height))
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 16, 0, 0, 0, 0))
+        + _chunk(b"IDAT", zlib.compress(rows))
+        + _chunk(b"IEND", b"")
+    )
+
+
+def _consume_images(holder: dict[str, Any]) -> list[dict[str, str]]:
+    images = []
+    cameras = holder.pop("cameras", None)
+    depths = holder.pop("depth_images", None)
+    if cameras is not None:
+        holder["camera_names"] = list(cameras)
+        images.extend(
+            {"type": "image", "mimeType": "image/png", "data": base64.b64encode(_png(frame)).decode("ascii")}
+            for frame in cameras.values()
+        )
+    if depths is not None:
+        holder["depth_image_names"] = list(depths)
+        images.extend(
+            {
+                "type": "image",
+                "mimeType": "image/png",
+                "data": base64.b64encode(_png16(frame)).decode("ascii"),
+            }
+            for frame in depths.values()
+        )
+    return images
 
 
 def _pack(value: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, str]]]:
     value = dict(value)
-    images = []
-    cameras = value.pop("cameras", None)
+    images = _consume_images(value)
     nested = value.get("observation")
-    if cameras is None and isinstance(nested, dict):
+    if isinstance(nested, dict):
         nested = dict(nested)
-        cameras = nested.pop("cameras", None)
-        if cameras is not None:
-            nested["camera_names"] = list(cameras)
-            value["observation"] = nested
-    elif cameras is not None:
-        value["camera_names"] = list(cameras)
-    if cameras:
-        images = [
-            {"type": "image", "mimeType": "image/png", "data": base64.b64encode(_png(frame)).decode("ascii")}
-            for frame in cameras.values()
-        ]
+        images.extend(_consume_images(nested))
+        value["observation"] = nested
+    if images:
         value["camera_image_count"] = len(images)
     return value, images
 
@@ -95,7 +123,10 @@ class RaxDrawerBackend:
         return [
             {
                 "name": "drawer_observe",
-                "description": "Observe joint state, end-effector pose, drawer travel, and camera frames.",
+                "description": (
+                    "Observe joint state, camera calibration, color frames from top, side, "
+                    "and wrist, and metric depth from the overhead camera."
+                ),
                 "inputSchema": {
                     "type": "object",
                     "properties": {"include_cameras": {"type": "boolean", "default": True}},
@@ -143,8 +174,9 @@ class RaxDrawerBackend:
             {
                 "name": "drawer_check_success",
                 "description": (
-                    f"Check for at least {self.env.task.success_position_m * 100:.0f} cm "
-                    "of drawer travel since reset."
+                    "Score the episode. Success means the gripper contacted the lower handle, "
+                    "the drawer opened at least 6 cm, and it returned to this episode's "
+                    "starting opening. This is the task result, not a sensor for aiming."
                 ),
                 "inputSchema": {"type": "object", "properties": {}},
             },
@@ -197,24 +229,14 @@ class RaxDrawerBackend:
                 include_cameras=args.get("include_cameras", True),
             )
         else:
-            position = self.env.drawer_position()
-            value = {
-                "success": self.env.check_success(),
-                "drawer_position_m": position,
-                "drawer_opened_distance_m": position - self.env.start_drawer_position,
-                "success_threshold_m": self.env.task.success_position_m,
-            }
+            value = {"success": self.env.check_success()}
         return _pack(value)
 
     def status(self) -> dict[str, Any]:
-        position = self.env.drawer_position()
         return {
             "robot": "so101_mujoco",
             "task": "pull_open_smart_drawer",
             "episode": self.env.episode,
-            "drawer_position_m": position,
-            "drawer_opened_distance_m": position - self.env.start_drawer_position,
-            "success_threshold_m": self.env.task.success_position_m,
             "success": self.env.check_success(),
         }
 

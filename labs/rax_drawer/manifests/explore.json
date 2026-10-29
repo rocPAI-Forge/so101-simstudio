@@ -1,0 +1,408 @@
+{
+  "seed": 20261028,
+  "split": "explore",
+  "locked": false,
+  "note": "Test split was drawn first and is not for tuning.",
+  "scenes": [
+    {
+      "x_m": -0.012159328501479738,
+      "y_m": 0.024609376609955075,
+      "yaw_deg": -4.166580949610291,
+      "drawer_position_m": 5.1675646385827e-05,
+      "handle_distance_m": 0.3228,
+      "reachable": true
+    },
+    {
+      "x_m": 0.021212715459580367,
+      "y_m": 0.016764755392370354,
+      "yaw_deg": -2.6073707092883014,
+      "drawer_position_m": 0.003448472553793416,
+      "handle_distance_m": 0.3233,
+      "reachable": true
+    },
+    {
+      "x_m": -0.02057170145749722,
+      "y_m": 0.026096430140117942,
+      "yaw_deg": -9.278516639092222,
+      "drawer_position_m": 0.007761966575042864,
+      "handle_distance_m": 0.3312,
+      "reachable": true
+    },
+    {
+      "x_m": 0.010354656724872879,
+      "y_m": -0.024374457312685918,
+      "yaw_deg": -6.029020100611191,
+      "drawer_position_m": 0.0004562774544609671,
+      "handle_distance_m": 0.3784,
+      "reachable": true
+    },
+    {
+      "x_m": -0.029910777292356514,
+      "y_m": 0.022237532129202903,
+      "yaw_deg": 6.182019859037716,
+      "drawer_position_m": 0.012293760569304231,
+      "handle_distance_m": 0.2851,
+      "reachable": true
+    },
+    {
+      "x_m": -0.020998486383874776,
+      "y_m": -0.010683423231070991,
+      "yaw_deg": -5.335361884827774,
+      "drawer_position_m": 0.019281123458672826,
+      "handle_distance_m": 0.3429,
+      "reachable": true
+    },
+    {
+      "x_m": 0.016620216741960344,
+      "y_m": 0.011206263002677082,
+      "yaw_deg": -9.296706093744685,
+      "drawer_position_m": 0.016359140395268323,
+      "handle_distance_m": 0.3401,
+      "reachable": true
+    },
+    {
+      "x_m": -0.01875740591652421,
+      "y_m": -0.019685266521578072,
+      "yaw_deg": -8.546088675953127,
+      "drawer_position_m": 0.019053268331794854,
+      "handle_distance_m": 0.3632,
+      "reachable": true
+    },
+    {
+      "x_m": 0.016771226312106317,
+      "y_m": -0.018157695054757797,
+      "yaw_deg": -5.858223796200095,
+      "drawer_position_m": 0.017654758308547364,
+      "handle_distance_m": 0.3552,
+      "reachable": true
+    },
+    {
+      "x_m": -0.013673847508605213,
+      "y_m": 0.02905479820118647,
+      "yaw_deg": -6.116365763641616,
+      "drawer_position_m": 0.014612709528301323,
+      "handle_distance_m": 0.3104,
+      "reachable": true
+    },
+    {
+      "x_m": -0.02728250892566305,
+      "y_m": -0.025323876183164663,
+      "yaw_deg": -0.9319001527495061,
+      "drawer_position_m": 0.0018087192978142985,
+      "handle_distance_m": 0.3613,
+      "reachable": true
+    },
+    {
+      "x_m": 0.021433854672991824,
+      "y_m": -0.014577700177505514,
+      "yaw_deg": 5.028329239447274,
+      "drawer_position_m": 0.019730654732186333,
+      "handle_distance_m": 0.3138,
+      "reachable": true
+    },
+    {
+      "x_m": -0.01743263623045466,
+      "y_m": 0.02431500375562084,
+      "yaw_deg": 5.609547734963282,
+      "drawer_position_m": 0.01204957670187415,
+      "handle_distance_m": 0.2828,
+      "reachable": true
+    },
+    {
+      "x_m": 0.025036440750844983,
+      "y_m": -0.028767452626442036,
+      "yaw_deg": 9.432712058592095,
+      "drawer_position_m": 0.008327069914652194,
+      "handle_distance_m": 0.327,
+      "reachable": true
+    },
+    {
+      "x_m": -0.019898677236500184,
+      "y_m": 0.023126311814213762,
+      "yaw_deg": -9.951304161161671,
+      "drawer_position_m": 0.009109546504499235,
+      "handle_distance_m": 0.3352,
+      "reachable": true
+    },
+    {
+      "x_m": 0.023785698709147596,
+      "y_m": 0.02776091047281659,
+      "yaw_deg": 5.336423187360285,
+      "drawer_position_m": 0.005972951361152397,
+      "handle_distance_m": 0.2843,
+      "reachable": true
+    },
+    {
+      "x_m": -0.013613591337710403,
+      "y_m": 0.02432066013304909,
+      "yaw_deg": 1.7503549774980343,
+      "drawer_position_m": 0.016908579739376244,
+      "handle_distance_m": 0.288,
+      "reachable": true
+    },
+    {
+      "x_m": 0.022147541621480776,
+      "y_m": -0.016995738568962956,
+      "yaw_deg": -0.15272616939207673,
+      "drawer_position_m": 0.00958176434725552,
+      "handle_distance_m": 0.3426,
+      "reachable": true
+    },
+    {
+      "x_m": -0.023281252230227055,
+      "y_m": 0.026417512607571497,
+      "yaw_deg": -9.8724987895832,
+      "drawer_position_m": 0.007763890949352175,
+      "handle_distance_m": 0.333,
+      "reachable": true
+    },
+    {
+      "x_m": -0.018447495762956193,
+      "y_m": 0.018087441850370273,
+      "yaw_deg": 0.18825118157786314,
+      "drawer_position_m": 0.004658377386567856,
+      "handle_distance_m": 0.3112,
+      "reachable": true
+    },
+    {
+      "x_m": -0.024046973497665897,
+      "y_m": 0.01998951068313325,
+      "yaw_deg": 0.8149389204881619,
+      "drawer_position_m": 0.0013308438793244726,
+      "handle_distance_m": 0.3112,
+      "reachable": true
+    },
+    {
+      "x_m": -0.027674813378691245,
+      "y_m": 0.02144239990333123,
+      "yaw_deg": 0.7570274961034062,
+      "drawer_position_m": 0.018180109632507883,
+      "handle_distance_m": 0.2935,
+      "reachable": true
+    },
+    {
+      "x_m": -0.027042907384089064,
+      "y_m": 0.019489359515461997,
+      "yaw_deg": -1.1457341513821273,
+      "drawer_position_m": 0.006079998399602267,
+      "handle_distance_m": 0.313,
+      "reachable": true
+    },
+    {
+      "x_m": 0.010702099709763713,
+      "y_m": -0.011772233956816121,
+      "yaw_deg": 2.4880942626168334,
+      "drawer_position_m": 0.019402636975938477,
+      "handle_distance_m": 0.3187,
+      "reachable": true
+    },
+    {
+      "x_m": 0.020334136524081226,
+      "y_m": 0.02251108645991102,
+      "yaw_deg": 2.0491773523423014,
+      "drawer_position_m": 0.002825763268756547,
+      "handle_distance_m": 0.3027,
+      "reachable": true
+    },
+    {
+      "x_m": 0.025381986498651764,
+      "y_m": 0.021625991189198064,
+      "yaw_deg": 5.597795524980986,
+      "drawer_position_m": 0.008883877091479564,
+      "handle_distance_m": 0.2868,
+      "reachable": true
+    },
+    {
+      "x_m": -0.015818828248692837,
+      "y_m": 0.018534187664390356,
+      "yaw_deg": 8.544455673464274,
+      "drawer_position_m": 0.017658624093238505,
+      "handle_distance_m": 0.2761,
+      "reachable": true
+    },
+    {
+      "x_m": -0.01849259207580484,
+      "y_m": 0.022170650747298473,
+      "yaw_deg": 2.3038472038902995,
+      "drawer_position_m": 0.017573821960571327,
+      "handle_distance_m": 0.2883,
+      "reachable": true
+    },
+    {
+      "x_m": 0.02521420897755399,
+      "y_m": -0.027188669417568895,
+      "yaw_deg": 0.5528234205451419,
+      "drawer_position_m": 0.00014332066946070476,
+      "handle_distance_m": 0.3601,
+      "reachable": true
+    },
+    {
+      "x_m": -0.011791253534907696,
+      "y_m": -0.015738317282613844,
+      "yaw_deg": -8.98506102673074,
+      "drawer_position_m": 0.01620808017885123,
+      "handle_distance_m": 0.3638,
+      "reachable": true
+    },
+    {
+      "x_m": -0.02340657687149085,
+      "y_m": -0.02182035760802429,
+      "yaw_deg": 9.83833557012645,
+      "drawer_position_m": 0.014265252037278818,
+      "handle_distance_m": 0.3177,
+      "reachable": true
+    },
+    {
+      "x_m": 0.018801848126595362,
+      "y_m": -0.022384013356567634,
+      "yaw_deg": -0.6605237855121473,
+      "drawer_position_m": 0.019865883480699714,
+      "handle_distance_m": 0.3392,
+      "reachable": true
+    },
+    {
+      "x_m": 0.010624840548991392,
+      "y_m": -0.014869602342257959,
+      "yaw_deg": -5.185789878834619,
+      "drawer_position_m": 0.004224721664219488,
+      "handle_distance_m": 0.3623,
+      "reachable": true
+    },
+    {
+      "x_m": -0.012283824476915584,
+      "y_m": -0.024036421195828717,
+      "yaw_deg": -5.351936257374148,
+      "drawer_position_m": 0.014283814625053928,
+      "handle_distance_m": 0.3612,
+      "reachable": true
+    },
+    {
+      "x_m": -0.028121602327376025,
+      "y_m": -0.018918160774457703,
+      "yaw_deg": 8.012687691865892,
+      "drawer_position_m": 0.017327000091419728,
+      "handle_distance_m": 0.3165,
+      "reachable": true
+    },
+    {
+      "x_m": 0.01712097785968337,
+      "y_m": -0.02396447753867799,
+      "yaw_deg": 0.6823104982742816,
+      "drawer_position_m": 0.011115144294784345,
+      "handle_distance_m": 0.3451,
+      "reachable": true
+    },
+    {
+      "x_m": 0.019288088138125336,
+      "y_m": 0.011958026961732853,
+      "yaw_deg": -7.888282575845585,
+      "drawer_position_m": 0.016734815814479692,
+      "handle_distance_m": 0.3339,
+      "reachable": true
+    },
+    {
+      "x_m": -0.012762829637909113,
+      "y_m": -0.028091154936428227,
+      "yaw_deg": -6.256653493746642,
+      "drawer_position_m": 0.005276244760526674,
+      "handle_distance_m": 0.3773,
+      "reachable": true
+    },
+    {
+      "x_m": -0.019784699531241873,
+      "y_m": -0.012517322272303582,
+      "yaw_deg": -7.985769850964868,
+      "drawer_position_m": 0.001459785351267522,
+      "handle_distance_m": 0.3715,
+      "reachable": true
+    },
+    {
+      "x_m": 0.016565940037321647,
+      "y_m": -0.02766517403612124,
+      "yaw_deg": -5.749858055154977,
+      "drawer_position_m": 0.015354868265577788,
+      "handle_distance_m": 0.3665,
+      "reachable": true
+    },
+    {
+      "x_m": -0.013245962108436423,
+      "y_m": 0.019345601184288456,
+      "yaw_deg": -0.6449334101494113,
+      "drawer_position_m": 0.008656808406769127,
+      "handle_distance_m": 0.3082,
+      "reachable": true
+    },
+    {
+      "x_m": 0.018951339579139567,
+      "y_m": 0.01428308253957996,
+      "yaw_deg": 4.635439526033993,
+      "drawer_position_m": 0.017340746627303144,
+      "handle_distance_m": 0.2884,
+      "reachable": true
+    },
+    {
+      "x_m": 0.018470292028286872,
+      "y_m": 0.022803093440029346,
+      "yaw_deg": 6.1525000118924105,
+      "drawer_position_m": 0.004498698039553164,
+      "handle_distance_m": 0.2883,
+      "reachable": true
+    },
+    {
+      "x_m": 0.024153376266983717,
+      "y_m": 0.018581060762888277,
+      "yaw_deg": 1.4591545491116964,
+      "drawer_position_m": 0.0038277915008545563,
+      "handle_distance_m": 0.3077,
+      "reachable": true
+    },
+    {
+      "x_m": -0.01188366928351866,
+      "y_m": 0.022064135804178094,
+      "yaw_deg": -6.416711694915178,
+      "drawer_position_m": 0.008766103522111246,
+      "handle_distance_m": 0.3243,
+      "reachable": true
+    },
+    {
+      "x_m": -0.023973906553603715,
+      "y_m": 0.027445259596041473,
+      "yaw_deg": -4.988981003193354,
+      "drawer_position_m": 0.007853860694838278,
+      "handle_distance_m": 0.3151,
+      "reachable": true
+    },
+    {
+      "x_m": 0.017880563906700488,
+      "y_m": -0.01129750075523572,
+      "yaw_deg": 3.142076002380543,
+      "drawer_position_m": 0.008699554535776222,
+      "handle_distance_m": 0.3271,
+      "reachable": true
+    },
+    {
+      "x_m": 0.017763184481662423,
+      "y_m": 0.023021662978704983,
+      "yaw_deg": -3.031037018368492,
+      "drawer_position_m": 0.0025177172825259133,
+      "handle_distance_m": 0.3192,
+      "reachable": true
+    },
+    {
+      "x_m": 0.026860185872643924,
+      "y_m": -0.020948005074060076,
+      "yaw_deg": -7.215356521582679,
+      "drawer_position_m": 0.01319946793997385,
+      "handle_distance_m": 0.3684,
+      "reachable": true
+    },
+    {
+      "x_m": 0.013778959184130336,
+      "y_m": -0.015653009303638176,
+      "yaw_deg": 3.620331811928292,
+      "drawer_position_m": 0.005380287237882022,
+      "handle_distance_m": 0.3332,
+      "reachable": true
+    }
+  ]
+}

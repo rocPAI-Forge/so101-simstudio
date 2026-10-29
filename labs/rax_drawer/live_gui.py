@@ -13,10 +13,8 @@ def main() -> None:
     env = RaxDrawerEnv(task)
     try:
         env.reset(seed=12, include_cameras=False)
-        # Lab01 task views are top/front/wrist. Omit this scene's optional overview.
-        env.robot._glfw_cam_ids.pop("overview", None)
         window = env.robot._glfw_window
-        print("GUI ready: top / front / wrist. Running scripted drawer pull.", flush=True)
+        print("GUI ready. Running scripted drawer pull.", flush=True)
         time.sleep(1.5)
 
         def apply(action: dict[str, float], duration_s: float) -> dict:
