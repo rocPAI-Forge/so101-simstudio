@@ -49,6 +49,8 @@ Put both the RAX runtime root and this repository root on `PYTHONPATH`, and conf
 
 On Halo the detached `real/franka` checkout is `~/Repo/RAX/rax-drawer-runtime`, and its `services/backends.py` registers `so101_drawer`. Headless rendering uses `MUJOCO_GL=osmesa`. A controller that opened the drawer by servoing to a fixed world Y is withdrawn: it used the drawer joint and a measured coordinate, so it is not a valid RAX generalization policy.
 
+`open_close.py` is the non-privileged program for this task. It finds the lower handle from the overhead color and depth, pulls along that bar's horizontal normal toward the fixed arm mount, then pushes back to the grasp point. It does not read the drawer joint. Develop against `manifests/explore.json`. The locked held-out file `manifests/test.json` is only for the final score. On 2026-10-29 that program succeeded on 16 of 20 test scenes (0 unreachable). The same program succeeded on 37 of 50 explore scenes; that explore number is not the reported rate.
+
 ## Setup
 
 On the target Linux host, use the repository's normal setup (including submodules and `make rocm-sync`). The tested environment on halo used Python 3.12, Torch `2.14.1+rocm7.2`, and MuJoCo `3.16.0`.
