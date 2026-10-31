@@ -2,7 +2,7 @@
 
 This lab adds a task-level environment and RAX-style robot backend for opening the existing SO-101 `smart_drawer` MuJoCo scene. It leaves the LeRobot recording and policy-training workflows unchanged.
 
-**Strict RAX place session:** `rax_place/` — tool-only explore → compile → locked test. Process log: [`rax_place/PROCESS.md`](rax_place/PROCESS.md). Freeze 3 scored **15 / 20** on the locked place task.
+**Strict RAX place session:** `rax_place/` — tool-only explore → compile → locked test. Method (principles + API modules): [`rax_place/RAX_METHOD.md`](rax_place/RAX_METHOD.md). Process log: [`rax_place/PROCESS.md`](rax_place/PROCESS.md). Freeze 3 scored **15 / 20** on the locked place task.
 
 ## Task and success contract
 
@@ -58,9 +58,15 @@ On Halo the detached `real/franka` checkout is `~/Repo/RAX/rax-drawer-runtime`, 
 
 The reported place program is `rax_place/code/open_place_close/`. It uses only `reset`, `observe`, `step`, and `check_success`. Overhead color and depth find the lower handle and the green cube. The arm opens the drawer with velocity control, picks the cube with joint-position Jacobian control, drops it 5.5 cm inside the perceived handle, then closes by servoing onto that same pull axis. Drawer joint, handle pose, cube pose, and contacts stay in the evaluator. SmolVLA and pi0.5 were not used: there are no drawer-open/place demos, and their camera and action layouts do not match this scene.
 
-Freeze 3 (`20261031T093325Z`) scored **15 of 20** on `manifests/test.json`. Before that freeze, explore scenes 0–23 scored 18/24 and held-out explore scenes 24–43 scored 13/20. Replay the locked run with `./labs/rax_drawer/rax_place/eval_locked.cmd`. The process log is [`rax_place/PROCESS.md`](rax_place/PROCESS.md). This place rate is separate from the 16/20 open/close figure.
+Freeze 3 (`20261031T093325Z`) scored **15 of 20** on `manifests/test.json`. Before that freeze, explore scenes 0–23 scored 18/24 and held-out explore scenes 24–43 scored 13/20. Replay the locked run with `./labs/rax_drawer/rax_place/eval_locked.cmd`. Full method write-up: [`rax_place/RAX_METHOD.md`](rax_place/RAX_METHOD.md). Process log: [`rax_place/PROCESS.md`](rax_place/PROCESS.md). This place rate is separate from the 16/20 open/close figure.
 
 `place_close.py` is an earlier direct-environment variant of the same perception. It is not the reported 15/20 program.
+
+Locked test scene 1 under the frozen place controller (top RGB, top depth, side RGB):
+
+![Open, place cube, close — RGB-D](media/open_place_close_rgbd.gif)
+
+Re-render with `MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.rax_place.render_place_gif`.
 
 The side-camera clip below is explore scene 0 (cabinet shifted −1.2 cm / +2.5 cm and yawed −4.2°). That run finished 0.46 cm from the start with handle contact on both the pull and the return.
 
@@ -120,7 +126,7 @@ The three-camera live GUI replay also completed successfully at about 6.05 cm op
 - `backend.py`: RAX robot-service adapter and PNG camera responses.
 - `open_close.py`: non-privileged open/close program (reported 16/20 test).
 - `place_close.py`: earlier direct-environment place variant. The reported 15/20 program is `rax_place/`.
-- `rax_place/`: tool-only session, frozen controller, explore and locked-test scripts. Replay with `rax_place/eval_locked.cmd`.
+- `rax_place/`: tool-only session, frozen controller, explore and locked-test scripts. Method: `rax_place/RAX_METHOD.md`. Replay with `rax_place/eval_locked.cmd`.
 - `smoke.py`: contract checks and optional feedback-driven positive control.
 - `live_gui.py`: Lab01-style three-camera live demonstration.
 - `TASK.md`: concise task instructions suitable for an agent session.

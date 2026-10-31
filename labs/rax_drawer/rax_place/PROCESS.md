@@ -81,3 +81,9 @@ Place drops 5.5 cm behind the perceived handle. Close pitches on the robot side 
 | Locked test #3 | **15 / 20** | `logs/locked_test_3.json` |
 
 The 10/20 target is met. This locked run was not used to edit the controller.
+
+## Method documentation and demo media
+
+- Principles, tool API, and module map: [`RAX_METHOD.md`](RAX_METHOD.md)
+- Full-episode GIF (top RGB + top depth + side RGB, locked test scene 1): [`../media/open_place_close_rgbd.gif`](../media/open_place_close_rgbd.gif)
+- Renderer: `python -m labs.rax_drawer.rax_place.render_place_gif`
