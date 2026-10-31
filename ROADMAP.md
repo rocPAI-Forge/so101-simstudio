@@ -139,6 +139,16 @@
 - [x] Directories named `tmp/` stay untracked
 - [x] Pinned LeRobot remains v0.6.0. DM0.5, xVLA, and LingBot-VLA 2.0 are not in that pin
 
+## v0.1.5 ✅ (`release-v0.1.5`)
+
+### RAX drawer practice
+
+- [x] `labs/rax_drawer/`: task env + RAX backend on Text2MuJoCo `smart_drawer` (joints + RGB + overhead depth; drawer/handle/cube poses evaluator-only)
+- [x] Non-privileged open → close: **16 / 20** locked (`open_close.py`)
+- [x] Tool-only place session (`rax_place/`): explore → compile → freeze → one locked test; open → place cube → close **15 / 20** (freeze 3)
+- [x] Method / protocol / process docs + RGB-D episode GIF; replay `./labs/rax_drawer/rax_place/eval_locked.cmd`
+- [x] Compact project README: capability map + try-it paths ([PR #23](https://github.com/rocPAI-Forge/so101-simstudio/pull/23))
+
 ## Evolution
 
 ```
@@ -148,8 +158,9 @@ v0.0.x: so101-mujoco-teleop
         ↓ v0.1.2 (`release-v0.1.2`) Joy-Con cylindrical + one-handed recording + joycon patch workflow
         ↓ v0.1.3 (`release-v0.1.3`) Lab 01 PnP: train ACT/SmolVLA + MuJoCo sim2sim eval + Hub assets
         ↓ v0.1.4 (`release-v0.1.4`) 193-episode agent set, per-model finetune trials, Home20
-Current: so101-simstudio @ v0.1.4
-        Expert trajectories + Lab 01 closed-loop train/eval (ROCm)
+        ↓ v0.1.5 (`release-v0.1.5`) RAX drawer tool-only practice (16/20 open-close, 15/20 place)
+Current: so101-simstudio @ v0.1.5
+        Expert trajectories + Lab 01 closed-loop train/eval + RAX drawer (ROCm)
         Future: domain randomization, broader automated pipeline, real follower, CUDA/macOS
 ```
 
@@ -160,7 +171,7 @@ Current: so101-simstudio @ v0.1.4
 - [ ] **NVIDIA CUDA (Linux)** — not supported yet (unverified); needs documented install path, PyTorch CUDA wheels, smoke tests
 - [ ] **macOS / Apple Silicon (MPS)** — not supported yet (unverified); needs documented install path, GLFW / input quirks, smoke tests
 
-**Current release:** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, and VLA training.
+**Current release (v0.1.5):** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, VLA training, and the RAX drawer lab.
 
 ### Automated data pipeline
 
