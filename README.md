@@ -20,6 +20,7 @@ SO-101 SimStudio is a MuJoCo-based teleoperation platform for collecting expert 
 - High-fidelity MuJoCo physics simulation
 - LeRobot v3.0 dataset format
 - Lab 01 pick-and-place: record or agent-collect → train → MuJoCo eval
+- RAX drawer practice: tool-only coding-agent control on `smart_drawer` (open/close + place)
 - Modular, extensible architecture
 
 **Platform focus:** Validated on **Ubuntu 24.04 + AMD ROCm** only. **NVIDIA CUDA (Linux)** and **macOS (Apple Silicon / MPS)** are **not supported** in this release — unverified, no install path; see [ROADMAP](ROADMAP.md).
@@ -91,6 +92,29 @@ These policy families have completed closed-loop evaluation in this Lab 01 scene
 
 These totals are not a general model ranking. The scene and frozen poses are shared, but step count, learning rate, cameras, trainable weights, initialization, and action representation differ. A higher number only means that checkpoint performed better under this specific Home20 setup. The LeRobot submodule stays at v0.6.0. DM0.5 and xVLA train and Home20 eval use LeRobot `24f15b92` through `labs/lab01_pnp/train_dm05.cmd`, `train_xvla.cmd`, and `eval_home20.cmd` (`LAB01_LEROBOT_SRC`). LingBot-VLA 2.0 needs a newer LeRobot revision (see [`lingbot_vla_v2_adapt.md`](labs/lab01_pnp/lingbot_vla_v2_adapt.md)).
 
+### RAX drawer practice
+
+[`labs/rax_drawer/`](labs/rax_drawer/) is a **RAX-style** practice on the existing Text2MuJoCo `smart_drawer` scene. A coding agent may move the arm only through a four-tool API (`reset` / `observe` / `step` / `check_success`). Cabinet layout, drawer joint, handle pose, cube pose, and contacts stay inside the evaluator. Control observations are joints, camera calibration, RGB (`top` / `side` / `wrist`), and overhead depth. This path does **not** train a VLA; the deliverable is a compiled Python controller.
+
+| Task | Locked score | Entry |
+|------|--------------|-------|
+| Open → close lower drawer | **16 / 20** | [`open_close.py`](labs/rax_drawer/open_close.py) |
+| Open → place green cube → close | **15 / 20** (freeze 3) | [`rax_place/`](labs/rax_drawer/rax_place/) · replay `./labs/rax_drawer/rax_place/eval_locked.cmd` |
+
+<p align="center">
+  <img src="labs/rax_drawer/media/open_place_close_rgbd.gif" alt="RAX place: top RGB, top depth, side RGB — open, place cube, close" width="480"/>
+</p>
+
+**Index**
+
+| Doc | Contents |
+|-----|----------|
+| [Lab README](labs/rax_drawer/README.md) | Task contract, env/backend, smoke / live GUI, media |
+| [RAX method](labs/rax_drawer/rax_place/RAX_METHOD.md) | Principles, tool API, module map, controller design |
+| [Protocol](labs/rax_drawer/rax_place/PROTOCOL.md) | Explore → compile → freeze → one locked test |
+| [Process log](labs/rax_drawer/rax_place/PROCESS.md) | Chronological explore / freeze rounds and scores |
+| [Agent brief](labs/rax_drawer/rax_place/AGENTS.md) · [Task](labs/rax_drawer/rax_place/TASK.md) | Session rules and place-task text |
+
 ## Requirements
 
 ### Supported platform (current release)
@@ -132,7 +156,7 @@ so101-simstudio/
 │   └── common/              # Shared utilities
 ├── configs/                 # YAML configs
 ├── SO101/                   # MuJoCo assets
-├── labs/                    # Lab 01 teleop + agent-yaw / Home20
+├── labs/                    # Lab 01 teleop + agent-yaw / Home20; rax_drawer RAX practice
 ├── scripts/smoke/           # Parameterized manual smoke tests
 ├── scripts/quicktest/       # Fixed 2-episode collaboration runs
 ├── lerobot/                 # LeRobot submodule
@@ -184,6 +208,7 @@ make smoke-keyboard-teleop-smart-drawer     # Text2MuJoCo 02 drawer pull
 | External VLA inference plugin / sidecar | ✅ |
 | Agent-yaw 193-episode dataset + Home20 eval | ✅ |
 | Lab 01 MolmoAct2 / pi05 / GR00T / DM0.5 finetunes | ✅ |
+| RAX drawer (tool-only open/close + place) | ✅ |
 | Real follower hardware | 🔲 Planned |
 
 ## Version history
@@ -202,6 +227,7 @@ make smoke-keyboard-teleop-smart-drawer     # Text2MuJoCo 02 drawer pull
 - [Lab 01 — PnP record / train / eval](labs/lab01_pnp/lab01_pnp.md)
 - [External VLA inference](docs/external_vla.md)
 - [Lab 01 agent data](labs/lab01_pnp_agent/lab01_pnp_agent.md) · [Home20 scores](labs/lab01_pnp_agent/home20.md)
+- [RAX drawer practice](labs/rax_drawer/README.md) · [method](labs/rax_drawer/rax_place/RAX_METHOD.md)
 - [Architecture](DESIGN.md)
 - [Roadmap](ROADMAP.md)
 - [Agent / dev guide](AGENTS.md)
