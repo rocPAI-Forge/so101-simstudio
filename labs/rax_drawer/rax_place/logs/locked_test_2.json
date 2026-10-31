@@ -1,0 +1,109 @@
+{
+  "n": 20,
+  "successes": 3,
+  "rate": 0.15,
+  "results": [
+    {
+      "i": 0,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 1,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 2,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 3,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 4,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 5,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 6,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 7,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 8,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 9,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 10,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 11,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 12,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 13,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 14,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 15,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 16,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 17,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 18,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 19,
+      "success": false,
+      "error": ""
+    }
+  ],
+  "frozen_at": "20261031T004504Z",
+  "round": 2
+}

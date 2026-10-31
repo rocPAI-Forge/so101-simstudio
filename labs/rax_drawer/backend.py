@@ -152,14 +152,20 @@ class RaxDrawerBackend:
             {
                 "name": "drawer_step",
                 "description": (
-                    "Apply bounded velocity commands. Close on the handle, then use "
-                    f"positive world Y to pull open. Observe between actions; max duration "
-                    f"{self.env.task.max_action_duration_s:g} s."
+                    "Apply one bounded action for up to "
+                    f"{self.env.task.max_action_duration_s:g} s. Pass either world-frame "
+                    "velocity keys (vx/vy/vz, wrist rates, gripper_delta) or joint "
+                    "position keys named like shoulder_pan.pos. Positive world Y pulls "
+                    "toward the robot and opens the drawer. Negative gripper_delta closes."
                 ),
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "action": {"type": "object", "properties": actions, "additionalProperties": False},
+                        "action": {
+                            "type": "object",
+                            "properties": actions,
+                            "additionalProperties": True,
+                        },
                         "duration_s": {
                             "type": "number",
                             "exclusiveMinimum": 0,
@@ -174,9 +180,10 @@ class RaxDrawerBackend:
             {
                 "name": "drawer_check_success",
                 "description": (
-                    "Score the episode. Success means the gripper contacted the lower handle, "
-                    "the drawer opened at least 6 cm, and it returned to this episode's "
-                    "starting opening. This is the task result, not a sensor for aiming."
+                    "Score the episode. When cube placement is required, success means "
+                    "handle contact on the pull, at least 6 cm of opening, handle contact "
+                    "on the return to within 5 mm of the start, and the green cube resting "
+                    "in the tray. This is the task result, not a sensor for aiming."
                 ),
                 "inputSchema": {"type": "object", "properties": {}},
             },

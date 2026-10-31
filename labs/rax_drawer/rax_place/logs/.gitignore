@@ -1,0 +1,3 @@
+# Per-call tool traces. Scores stay in locked_test*.json and the *.log summaries.
+mcp.jsonl
+mcp_test*.jsonl

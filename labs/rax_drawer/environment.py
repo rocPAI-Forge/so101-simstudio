@@ -22,6 +22,8 @@ class DrawerTaskConfig:
     render_window: bool = False
     success_position_m: float = 0.06
     close_tolerance_m: float = 0.005
+    # When true, success also requires the green cube to rest inside the drawer.
+    require_cube_placed: bool = False
     episode_limit_s: float = 45.0
     max_action_duration_s: float = 2.0
     max_linear_speed_mps: float = 0.04
@@ -119,6 +121,13 @@ class RaxDrawerEnv:
             for index in range(self.robot.model.ngeom)
             if int(self.robot.model.geom_bodyid[index]) in gripper_bodies
         }
+        drawer_body = mj.mj_name2id(self.robot.model, mj.mjtObj.mjOBJ_BODY, "tool_drawer")
+        block_geom = mj.mj_name2id(self.robot.model, mj.mjtObj.mjOBJ_GEOM, "block")
+        if drawer_body < 0 or block_geom < 0:
+            self.robot.disconnect()
+            raise ValueError("scene requires tool_drawer and block")
+        self.drawer_body = int(drawer_body)
+        self.block_geom = int(block_geom)
         self.layout = {"x_m": 0.0, "y_m": 0.0, "yaw_deg": 0.0}
         self._reset_score()
         self.episode = -1
@@ -164,6 +173,7 @@ class RaxDrawerEnv:
         self.reached_open = False
         self.pull_contact = False
         self.close_contact = False
+        self.cube_placed = False
 
     def _gripper_touching_handle(self) -> bool:
         for index in range(self.data.ncon):
@@ -172,6 +182,29 @@ class RaxDrawerEnv:
             if self.handle_geom in pair and pair & self.gripper_geoms:
                 return True
         return False
+
+    def _gripper_touching_block(self) -> bool:
+        for index in range(self.data.ncon):
+            contact = self.data.contact[index]
+            pair = {int(contact.geom1), int(contact.geom2)}
+            if self.block_geom in pair and pair & self.gripper_geoms:
+                return True
+        return False
+
+    def cube_in_drawer(self) -> bool:
+        """Whether the green cube rests inside the drawer tray (evaluator only)."""
+        self._check_open()
+        mj.mj_forward(self.model, self.data)
+        if self._gripper_touching_block():
+            return False
+        origin = self.data.xpos[self.drawer_body]
+        rotation = np.array(self.data.xmat[self.drawer_body], dtype=float).reshape(3, 3)
+        local = rotation.T @ (self.data.geom_xpos[self.block_geom] - origin)
+        return bool(
+            abs(local[0]) <= 0.090
+            and -0.070 <= local[1] <= 0.085
+            and 0.006 <= local[2] <= 0.060
+        )
 
     def _update_score(self) -> None:
         opened = self.drawer_position() - self.start_drawer_position
@@ -182,17 +215,24 @@ class RaxDrawerEnv:
             self.pull_contact = True
         if touching and self.reached_open and opened < self.task.success_position_m:
             self.close_contact = True
+        if self.cube_in_drawer():
+            self.cube_placed = True
 
     def check_success(self) -> bool:
         if self.episode < 0:
             return False
         opened = abs(self.drawer_position() - self.start_drawer_position)
-        return (
+        drawer_ok = (
             self.reached_open
             and self.pull_contact
             and self.close_contact
             and opened <= self.task.close_tolerance_m + 1e-6
         )
+        if not drawer_ok:
+            return False
+        if self.task.require_cube_placed:
+            return self.cube_placed and self.cube_in_drawer()
+        return True
 
     def reset(
         self, *, seed: int | None = None, drawer_position_m: float = 0.0, include_cameras: bool = True
@@ -278,7 +318,20 @@ class RaxDrawerEnv:
         return result
 
     def _bound_action(self, action: dict[str, float]) -> dict[str, float]:
-        unknown = set(action) - set(self.ACTION_LIMITS)
+        """Accept velocity teleop keys or joint-position keys (`name.pos`)."""
+        joint_keys = {f"{name}.pos" for name in self.robot.JOINT_NAMES}
+        keys = set(action)
+        if keys and keys <= joint_keys:
+            bounded = {}
+            for key, value in action.items():
+                numeric = float(value)
+                if not np.isfinite(numeric):
+                    raise ValueError(f"action {key!r} must be finite")
+                name = key[: -len(".pos")]
+                low, high = self.robot._mujoco_joint_range[name]
+                bounded[key] = float(np.clip(numeric, low, high))
+            return bounded
+        unknown = keys - set(self.ACTION_LIMITS)
         if unknown:
             raise ValueError(f"unknown action keys: {sorted(unknown)}")
         bounded = {}

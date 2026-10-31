@@ -1,0 +1,242 @@
+[
+  {
+    "i": 0,
+    "ok": true,
+    "opened": true,
+    "placed": true,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004873257904840718,
+    "yaw": -4.166580949610291
+  },
+  {
+    "i": 1,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": false,
+    "drawer": -4.178407616056972e-06,
+    "yaw": -2.6073707092883014
+  },
+  {
+    "i": 2,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": false,
+    "drawer": -0.00040853711533419315,
+    "yaw": -9.278516639092222
+  },
+  {
+    "i": 3,
+    "ok": true,
+    "opened": true,
+    "placed": true,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004620413957306202,
+    "yaw": -6.029020100611191
+  },
+  {
+    "i": 4,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": 0.0013341618613623844,
+    "yaw": 6.182019859037716
+  },
+  {
+    "i": 5,
+    "ok": true,
+    "opened": true,
+    "placed": false,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004518723327699628,
+    "yaw": -5.335361884827774
+  },
+  {
+    "i": 6,
+    "ok": true,
+    "opened": true,
+    "placed": false,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004437842098282737,
+    "yaw": -9.296706093744685
+  },
+  {
+    "i": 7,
+    "ok": true,
+    "opened": true,
+    "placed": false,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004615175809053108,
+    "yaw": -8.546088675953127
+  },
+  {
+    "i": 8,
+    "ok": true,
+    "opened": true,
+    "placed": true,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004911682914052125,
+    "yaw": -5.858223796200095
+  },
+  {
+    "i": 9,
+    "ok": true,
+    "opened": true,
+    "placed": false,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004980321533671463,
+    "yaw": -6.116365763641616
+  },
+  {
+    "i": 10,
+    "ok": true,
+    "opened": true,
+    "placed": false,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.00444793197776737,
+    "yaw": -0.9319001527495061
+  },
+  {
+    "i": 11,
+    "ok": true,
+    "opened": true,
+    "placed": true,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004790789590459784,
+    "yaw": 5.028329239447274
+  },
+  {
+    "i": 12,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": -4.048867747478339e-06,
+    "yaw": 5.609547734963282
+  },
+  {
+    "i": 13,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": -0.0003044777231716557,
+    "yaw": 9.432712058592095
+  },
+  {
+    "i": 14,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": false,
+    "drawer": 0.005942025319435565,
+    "yaw": -9.951304161161671
+  },
+  {
+    "i": 15,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": 0.0007258020926718107,
+    "yaw": 5.336423187360285
+  },
+  {
+    "i": 16,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": -1.889191421187748e-05,
+    "yaw": 1.7503549774980343
+  },
+  {
+    "i": 17,
+    "ok": true,
+    "opened": true,
+    "placed": true,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004628374324242361,
+    "yaw": -0.15272616939207673
+  },
+  {
+    "i": 18,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": false,
+    "drawer": -0.00015041373636563132,
+    "yaw": -9.8724987895832
+  },
+  {
+    "i": 19,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": false,
+    "drawer": 0.06914366280031627,
+    "yaw": 0.18825118157786314
+  },
+  {
+    "i": 20,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": 0.001023427227652005,
+    "yaw": 0.8149389204881619
+  },
+  {
+    "i": 21,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": -0.0013591091839671896,
+    "yaw": 0.7570274961034062
+  },
+  {
+    "i": 22,
+    "ok": false,
+    "opened": true,
+    "placed": false,
+    "cube": false,
+    "close_c": true,
+    "drawer": -0.00027325703967487174,
+    "yaw": -1.1457341513821273
+  },
+  {
+    "i": 23,
+    "ok": true,
+    "opened": true,
+    "placed": false,
+    "cube": true,
+    "close_c": true,
+    "drawer": 0.004902859157619291,
+    "yaw": 2.4880942626168334
+  }
+]
