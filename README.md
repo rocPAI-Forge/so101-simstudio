@@ -50,6 +50,12 @@ Full install, Joy-Con, leader arm, and train/eval recipes: [QUICKSTART.md](QUICK
 | RAX open → close | **16 / 20** locked | [rax_drawer](labs/rax_drawer/README.md) |
 | RAX open → place → close | **15 / 20** freeze 3 | [RAX_METHOD](labs/rax_drawer/rax_place/RAX_METHOD.md) · replay `eval_locked.cmd` |
 
+## Version
+
+- **v0.1.5** (`release-v0.1.5`): RAX drawer practice on `smart_drawer` — tool-only explore → compile → locked test; open/close **16/20**, open→place→close **15/20**; method docs + RGB-D demo media
+- **v0.1.4** (`release-v0.1.4`): 193-episode agent dataset, per-model finetunes, Home20 scoreboard
+- Earlier: see [ROADMAP](ROADMAP.md)
+
 ## Documentation
 
 - [Quick start](QUICKSTART.md) · [Agent / layout guide](AGENTS.md) · [Architecture](DESIGN.md) · [Roadmap](ROADMAP.md)
