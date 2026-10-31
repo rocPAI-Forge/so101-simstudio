@@ -1,0 +1,109 @@
+{
+  "n": 20,
+  "successes": 15,
+  "rate": 0.75,
+  "results": [
+    {
+      "i": 0,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 1,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 2,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 3,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 4,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 5,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 6,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 7,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 8,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 9,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 10,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 11,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 12,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 13,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 14,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 15,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 16,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 17,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 18,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 19,
+      "success": true,
+      "error": ""
+    }
+  ],
+  "frozen_at": "20261031T093325Z",
+  "round": 3
+}

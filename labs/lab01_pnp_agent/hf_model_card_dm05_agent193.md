@@ -19,7 +19,7 @@ Fine-tune of [`lerobot/dm05_base`](https://huggingface.co/lerobot/dm05_base) on 
 
 Cameras: `camera_top` and `camera_wrist`. The recorded front camera is not an input. State and action are 6-D absolute joint `.pos`. Images are resized to 448×448. Chunk / `n_action_steps` 10.
 
-The pinned SO-101 SimStudio submodule is LeRobot v0.6.0, which does not ship DM0.5. Load this repo with a LeRobot revision that includes `lerobot.policies.dm05`.
+The pinned SO-101 SimStudio submodule is LeRobot v0.6.0, which does not ship DM0.5. Train and evaluate with LeRobot `24f15b92` via `labs/lab01_pnp/train_dm05.cmd` and `labs/lab01_pnp/eval_home20.cmd` (`LAB01_LEROBOT_SRC`). Load this repo with a revision that includes `lerobot.policies.dm05`.
 
 **Training data:** [alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2](https://huggingface.co/datasets/alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2) (193 episodes). On disk, `observation.state` is 15-D; training uses the first 6 joint positions.
 

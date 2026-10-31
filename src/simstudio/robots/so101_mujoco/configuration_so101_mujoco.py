@@ -24,6 +24,8 @@ class SO101MujocoConfig(RobotConfig):
     # unless listed here.
     camera_width: int = 640
     camera_height: int = 480
+    # Optional per-camera (width, height). Cameras not listed use the size above.
+    camera_resolutions: dict[str, tuple[int, int]] = field(default_factory=dict)
     camera_names: list[str] = field(default_factory=lambda: ["front", "top", "wrist"])
     show_collision_geometry: bool = False
 

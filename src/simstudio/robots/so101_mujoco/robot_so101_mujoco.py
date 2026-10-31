@@ -126,7 +126,7 @@ class SO101MujocoRobot(Robot):
             "ee.pos_z": float,
         }
         for cam_name in self.config.camera_names:
-            features[f"camera_{cam_name}"] = (self.config.camera_height, self.config.camera_width, 3)
+            features[f"camera_{cam_name}"] = (*self._camera_resolution(cam_name), 3)
         return features
 
     @cached_property
@@ -167,11 +167,8 @@ class SO101MujocoRobot(Robot):
 
         # Setup renderers for each camera
         for cam_name in self.config.camera_names:
-            self._renderers[cam_name] = mj.Renderer(
-                self.model,
-                height=self.config.camera_height,
-                width=self.config.camera_width,
-            )
+            height, width = self._camera_resolution(cam_name)
+            self._renderers[cam_name] = mj.Renderer(self.model, height=height, width=width)
 
         # Map joint/actuator/site IDs
         self._setup_ids()
@@ -411,13 +408,19 @@ class SO101MujocoRobot(Robot):
 
         return obs
 
+    def _camera_resolution(self, camera_name: str) -> tuple[int, int]:
+        """Return (height, width) for one camera."""
+        custom = self.config.camera_resolutions.get(camera_name)
+        if custom is None:
+            return self.config.camera_height, self.config.camera_width
+        width, height = custom
+        return int(height), int(width)
+
     def _render_camera(self, camera_name: str) -> np.ndarray:
         """Render camera view."""
         if camera_name not in self._renderers:
-            return np.zeros(
-                (self.config.camera_height, self.config.camera_width, 3),
-                dtype=np.uint8,
-            )
+            height, width = self._camera_resolution(camera_name)
+            return np.zeros((height, width, 3), dtype=np.uint8)
 
         renderer = self._renderers[camera_name]
         renderer.update_scene(self.data, camera=camera_name)
@@ -429,7 +432,9 @@ class SO101MujocoRobot(Robot):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected")
 
-        has_velocity_keys = any(k in action for k in ["vx", "vy", "vz", "yaw_rate", "gripper_delta"])
+        has_velocity_keys = any(
+            k in action for k in ["vx", "vy", "vz", "wrist_flex_rate", "yaw_rate", "gripper_delta"]
+        )
         has_position_keys = any(f"{jn}.pos" in action for jn in self.JOINT_NAMES)
 
         if has_position_keys:

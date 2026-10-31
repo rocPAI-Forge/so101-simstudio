@@ -89,7 +89,7 @@ These policy families have completed closed-loop evaluation in this Lab 01 scene
 | FastWAM | **0/60** — 4K transfer trial | Not published |
 | VLA-JEPA | **0/60** — 6-D joint and 7-D end-effector trials | Not published |
 
-These totals are not a general model ranking. The scene and frozen poses are shared, but step count, learning rate, cameras, trainable weights, initialization, and action representation differ. A higher number only means that checkpoint performed better under this specific Home20 setup. The LeRobot submodule stays at v0.6.0; DM0.5, xVLA, and LingBot-VLA 2.0 need a newer LeRobot revision (V2: see [`lingbot_vla_v2_adapt.md`](labs/lab01_pnp/lingbot_vla_v2_adapt.md)).
+These totals are not a general model ranking. The scene and frozen poses are shared, but step count, learning rate, cameras, trainable weights, initialization, and action representation differ. A higher number only means that checkpoint performed better under this specific Home20 setup. The LeRobot submodule stays at v0.6.0. DM0.5 and xVLA train and Home20 eval use LeRobot `24f15b92` through `labs/lab01_pnp/train_dm05.cmd`, `train_xvla.cmd`, and `eval_home20.cmd` (`LAB01_LEROBOT_SRC`). LingBot-VLA 2.0 needs a newer LeRobot revision (see [`lingbot_vla_v2_adapt.md`](labs/lab01_pnp/lingbot_vla_v2_adapt.md)).
 
 ## Requirements
 

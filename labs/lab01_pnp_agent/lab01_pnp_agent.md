@@ -35,7 +35,7 @@
 | `media/` | 演示 mp4 和关键帧截图，由 `make_demo_media.py` 从数据集导出 |
 | `datasets/` | 指向仓库根 `datasets/` 下各 agent 数据集的软链接，不进 git |
 
-采集器仍在 [`../lab01_pnp/`](../lab01_pnp/)：`auto_collect_poc.py`、`auto_collect_yaw.py`、`collect_yaw.cmd`、`collect_policy_recovery.py`、`collect_policy_takeover.py`、`train_upweight_episodes.py`、`probe_*.py`。训练和评测入口也在那里：`train_*.cmd`、`eval.cmd`。本目录的 `_env.sh` 先加载那份模板，再只覆盖 Home20 和 193 条的变量。Home20 清单和 `rollout_act_agent_yaw.yaml` 在本目录 `configs/`。
+采集器仍在 [`../lab01_pnp/`](../lab01_pnp/)：`auto_collect_poc.py`、`auto_collect_yaw.py`、`collect_yaw.cmd`、`collect_policy_recovery.py`、`collect_policy_takeover.py`、`train_upweight_episodes.py`、`probe_*.py`。训练和评测入口也在那里：`train_*.cmd`、`eval.cmd`、`eval_home20.cmd`。xVLA 和 DM0.5 的复现命令是 `train_xvla.cmd`、`train_dm05.cmd` 和 `eval_home20.cmd`，LeRobot 检出写在 [`home20.md`](home20.md)。本目录的 `_env.sh` 先加载那份模板，再只覆盖 Home20 和 193 条的变量。Home20 清单和 `rollout_act_agent_yaw.yaml` 在本目录 `configs/`。
 
 ## 协议先分开
 

@@ -1,0 +1,58 @@
+# =============================================================================
+# Lab 01 — xVLA Home20 eval (193-episode fine-tune, 6-D absolute joints)
+# =============================================================================
+# Camera map matches train_xvla.cmd. action_mode=auto trims the 20-D head to
+# the 6 real joints. Do not send the raw 20-D output to the robot.
+# Poses and gripper 0.85 come from LAB01_EPISODE_INIT (eval_home20.cmd).
+#
+#   LAB01_LEROBOT_SRC=/path/to/lerobot \
+#   LAB01_POLICY_PATH=./outputs/train/lab01_xvla_agent193_10k/checkpoints/010000/pretrained_model \
+#   LAB01_EVAL_CONFIG=labs/lab01_pnp/configs/rollout_xvla.yaml \
+#   LAB01_N_ACTION_STEPS=30 \
+#   LAB01_HOME20_TAG=xvla_agent193_10k \
+#     ./labs/lab01_pnp/eval_home20.cmd
+# =============================================================================
+
+robot:
+  type: so101_mujoco
+  action_mode: position
+  home_gripper: 0.85
+  reset_mode: auto
+  reset_arm: home
+  reset_cube: fixed
+  xml_path: SO101/scenes/simple_pick/scene.xml
+  record_fps: 20
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: false
+
+fps: 20
+task: "Pick up the cube and place it in the box"
+
+rename_map:
+  observation.images.camera_top: observation.images.image
+  observation.images.camera_wrist: observation.images.image2
+  observation.images.camera_front: observation.images.image3
+
+strategy:
+  type: base
+
+inference:
+  type: sync
+
+play_sounds: false
+display_data: false
+display_mode: rerun
+return_to_initial_position: false
+
+eval:
+  num_episodes: 20
+  episode_time_s: 60
+  reset_time_s: 3
+  stats_dataset_repo_id: alexhegit/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2
+  stats_dataset_root: ./datasets/so101-simstudio-lab01-pnp-agent-yaw-v4-actonly-follow2
+  state_dim: 6
