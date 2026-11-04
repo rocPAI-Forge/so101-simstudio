@@ -1,6 +1,7 @@
 # Proposal: staged success diagnostics + staged resets
 
 **Status:** proposal only (no code in this change set).  
+**Tracking:** [issue #25](https://github.com/rocPAI-Forge/so101-simstudio/issues/25).  
 **Origin:** review of [emoPointer/supermimic_manipulation](https://github.com/emoPointer/supermimic_manipulation) (SuperMimic + OmniReset-style reset banks on ARX5 / mjlab) against so101-simstudio Lab 01 and `labs/rax_drawer` (2026-11).  
 **Goal:** record *why* we would adopt pieces of that idea, what must stay frozen, and what future work it unlocks — so a later PR can implement without rewriting published scores.
 
