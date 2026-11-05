@@ -1,5 +1,5 @@
 {
-  "protocol": "place100d ACT 30k; explore10+test20; state 6-D; MUJOCO_GL=egl",
+  "protocol": "place100d ACT 30k; explore10+test20; state 6-D; MUJOCO_GL=egl; paired RGB vs RGB-D only",
   "hub": {
     "dataset": "alexhegit/so101-simstudio-rax-drawer-place100d",
     "act_rgb": "alexhegit/so101-simstudio-rax-drawer-act-rgb-place100d",

@@ -27,15 +27,16 @@ This section is the **canonical comparison table** for the practice (also mirror
 
 Protocol: `labs/rax_drawer/vla/eval_policy.py`, state 6-D joint `.pos`, explore10 + test20, `MUJOCO_GL=egl` on halo.
 
-| Policy | explore10 | test20 | Δ vs place100d RGB |
-|--------|-----------|--------|--------------------|
-| place100d **RGB** | 4/10 (40%) | 7/20 (35%) | — |
-| place100d **RGB-D** | **6/10 (60%)** | **11/20 (55%)** | **+20 pp / +20 pp** |
-| prior place100b RGB (reference) | 5/10 (50%) | 9/20 (45%) | — |
+| Policy | explore10 | test20 | Δ |
+|--------|-----------|--------|---|
+| place100d **RGB** (no depth) | 4/10 (40%) | 7/20 (35%) | — |
+| place100d **RGB-D** (+ top depth) | **6/10 (60%)** | **11/20 (55%)** | **+20 pp / +20 pp** |
+
+Paired ablation only: same `place100d` demos and ACT budget. An older place100b RGB run (different teleop set) is **not** listed here to avoid unpaired comparisons.
 
 Machine-readable: [`results/rgb_vs_rgbd_summary.json`](results/rgb_vs_rgbd_summary.json) (+ per-split JSON next to it).
 
-**Takeaway:** with matched data and training budget, top-depth gray lifts ACT by **+20 pp** on both splits vs place100d RGB, and slightly above the older place100b RGB baseline. Caveats: n is small; depth is gray pseudo-RGB (not a dedicated depth backbone); place100d RGB alone is a bit weaker than the older RGB set.
+**Takeaway:** with matched data and training budget, top-depth gray lifts ACT by **+20 pp** on both splits. Caveats: n is small; depth is gray pseudo-RGB (not a dedicated depth backbone).
 
 ## Reproduce
 

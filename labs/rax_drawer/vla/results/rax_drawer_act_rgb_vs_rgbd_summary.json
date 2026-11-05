@@ -1,5 +1,10 @@
 {
-  "protocol": "Home20-style locked layouts; explore10 + test20; ACT 30k; place100d unless noted",
+  "protocol": "place100d ACT 30k; explore10+test20; state 6-D; MUJOCO_GL=egl; paired RGB vs RGB-D only",
+  "hub": {
+    "dataset": "alexhegit/so101-simstudio-rax-drawer-place100d",
+    "act_rgb": "alexhegit/so101-simstudio-rax-drawer-act-rgb-place100d",
+    "act_rgbd": "alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d"
+  },
   "rows": [
     {
       "label": "RGB explore10",
@@ -24,26 +29,10 @@
       "successes": 11,
       "n": 20,
       "rate": 0.55
-    },
-    {
-      "label": "OLD_RGB_place100b explore10",
-      "successes": 5,
-      "n": 10,
-      "rate": 0.5
-    },
-    {
-      "label": "OLD_RGB_place100b test20",
-      "successes": 9,
-      "n": 20,
-      "rate": 0.45
     }
   ],
   "delta_rgbd_vs_rgb_place100d": {
-    "explore": "6/10 vs 4/10 (+20pp)",
-    "test": "11/20 vs 7/20 (+20pp)"
-  },
-  "delta_rgbd_vs_old_place100b": {
-    "explore": "6/10 vs 5/10 (+10pp)",
-    "test": "11/20 vs 9/20 (+10pp)"
+    "explore": "+20pp",
+    "test": "+20pp"
   }
 }

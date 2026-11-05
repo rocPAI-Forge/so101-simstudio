@@ -25,13 +25,12 @@ Repo write-up (canonical): [DEPTH_ABLATION.md](https://github.com/rocPAI-Forge/s
 
 ## Comparison results (closed-loop)
 
-Same demos (`place100d`), same ACT budget, eval on halo with `MUJOCO_GL=egl`, locked manifests, state 6-D.
+Paired ablation on the **same** `place100d` demos and ACT budget. Eval on halo with `MUJOCO_GL=egl`, locked manifests, state 6-D.
 
-| Policy | explore10 | test20 | Δ vs place100d RGB |
-|--------|-----------|--------|--------------------|
-| **This checkpoint (RGB-D)** | **6/10 (60%)** | **11/20 (55%)** | **+20 pp / +20 pp** |
+| Policy | explore10 | test20 | Δ |
+|--------|-----------|--------|---|
 | ACT RGB sibling (no depth) | 4/10 (40%) | 7/20 (35%) | — |
-| Prior place100b RGB (reference) | 5/10 (50%) | 9/20 (45%) | — |
+| **This checkpoint (RGB-D)** | **6/10 (60%)** | **11/20 (55%)** | **+20 pp / +20 pp** |
 
 **Takeaway:** matched-data top-depth gray helps ACT open→place→close on this drawer task. Caveats: small n; depth is gray pseudo-RGB (not a dedicated depth backbone).
 

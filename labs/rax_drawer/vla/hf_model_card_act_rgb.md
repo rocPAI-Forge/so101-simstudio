@@ -24,11 +24,12 @@ Repo write-up (canonical): [DEPTH_ABLATION.md](https://github.com/rocPAI-Forge/s
 
 ## Comparison results (closed-loop)
 
+Paired ablation vs the RGB-D sibling on the **same** `place100d` demos:
+
 | Policy | explore10 | test20 |
 |--------|-----------|--------|
 | **This checkpoint (RGB)** | 4/10 (40%) | 7/20 (35%) |
 | ACT RGB-D sibling (+ top depth) | **6/10 (60%)** | **11/20 (55%)** |
-| Prior place100b RGB (reference) | 5/10 (50%) | 9/20 (45%) |
 
 RGB-D sibling: [`alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d`](https://huggingface.co/alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d)
 

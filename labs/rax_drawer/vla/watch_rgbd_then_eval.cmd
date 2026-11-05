@@ -80,9 +80,6 @@ for name, label in [
     ("rax_drawer_act_rgb_place100d_test20.json", "RGB test20"),
     ("rax_drawer_act_rgbd_place100d_explore10.json", "RGBD explore10"),
     ("rax_drawer_act_rgbd_place100d_test20.json", "RGBD test20"),
-    # prior place100b ACT (no depth) for reference if present
-    ("rax_drawer_act_state6_explore10.json", "OLD_RGB_place100b explore10"),
-    ("rax_drawer_act_state6_test20.json", "OLD_RGB_place100b test20"),
 ]:
     p = root / name
     if not p.is_file():
