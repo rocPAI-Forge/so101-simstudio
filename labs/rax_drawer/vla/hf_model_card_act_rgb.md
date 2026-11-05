@@ -16,13 +16,21 @@ datasets:
 
 # SO-101 RAX drawer — ACT RGB (place100d)
 
-ACT trained **without** `camera_top_depth` on [`alexhegit/so101-simstudio-rax-drawer-place100d`](https://huggingface.co/datasets/alexhegit/so101-simstudio-rax-drawer-place100d). Cameras: top / side / wrist. Absolute 6-D joint `.pos`. 30 000 steps.
+ACT trained **without** `camera_top_depth` on
+[`alexhegit/so101-simstudio-rax-drawer-place100d`](https://huggingface.co/datasets/alexhegit/so101-simstudio-rax-drawer-place100d).
+Cameras: top / side / wrist. Absolute **6-D** joint `.pos`. **30 000** steps.
 
-Closed-loop (halo, EGL): explore **4/10**, test **7/20**.
+Repo write-up (canonical): [DEPTH_ABLATION.md](https://github.com/rocPAI-Forge/so101-simstudio/blob/release-v0.1.6/labs/rax_drawer/vla/DEPTH_ABLATION.md)
 
-RGB-D sibling (same data): [`alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d`](https://huggingface.co/alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d) — explore 6/10, test 11/20.
+## Comparison results (closed-loop)
 
-Docs: [DEPTH_ABLATION.md](https://github.com/rocPAI-Forge/so101-simstudio/blob/rax_drawer_vla/labs/rax_drawer/vla/DEPTH_ABLATION.md)
+| Policy | explore10 | test20 |
+|--------|-----------|--------|
+| **This checkpoint (RGB)** | 4/10 (40%) | 7/20 (35%) |
+| ACT RGB-D sibling (+ top depth) | **6/10 (60%)** | **11/20 (55%)** |
+| Prior place100b RGB (reference) | 5/10 (50%) | 9/20 (45%) |
+
+RGB-D sibling: [`alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d`](https://huggingface.co/alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d)
 
 ## Load
 
