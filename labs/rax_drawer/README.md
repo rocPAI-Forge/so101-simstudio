@@ -4,6 +4,10 @@ This lab adds a task-level environment and RAX-style robot backend for opening t
 
 **Strict RAX place session:** `rax_place/` — tool-only explore → compile → locked test. Method (principles + API modules): [`rax_place/RAX_METHOD.md`](rax_place/RAX_METHOD.md). Process log: [`rax_place/PROCESS.md`](rax_place/PROCESS.md). Freeze 3 scored **15 / 20** on the locked place task.
 
+**ACT RGB vs RGB-D (place100d):** collect → train → eval write-up in [`vla/DEPTH_ABLATION.md`](vla/DEPTH_ABLATION.md). Hub: [dataset](https://huggingface.co/datasets/alexhegit/so101-simstudio-rax-drawer-place100d), [ACT RGB](https://huggingface.co/alexhegit/so101-simstudio-rax-drawer-act-rgb-place100d), [ACT RGB-D](https://huggingface.co/alexhegit/so101-simstudio-rax-drawer-act-rgbd-place100d) (test20: 7/20 vs **11/20**).
+
+![ACT RGB vs RGB-D compare](media/act_rgb_vs_rgbd_compare.gif)
+
 ## Task and success contract
 
 - Goal (open/close): grasp the lower drawer handle and pull toward the SO-101, then return it.

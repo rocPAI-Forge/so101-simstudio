@@ -20,6 +20,8 @@ class DrawerTaskConfig:
     scene_path: Path = Path("SO101/scenes/smart_drawer/scene.xml")
     camera_names: tuple[str, ...] = ("top", "side", "wrist")
     render_window: bool = False
+    # Operator-only: GLFW top-right pane shows colorized top depth when True.
+    gui_show_top_depth: bool = False
     success_position_m: float = 0.06
     close_tolerance_m: float = 0.005
     # When true, success also requires the green cube to rest inside the drawer.
@@ -64,6 +66,7 @@ class RaxDrawerEnv:
             camera_names=list(self.task.camera_names),
             camera_resolutions={"top": (1280, 800)},
             render_window=self.task.render_window,
+            gui_show_top_depth=self.task.gui_show_top_depth,
             action_mode="velocity",
             ee_site_name="gripperframe",
         )

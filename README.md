@@ -49,9 +49,11 @@ Full install, Joy-Con, leader arm, and train/eval recipes: [QUICKSTART.md](QUICK
 | Lab 01 Home20 | ACT **53/60**, SmolVLA **51/60**, … (shared frozen poses; not a general ranking) | [home20.md](labs/lab01_pnp_agent/home20.md) |
 | RAX open → close | **16 / 20** locked | [rax_drawer](labs/rax_drawer/README.md) |
 | RAX open → place → close | **15 / 20** freeze 3 | [RAX_METHOD](labs/rax_drawer/rax_place/RAX_METHOD.md) · replay `eval_locked.cmd` |
+| RAX ACT place100d RGB → RGB-D | test20 **7/20 → 11/20** | [DEPTH_ABLATION](labs/rax_drawer/vla/DEPTH_ABLATION.md) · Hub dataset + 2 ACT ckpts |
 
 ## Version
 
+- **v0.1.6** (`release-v0.1.6`): RAX drawer ACT RGB vs RGB-D depth ablation (place100d); Hub dataset + ACT RGB/RGB-D; paired comparison docs + GIF
 - **v0.1.5** (`release-v0.1.5`): RAX drawer practice on `smart_drawer` — tool-only explore → compile → locked test; open/close **16/20**, open→place→close **15/20**; method docs + RGB-D demo media
 - **v0.1.4** (`release-v0.1.4`): 193-episode agent dataset, per-model finetunes, Home20 scoreboard
 - Earlier: see [ROADMAP](ROADMAP.md)
