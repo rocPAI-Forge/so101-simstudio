@@ -53,6 +53,7 @@ Full install, Joy-Con, leader arm, and train/eval recipes: [QUICKSTART.md](QUICK
 
 ## Version
 
+- **v0.1.7** (`release-v0.1.7`): place100d ACT RGB vs RGB-D docs finalized (paired comparison only)
 - **v0.1.6** (`release-v0.1.6`): RAX drawer ACT RGB vs RGB-D depth ablation (place100d); Hub dataset + ACT RGB/RGB-D; compare GIF
 - **v0.1.5** (`release-v0.1.5`): RAX drawer practice on `smart_drawer` — tool-only explore → compile → locked test; open/close **16/20**, open→place→close **15/20**; method docs + RGB-D demo media
 - **v0.1.4** (`release-v0.1.4`): 193-episode agent dataset, per-model finetunes, Home20 scoreboard
