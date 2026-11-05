@@ -1,0 +1,57 @@
+{
+  "n": 10,
+  "successes": 4,
+  "rate": 0.4,
+  "results": [
+    {
+      "i": 0,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 1,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 2,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 3,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 4,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 5,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 6,
+      "success": true,
+      "error": ""
+    },
+    {
+      "i": 7,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 8,
+      "success": false,
+      "error": ""
+    },
+    {
+      "i": 9,
+      "success": true,
+      "error": ""
+    }
+  ]
+}

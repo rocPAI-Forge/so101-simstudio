@@ -51,6 +51,7 @@ class SO101MujocoRobot(Robot):
         self._glfw_scene = None
         self._glfw_ctx = None
         self._glfw_initialized = False
+        self._gui_depth_renderer: mj.Renderer | None = None
 
         # Joint/actuator/site IDs (set in connect())
         self.dof_ids: dict[str, int] = {}
@@ -321,7 +322,43 @@ class SO101MujocoRobot(Robot):
             for name in glfw_cam_names
         }
 
+        if bool(getattr(self.config, "gui_show_top_depth", False)):
+            top_id = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_CAMERA, "top")
+            if top_id >= 0:
+                # Modest offscreen size; blit resizes to the pane each frame.
+                self._gui_depth_renderer = mj.Renderer(self.model, height=360, width=640)
+                self._gui_depth_renderer.enable_depth_rendering()
+                logger.info("GLFW top-depth pane enabled")
+            else:
+                logger.warning("gui_show_top_depth set but scene has no 'top' camera")
+
         logger.info("GLFW visualization window created")
+
+    @staticmethod
+    def _depth_m_to_rgb(depth_m: np.ndarray) -> np.ndarray:
+        """Colorize metric depth (near=bright) for the GUI pane."""
+        valid = np.isfinite(depth_m) & (depth_m > 0.05) & (depth_m < 2.0)
+        out = np.zeros((*depth_m.shape, 3), dtype=np.uint8)
+        if not np.any(valid):
+            return out
+        lo = float(np.percentile(depth_m[valid], 5))
+        hi = float(np.percentile(depth_m[valid], 95))
+        hi = max(hi, lo + 1e-3)
+        norm = np.clip((depth_m - lo) / (hi - lo), 0.0, 1.0)
+        gray = (255.0 * (1.0 - norm)).astype(np.uint8)
+        gray[~valid] = 0
+        out[..., 0] = gray
+        out[..., 1] = gray
+        out[..., 2] = gray
+        return out
+
+    @staticmethod
+    def _resize_rgb(rgb: np.ndarray, height: int, width: int) -> np.ndarray:
+        if rgb.shape[0] == height and rgb.shape[1] == width:
+            return rgb
+        ys = np.linspace(0, rgb.shape[0] - 1, height).astype(np.int32)
+        xs = np.linspace(0, rgb.shape[1] - 1, width).astype(np.int32)
+        return rgb[ys][:, xs]
 
     def _render_glfw(self):
         """Render camera views to GLFW window in a grid layout."""
@@ -331,24 +368,43 @@ class SO101MujocoRobot(Robot):
         if glfw.window_should_close(self._glfw_window):
             return
 
-        glfw.make_context_current(self._glfw_window)
-
         viewport_width, viewport_height = glfw.get_framebuffer_size(self._glfw_window)
         cam_width = viewport_width // 2
         cam_height = viewport_height // 2
 
+        depth_rgb = None
+        if self._gui_depth_renderer is not None:
+            # Offscreen depth must not share the window GL context.
+            glfw.make_context_current(None)
+            self._gui_depth_renderer.update_scene(self.data, camera="top")
+            depth_m = np.asarray(self._gui_depth_renderer.render(), dtype=np.float32)
+            depth_rgb = self._depth_m_to_rgb(depth_m)
+
+        glfw.make_context_current(self._glfw_window)
+
+        # 2x2 grid. Bottom-right prefers policy ``side`` over viz-only ``overview``
+        # so live eval matches the cameras used in training/inference.
+        bottom_right = (
+            "side"
+            if "side" in self._glfw_cam_ids
+            else "overview"
+            if "overview" in self._glfw_cam_ids
+            else None
+        )
         camera_positions = {
             "top": (0, cam_height),
-            "front": (cam_width, cam_height),
             "wrist": (0, 0),
-            "overview": (cam_width, 0),
         }
+        # Top-right: front RGB unless top-depth pane is active.
+        if depth_rgb is None:
+            camera_positions["front"] = (cam_width, cam_height)
+        if bottom_right is not None:
+            camera_positions[bottom_right] = (cam_width, 0)
 
-        for cam_name in camera_positions:
+        for cam_name, (x, y) in camera_positions.items():
             if cam_name not in self._glfw_cam_ids:
                 continue
 
-            x, y = camera_positions[cam_name]
             viewport = mj.MjrRect(x, y, cam_width, cam_height)
 
             cam_id = self._glfw_cam_ids.get(cam_name, -1)
@@ -367,6 +423,13 @@ class SO101MujocoRobot(Robot):
             )
 
             mj.mjr_render(viewport, self._glfw_scene, self._glfw_ctx)
+
+        if depth_rgb is not None:
+            rgb = self._resize_rgb(depth_rgb, cam_height, cam_width)
+            # OpenGL origin is bottom-left; Renderer rows are top-first.
+            rgb = np.ascontiguousarray(np.flipud(rgb))
+            viewport = mj.MjrRect(cam_width, cam_height, cam_width, cam_height)
+            mj.mjr_drawPixels(rgb.reshape(-1), None, viewport, self._glfw_ctx)
 
         glfw.swap_buffers(self._glfw_window)
         glfw.poll_events()
@@ -815,6 +878,13 @@ class SO101MujocoRobot(Robot):
                 except Exception as e:
                     logger.warning(f"Error closing renderer for {cam_name}: {e}")
             self._renderers.clear()
+
+            if self._gui_depth_renderer is not None:
+                try:
+                    self._gui_depth_renderer.close()
+                except Exception as e:
+                    logger.warning(f"Error closing GUI depth renderer: {e}")
+                self._gui_depth_renderer = None
 
         self.model = None
         self.data = None

@@ -149,6 +149,14 @@
 - [x] Method / protocol / process docs + RGB-D episode GIF; replay `./labs/rax_drawer/rax_place/eval_locked.cmd`
 - [x] Compact project README: capability map + try-it paths ([PR #23](https://github.com/rocPAI-Forge/so101-simstudio/pull/23))
 
+## v0.1.6 ✅ (`release-v0.1.6`)
+
+### RAX drawer ACT RGB vs RGB-D
+
+- [x] `place100d` demos with top-depth gray; ACT RGB vs RGB-D 30k train/eval
+- [x] Closed-loop test20: RGB 7/20 → RGB-D **11/20** (+20 pp); docs + compare GIF
+- [x] Hub: dataset + ACT RGB + ACT RGB-D (`labs/rax_drawer/vla/DEPTH_ABLATION.md`)
+
 ## Evolution
 
 ```
@@ -159,8 +167,9 @@ v0.0.x: so101-mujoco-teleop
         ↓ v0.1.3 (`release-v0.1.3`) Lab 01 PnP: train ACT/SmolVLA + MuJoCo sim2sim eval + Hub assets
         ↓ v0.1.4 (`release-v0.1.4`) 193-episode agent set, per-model finetune trials, Home20
         ↓ v0.1.5 (`release-v0.1.5`) RAX drawer tool-only practice (16/20 open-close, 15/20 place)
-Current: so101-simstudio @ v0.1.5
-        Expert trajectories + Lab 01 closed-loop train/eval + RAX drawer (ROCm)
+        ↓ v0.1.6 (`release-v0.1.6`) RAX drawer ACT RGB vs RGB-D depth ablation + Hub assets
+Current: so101-simstudio @ v0.1.6
+        Expert trajectories + Lab 01 closed-loop train/eval + RAX drawer ACT depth ablation (ROCm)
         Future: domain randomization, broader automated pipeline, real follower, CUDA/macOS
 ```
 
@@ -171,7 +180,7 @@ Current: so101-simstudio @ v0.1.5
 - [ ] **NVIDIA CUDA (Linux)** — not supported yet (unverified); needs documented install path, PyTorch CUDA wheels, smoke tests
 - [ ] **macOS / Apple Silicon (MPS)** — not supported yet (unverified); needs documented install path, GLFW / input quirks, smoke tests
 
-**Current release (v0.1.5):** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, VLA training, and the RAX drawer lab.
+**Current release (v0.1.6):** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, VLA training, and the RAX drawer lab.
 
 ### Automated data pipeline
 

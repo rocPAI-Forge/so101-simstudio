@@ -27,6 +27,7 @@ from lerobot.utils.feature_utils import build_dataset_frame, hw_to_dataset_featu
 from labs.rax_drawer.environment import DrawerTaskConfig, RaxDrawerEnv
 from labs.rax_drawer.rax_place.code.open_place_close.controller import main as place_main
 from labs.rax_drawer.rax_place.tools import Session
+from labs.rax_drawer.vla.depth_vis import DEPTH_CAM_KEY, depth_m_to_rgb3
 
 JOINTS = [
     "shoulder_pan",
@@ -42,16 +43,32 @@ MANIFESTS = HERE / "manifests"
 
 
 class PlaceRecorder:
-    """Log absolute joint ticks + RGB into a LeRobot v3 dataset."""
+    """Log absolute joint ticks + RGB (+ optional top-depth viz) into LeRobot v3."""
 
-    def __init__(self, robot, *, repo_id: str, root: Path, save_failures: bool = False):
+    def __init__(
+        self,
+        robot,
+        *,
+        repo_id: str,
+        root: Path,
+        save_failures: bool = False,
+        depth_env: RaxDrawerEnv | None = None,
+        record_top_depth: bool = True,
+    ):
         self.robot = robot
+        self.depth_env = depth_env
+        self.record_top_depth = bool(record_top_depth and depth_env is not None)
         self.root = Path(root)
         self.repo_id = repo_id
         self.save_failures = save_failures
         self.spawn_log = self.root / "spawns.jsonl"
         # Force position-mode action schema for BC even if the env drives velocity.
-        obs_ft = hw_to_dataset_features(robot.observation_features, OBS_STR, use_video=True)
+        hw_obs = dict(robot.observation_features)
+        if self.record_top_depth:
+            # ACT needs matching HxWx3 across cameras; encode metric depth as gray RGB.
+            h, w = robot._camera_resolution("top")
+            hw_obs[DEPTH_CAM_KEY] = (h, w, 3)
+        obs_ft = hw_to_dataset_features(hw_obs, OBS_STR, use_video=True)
         act_ft = hw_to_dataset_features(
             {f"{name}.pos": float for name in JOINTS},
             ACTION,
@@ -93,6 +110,9 @@ class PlaceRecorder:
 
     def tick(self) -> None:
         obs = self.robot.get_observation()
+        if self.record_top_depth:
+            assert self.depth_env is not None
+            obs[DEPTH_CAM_KEY] = depth_m_to_rgb3(self.depth_env.top_depth_m())
         action = {f"{name}.pos": float(obs[f"{name}.pos"]) for name in JOINTS}
         obs_frame = build_dataset_frame(self.features, obs, prefix=OBS_STR)
         act_frame = build_dataset_frame(self.features, action, prefix=ACTION)
@@ -212,7 +232,15 @@ def _count_saved(root: Path) -> int:
     return n
 
 
-def collect(*, target: int, root: Path, repo_id: str, save_failures: bool, max_attempts: int) -> dict:
+def collect(
+    *,
+    target: int,
+    root: Path,
+    repo_id: str,
+    save_failures: bool,
+    max_attempts: int,
+    record_top_depth: bool = True,
+) -> dict:
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     already = _count_saved(root)
@@ -250,6 +278,13 @@ def collect(*, target: int, root: Path, repo_id: str, save_failures: bool, max_a
             repo_id=repo_id,
             root=root,
             save_failures=save_failures,
+            depth_env=ctx.env,
+            record_top_depth=record_top_depth,
+        )
+        print(
+            f"record_top_depth={recorder.record_top_depth} "
+            f"features={sorted(k for k in recorder.features if 'images' in k)}",
+            flush=True,
         )
         _install_step_hook(ctx.env, recorder)
 
@@ -297,14 +332,19 @@ def main() -> None:
     parser.add_argument(
         "--root",
         type=Path,
-        default=Path("datasets/so101-simstudio-rax-drawer-place100"),
+        default=Path("datasets/so101-simstudio-rax-drawer-place100d"),
     )
     parser.add_argument(
         "--repo-id",
-        default="alexhegit/so101-simstudio-rax-drawer-place100",
+        default="alexhegit/so101-simstudio-rax-drawer-place100d",
     )
     parser.add_argument("--save-failures", action="store_true")
     parser.add_argument("--max-attempts", type=int, default=400)
+    parser.add_argument(
+        "--no-top-depth",
+        action="store_true",
+        help="Do not record camera_top_depth (RGB-only dataset).",
+    )
     args = parser.parse_args()
     lock_path = Path(args.root).with_suffix(".collect.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -324,6 +364,7 @@ def main() -> None:
             repo_id=args.repo_id,
             save_failures=args.save_failures,
             max_attempts=args.max_attempts,
+            record_top_depth=not args.no_top_depth,
         )
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)

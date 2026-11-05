@@ -200,6 +200,33 @@ def patch_lingbot_action_feature_from_used_channels() -> None:
     LingBotVAConfig.validate_features = wrapped  # type: ignore[method-assign]
 
 
+def patch_drop_policy_image_keys(*substrings: str) -> None:
+    """Drop matching ``observation.images.*`` keys when building policy input_features.
+
+    Used for RAX ACT RGB-only ablations on a dataset that also stores top-depth.
+    """
+    from lerobot.utils import feature_utils
+
+    orig = feature_utils.dataset_to_policy_features
+    needles = tuple(s for s in substrings if s)
+
+    def wrapped(features):  # type: ignore[no-untyped-def]
+        out = orig(features)
+        if not needles:
+            return out
+        kept = {
+            key: ft
+            for key, ft in out.items()
+            if not (key.startswith("observation.images.") and any(n in key for n in needles))
+        }
+        dropped = sorted(set(out) - set(kept))
+        if dropped:
+            logging.getLogger(__name__).info("RAX_ACT drop image keys: %s", dropped)
+        return kept
+
+    feature_utils.dataset_to_policy_features = wrapped  # type: ignore[method-assign]
+
+
 def main() -> None:
     raw = (
         os.environ.get("LAB01_STATE_DIM", "").strip()
@@ -211,6 +238,15 @@ def main() -> None:
             raise SystemExit(f"LAB01_STATE_DIM/LAB01_ACT_STATE_DIM must be a positive int, got {raw!r}")
         logging.basicConfig(level=logging.INFO)
         patch_lerobot_observation_state_dim(dim)
+
+    # RAX_ACT_USE_DEPTH=0 → train RGB-only on place100d (drop camera_top_depth).
+    use_depth = os.environ.get("RAX_ACT_USE_DEPTH", "").strip().lower()
+    if use_depth in ("0", "false", "no", "off"):
+        logging.basicConfig(level=logging.INFO)
+        patch_drop_policy_image_keys("top_depth", "depth")
+    elif use_depth in ("1", "true", "yes", "on"):
+        logging.basicConfig(level=logging.INFO)
+        logging.getLogger(__name__).info("RAX_ACT_USE_DEPTH=1 (keeping depth image keys)")
 
     if _truthy("LAB01_PI05_TRAIN_VISION"):
         logging.basicConfig(level=logging.INFO)

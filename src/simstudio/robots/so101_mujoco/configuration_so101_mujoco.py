@@ -30,8 +30,12 @@ class SO101MujocoConfig(RobotConfig):
     show_collision_geometry: bool = False
 
     # Live GLFW rendering window (disable for headless/CI). If the MJCF has an
-    # ``overview`` camera, it is shown as a 4th pane for operator awareness only.
+    # ``overview`` camera, it is shown as a 4th pane for operator awareness only
+    # unless a policy ``side`` camera is present (side takes that pane).
     render_window: bool = True
+    # When True and ``top`` exists, fill the GLFW top-right pane with a colorized
+    # top-camera depth map (operator aid only; not written to observations).
+    gui_show_top_depth: bool = False
 
     # Frames drawn per position-mode action. One frame per action means the
     # window refreshes at the action rate, which looks choppy when a policy
