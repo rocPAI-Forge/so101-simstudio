@@ -32,11 +32,11 @@ Protocol: `labs/rax_drawer/vla/eval_policy.py`, state 6-D joint `.pos`, explore1
 | place100d **RGB** (no depth) | 4/10 (40%) | 7/20 (35%) | — |
 | place100d **RGB-D** (+ top depth) | **6/10 (60%)** | **11/20 (55%)** | **+20 pp / +20 pp** |
 
-Paired ablation only: same `place100d` demos and ACT budget. An older place100b RGB run (different teleop set) is **not** listed here to avoid unpaired comparisons.
+Scope: **only** this place100d paired RGB vs RGB-D run (same demos, same ACT budget). No earlier datasets or checkpoints in this table.
 
 Machine-readable: [`results/rgb_vs_rgbd_summary.json`](results/rgb_vs_rgbd_summary.json) (+ per-split JSON next to it).
 
-**Takeaway:** with matched data and training budget, top-depth gray lifts ACT by **+20 pp** on both splits. Caveats: n is small; depth is gray pseudo-RGB (not a dedicated depth backbone).
+**Takeaway:** top-depth gray lifts ACT by **+20 pp** on both splits. Caveats: n is small; depth is gray pseudo-RGB (not a dedicated depth backbone).
 
 ## Reproduce
 
