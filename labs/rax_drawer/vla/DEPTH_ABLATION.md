@@ -60,4 +60,5 @@ MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.vla.render_policy_compare
   --scene 6 --out labs/rax_drawer/media/act_rgb_vs_rgbd_compare.gif
 ```
 
-Push helpers: `./labs/rax_drawer/vla/push_place100d_dataset.cmd`, `./labs/rax_drawer/vla/push_act_models.cmd`.
+Push helpers (run on **DORobot** against official `https://huggingface.co`, not hf-mirror):
+`./labs/rax_drawer/vla/push_act_models.cmd`, `./labs/rax_drawer/vla/push_place100d_dataset.cmd`.

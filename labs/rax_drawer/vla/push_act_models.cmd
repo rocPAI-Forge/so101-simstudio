@@ -1,12 +1,17 @@
 #!/bin/bash
-# Upload ACT RGB + RGB-D place100d checkpoints to Hugging Face.
-#   HF_ENDPOINT=https://hf-mirror.com ./labs/rax_drawer/vla/push_act_models.cmd
+# Upload ACT RGB + RGB-D place100d checkpoints to Hugging Face (official endpoint).
+# Prefer running on DORobot when halo cannot reach huggingface.co.
+# Do not publish via hf-mirror.com.
 set -euo pipefail
 _DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$_DIR/../../.." && pwd)"
 cd "$REPO_ROOT"
 source "$_DIR/_env.sh"
 PYTHON="${PYTHON:-$REPO_ROOT/.venv-rocm/bin/python}"
+if [[ "${HF_ENDPOINT:-}" == *"hf-mirror.com"* ]]; then
+  echo "Refusing HF_ENDPOINT=$HF_ENDPOINT — use https://huggingface.co (e.g. from DORobot)" >&2
+  exit 1
+fi
 export HF_ENDPOINT="${HF_ENDPOINT:-https://huggingface.co}"
 
 RGB_LOCAL="${RAX_ACT_RGB_OUTPUT}/checkpoints/030000/pretrained_model"

@@ -53,13 +53,15 @@ MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.vla.eval_policy \
   --episodes 20 --split test
 ```
 
-## 5. Push Hub
+## 5. Push Hub (from DORobot — official `huggingface.co`)
+
+Halo often cannot reach `huggingface.co`; upload from **DORobot** with the default endpoint (do **not** use `hf-mirror.com` for publishes):
 
 ```bash
-# if huggingface.co is unreachable:
-export HF_ENDPOINT=https://hf-mirror.com
-./labs/rax_drawer/vla/push_place100d_dataset.cmd
-./labs/rax_drawer/vla/push_act_models.cmd
+ssh DORobot 'cd /root/so101-simstudio-rax && \
+  unset HF_ENDPOINT && export HF_ENDPOINT=https://huggingface.co && \
+  ./labs/rax_drawer/vla/push_act_models.cmd && \
+  ./labs/rax_drawer/vla/push_place100d_dataset.cmd'
 ```
 
 ## 6. SmolVLA (optional; prior line)

@@ -1,7 +1,7 @@
 #!/bin/bash
-# Push place100d LeRobot dataset to Hugging Face.
-# On hosts that cannot reach huggingface.co, use:
-#   HF_ENDPOINT=https://hf-mirror.com ./labs/rax_drawer/vla/push_place100d_dataset.cmd
+# Push place100d LeRobot dataset to Hugging Face (official endpoint).
+# Prefer running on DORobot when halo cannot reach huggingface.co.
+# Do not publish via hf-mirror.com.
 set -euo pipefail
 _DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$_DIR/../../.." && pwd)"
@@ -9,6 +9,11 @@ cd "$REPO_ROOT"
 source "$_DIR/_env.sh"
 PYTHON="${PYTHON:-$REPO_ROOT/.venv-rocm/bin/python}"
 PRIVATE="${PRIVATE:-false}"
+# Force official Hub unless the caller already set a non-mirror endpoint.
+if [[ "${HF_ENDPOINT:-}" == *"hf-mirror.com"* ]]; then
+  echo "Refusing HF_ENDPOINT=$HF_ENDPOINT — use https://huggingface.co (e.g. from DORobot)" >&2
+  exit 1
+fi
 export HF_ENDPOINT="${HF_ENDPOINT:-https://huggingface.co}"
 
 echo "Local: $RAX_DATASET_ROOT"
