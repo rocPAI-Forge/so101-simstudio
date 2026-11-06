@@ -66,3 +66,27 @@ MUJOCO_GL=egl .venv-rocm/bin/python -m labs.rax_drawer.vla.render_policy_compare
 
 Push helpers (run on **DORobot** against official `https://huggingface.co`, not hf-mirror):
 `./labs/rax_drawer/vla/push_act_models.cmd`, `./labs/rax_drawer/vla/push_place100d_dataset.cmd`.
+
+## Other depth-capable policies on place100d (parked)
+
+`camera_top_depth` is **3-channel gray of metric top depth** (ResNet / multi-cam image slot), not a raw HxW1 depth tensor or point cloud. Status as of `release-v0.1.6`: **no further depth VLA runs planned** — scope and integration cost are too high for now. Notes for later:
+
+### Same “extra image key” path as ACT (lowest friction)
+
+| Policy | Fit | Notes |
+|--------|-----|------|
+| **ACT** | Done | Paired RGB vs RGB-D above. |
+| **Diffusion Policy** | Best next IL-style ablation | Same multi-cam CNN pattern; reuse explore10/test20 protocol. |
+| **SmolVLA / π0.5 / GR00T / xVLA / DM0.5 / LingBot** | Possible hard-wire | Add `observation.images.camera_top_depth` (or rename_map). Backbones are RGB-pretrained; **do not expect ACT-like +20 pp**. SmolVLA already struggled closed-loop on this drawer without depth. |
+
+### Depth-aware, but not “sensor depth as 4th RGB”
+
+| Policy | Fit | Notes |
+|--------|-----|------|
+| **MolmoAct2-Think** (depth tokens) | Medium / blocked on LeRobot | Upstream often annotates depth via Depth Anything → VQ codes. place100d’s **true** top depth could replace that estimate. Current LeRobot MolmoAct2 path does **not** fully expose Think / adaptive depth yet. |
+
+### True RGB-D / 3D VLAs (not in this repo)
+
+DepthVLA, PointVLA, DP3 (point cloud), SpatialVLA-class models: best use of metric depth / 3D, but need new packaging, feature conversion from gray/video, and eval glue. Out of scope until a dedicated integration lands.
+
+**Suggested order if revived:** (1) Diffusion Policy RGB vs RGB-D → (2) optional SmolVLA/π0.5 depth-cam ablation → (3) MolmoAct2 + GT depth codes → (4) DP3 / DepthVLA. Keep weights/datasets on Hub; only scripts + result tables in-repo.
