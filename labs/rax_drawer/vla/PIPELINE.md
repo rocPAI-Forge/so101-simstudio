@@ -7,7 +7,7 @@ Split of work:
 | **halo** (`.13`, Radeon 8060S) | EGL collect + closed-loop eval |
 | **DORobot** (MI300X) | Heavy ACT / SmolVLA training (no MuJoCo GL) |
 
-**Depth ablation (place100d):** see [`DEPTH_ABLATION.md`](DEPTH_ABLATION.md).
+**Depth ablation (place100d):** see [`DEPTH_ABLATION.md`](DEPTH_ABLATION.md) (ACT RGB vs RGB-D done; further depth VLAs parked in that doc).
 
 ## Hub assets (place100d ACT RGB / RGB-D)
 
