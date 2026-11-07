@@ -2,7 +2,8 @@
 
 **Canonical template:** [lab01_pnp/](lab01_pnp/) (pick-and-place record → train → eval).  
 **Agent-generated data:** [lab01_pnp_agent/](lab01_pnp_agent/lab01_pnp_agent.md) — same task and eval as Lab 01, but expert trajectories come from scripted collectors and policy rollouts instead of human teleop. Data notes, the Home20 pose file, and the 193-episode Hub scripts live there. Home20 protocol and scores: [home20.md](lab01_pnp_agent/home20.md). Its `_env.sh` sources Lab 01's `_env.sh` and adds only those knobs. Collectors and `train_*.cmd` / `eval.cmd` stay in `lab01_pnp/`. LingBot-VLA 2.0 ranked path (Home20 **25/60**): [lingbot_vla_v2_adapt.md](lab01_pnp/lingbot_vla_v2_adapt.md).  
-**Agent rule:** [`.cursor/rules/lab-development.mdc`](../.cursor/rules/lab-development.mdc).
+**Agent rule:** [`.cursor/rules/lab-development.mdc`](../.cursor/rules/lab-development.mdc).  
+**Future (proposal):** staged success diagnostics and optional OmniReset-style mid-task resets — cause, impact on Lab 01 / rax_drawer, and non-goals: [`docs/proposals/staged-reset-and-success.md`](../docs/proposals/staged-reset-and-success.md).
 
 ## How to read these principles
 

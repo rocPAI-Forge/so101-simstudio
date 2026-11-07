@@ -189,6 +189,7 @@ Current: so101-simstudio @ v0.1.6
 - [x] Policy rollout in MuJoCo — Lab 01 sim2sim eval (`eval.cmd` + lab configs)
 - [x] Agent-generated Lab 01 trajectories and the Home20 benchmark (`labs/lab01_pnp_agent/`)
 - [ ] Broader multi-task / multi-scene automated pipeline beyond Lab 01
+- [ ] **Staged success diagnostics + optional staged resets** — proposal: [`docs/proposals/staged-reset-and-success.md`](docs/proposals/staged-reset-and-success.md) ([issue #25](https://github.com/rocPAI-Forge/so101-simstudio/issues/25)). Do not rewrite Home20 `/60` or rax locked **15/20** / **16/20**; add phase rates beside them first; mid-task reset banks only as new train recipes / future learned-drawer labs
 
 ### Real hardware
 
