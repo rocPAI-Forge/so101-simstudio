@@ -1,0 +1,61 @@
+# Joy-Con (RIGHT) teleop on smart_drawer — frozen demo reference.
+# Launch: ./scripts/demo/drawer_teleop.cmd joycon
+#         ./scripts/demo/drawer_teleop.cmd joycon right
+# Left twin: configs/so101_mujoco_joycon_teleop_smart_drawer_left.yaml
+#
+# Stick: cylindrical IK (reach / base swing). Wrist: face buttons X/B, Y/A.
+
+robot:
+  type: so101_mujoco
+  action_mode: velocity
+  # Reach/swing matches how the arm is built; left/right ≈ pan, forward ≈ extend.
+  horizontal_control_mode: cylindrical
+  # Prefer elbow for reach, keep pan a bit stiffer (weights: pan, lift, elbow).
+  ik_joint_weights: [1.15, 0.90, 0.55]
+  xml_path: SO101/scenes/smart_drawer/scene.xml
+  cube_positions_path: configs/scenes/smart_drawer/cube_positions.json
+  record_fps: 30
+  control_fps: 180
+  physics_fps: 360
+  camera_width: 640
+  camera_height: 480
+  # Recorded cams only. Scene ``overview`` is GLFW 4th pane (teleop view), not listed here.
+  camera_names: [front, top, wrist]
+  show_collision_geometry: false
+  render_window: true
+  lin_speed: 0.04
+  yaw_speed: 1.20
+  grip_speed: 0.7
+  ori_gain: 6.0
+  tilt_deadzone: 0.03
+  tilt_wmax: 6.0
+  lambda_pos: 0.008
+  lambda_tilt: 0.0001
+  vel_limit: 0.5
+  vel_limit_wrist: 8.0
+  smooth_dq: 0.30
+  smooth_dq_wrist: 0.08
+  wrist_gff_gain: 0.5
+  table_z: 0.0
+  clearance: 0.07
+  ee_site_name: wrist_site
+  tool_axis_site: [0.0, -1.0, 0.0]
+
+teleop:
+  type: so101_joycon
+  side: right
+  device: auto
+  translation_scale: 1.5
+  z_scale: 1.0
+  stick_axis_map: reach_swing          # stick fwd/back -> reach (vx), left/right -> swing (vy)
+  invert_x: false                      # stick forward = extend toward cabinet
+  invert_y: true                       # stick left = operator left (CCW when facing −Y)
+  # Face-button wrists (hold). Right Joy-Con diamond: X/B flex, Y/A roll.
+  wrist_control: buttons
+  wrist_flex_pos_button: x
+  wrist_flex_neg_button: b
+  wrist_roll_pos_button: y
+  wrist_roll_neg_button: a
+  wrist_button_rate: 2.0
+  gripper_toggle: true                 # press ZR to latch close/open
+  enable_button_recording: false       # A/Y are wrist_roll, not episodes

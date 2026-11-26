@@ -14,11 +14,25 @@ the gripper. `top` is a fixed overhead Gemini 336L depth camera at
 `(0.18, 0.22, 0.75)`, looking straight down, 1280×800, 65° vertical field
 (about 91° horizontal). `side` is a fixed color camera at
 `(-0.8255, 0.2800, 0.3970)`, 640×480, 45° vertical field, looking across the
-drawer, the cube, and the arm from 1.15 m away. `front` and `overview` remain
-for human viewing. See
+drawer, the cube, and the arm from 1.15 m away. `front` is a near-handle view.
+`overview` is the teleop GLFW 4th pane: behind the arm at `(0.18, 0.95, 0.62)`,
+looking toward the cabinet so the cube, arm, and drawer share one operator view.
+See
 [../README.md#cameras-record-vs-teleop-vs-train](../README.md#cameras-record-vs-teleop-vs-train).
 
-## Run (keyboard teleop)
+## Run (keyboard / Joy-Con teleop)
+
+Live demo launcher (MuJoCo GLFW; prints a control card):
+
+```bash
+./scripts/demo/drawer_teleop.cmd              # keyboard
+./scripts/demo/drawer_teleop.cmd joycon       # right Joy-Con (frozen reference)
+./scripts/demo/drawer_teleop.cmd joycon left  # left twin
+make demo-drawer DEVICE=joycon
+make demo-drawer DEVICE=joycon SIDE=left
+```
+
+Smoke shortcut (keyboard only):
 
 ```bash
 make smoke-keyboard-teleop-smart-drawer

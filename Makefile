@@ -1,14 +1,17 @@
 .PHONY: format lint test rocm-sync rocm-format rocm-lint rocm-test rocm-smoke-record joycon-sync \
 	smoke-keyboard-record smoke-keyboard-replay smoke-keyboard-teleop smoke-keyboard-teleop-kitchen \
 	smoke-keyboard-teleop-smart-drawer \
-	smoke-joycon-record smoke-leader-record smoke-leader-teleop
+	smoke-joycon-record smoke-leader-record smoke-leader-teleop \
+	demo-drawer
 
 SMOKE := scripts/smoke
+DEMO := scripts/demo
 EPISODES ?= 3
 EPISODE ?= 0
 RESUME ?= false
 VIEW_MODE ?= mujoco
 SIDE ?= right
+DEVICE ?= keyboard
 
 # ---------------------------------------------------------------------------
 # Lint / format / test — require .venv-rocm (create with make rocm-sync)
@@ -81,3 +84,10 @@ smoke-leader-record:
 
 smoke-leader-teleop:
 	$(SMOKE)/leader_teleop.sh
+
+# ---------------------------------------------------------------------------
+# Live demos (interactive; see scripts/demo/README.md) — MuJoCo GLFW, not Rerun
+# ---------------------------------------------------------------------------
+
+demo-drawer:
+	$(DEMO)/drawer_teleop.cmd $(DEVICE) $(SIDE)
