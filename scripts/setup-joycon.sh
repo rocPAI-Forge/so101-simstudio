@@ -29,9 +29,20 @@ if git apply --check "$PATCH_FILE" 2>/dev/null; then
 elif git apply --reverse --check "$PATCH_FILE" 2>/dev/null; then
     echo "Patch already applied"
 else
-    echo "Error: patch does not apply; reset submodule to the pinned upstream commit and retry" >&2
+    echo "Error: patch does not apply; reset submodule to the pinned upstream commit and retry:" >&2
+    echo "  git -C third_party/joycon-robotics checkout -- . && make joycon-sync" >&2
     exit 1
 fi
+
+# Guard against a silent unpatched tree: upstream device.py returns a bare
+# tuple for non-9c:54 serials, which then crashes get_ids_of_type with
+# TypeError: 'int' object is not subscriptable.
+if grep -q "return (0x057A, product_id, serial)" joyconrobotics/device.py 2>/dev/null; then
+    echo "Error: joycon-robotics serial compatibility patch is missing in device.py" >&2
+    echo "Reset the submodule and re-run: make joycon-sync" >&2
+    exit 1
+fi
+echo "Patch verified (device.py serial early-return removed)"
 
 # Bluetooth Joy-Con nodes are /dev/hidraw* owned root:root 600 by default.
 # Without this rule, joyconrobotics fails with: HIDException unable to open device
