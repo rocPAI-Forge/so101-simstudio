@@ -88,6 +88,7 @@ class SO101KeyboardTeleop(Teleoperator):
         self._use_evdev = False
         self.logs: dict[str, Any] = {}
         self._recording_events: dict[str, bool] | None = None
+        self._reset_requested = False
 
     def set_recording_events(self, events: dict[str, bool]) -> None:
         """Set the recording events dict so arrow keys/ESC can control recording."""
@@ -207,6 +208,9 @@ class SO101KeyboardTeleop(Teleoperator):
     def _on_evdev_key(self, key_name: str, is_pressed: bool) -> None:
         if self._handle_recording_key(key_name, is_pressed):
             return
+        if key_name == "backspace" and is_pressed:
+            self._reset_requested = True
+            return
         self.event_queue.put((key_name, is_pressed))
 
     def _on_press(self, key):
@@ -218,6 +222,9 @@ class SO101KeyboardTeleop(Teleoperator):
             return
         if key == keyboard.Key.left:
             self._handle_recording_key("left", True)
+            return
+        if key == keyboard.Key.backspace:
+            self._reset_requested = True
             return
 
         key_char = getattr(key, "char", None)
@@ -240,10 +247,21 @@ class SO101KeyboardTeleop(Teleoperator):
         """Update current_pressed state from event queue."""
         while not self.event_queue.empty():
             key_char, is_pressed = self.event_queue.get_nowait()
+            if key_char in ("backspace", "Key.backspace"):
+                if is_pressed:
+                    self._reset_requested = True
+                continue
             if is_pressed:
                 self.current_pressed[key_char] = True
             else:
                 self.current_pressed.pop(key_char, None)
+
+    def consume_reset_request(self) -> bool:
+        """Return True once per Backspace press (teleop scene hot-reset)."""
+        if not self._reset_requested:
+            return False
+        self._reset_requested = False
+        return True
 
     def get_action(self) -> RobotAction:
         """Return normalized velocity commands from currently pressed keys."""

@@ -73,6 +73,9 @@ class SO101JoyConTeleop(Teleoperator):
         # EMA state for tilt-derived wrist rates (see rotation_smooth).
         self._smooth_wrist_flex_rate = 0.0
         self._smooth_yaw_rate = 0.0
+        # Teleop scene hot-reset (Plus rising edge).
+        self._reset_requested = False
+        self._reset_btn_prev = False
         # Recording-control button state.
         self._recording_events: dict[str, bool] | None = None
         self._rec_btn_prev: dict[str, bool] = {}
@@ -162,6 +165,7 @@ class SO101JoyConTeleop(Teleoperator):
             print(f"  {grip_btn}: press to toggle gripper close/open (no need to hold)")
         else:
             print(f"  Hold {grip_btn}=close gripper, release=open gripper")
+        print("  Plus: reset scene (arm home, cube, drawer closed)")
         if self.config.enable_button_recording:
             nb = self.config.next_episode_button.upper()
             rb = self.config.restart_episode_button.upper()
@@ -341,6 +345,12 @@ class SO101JoyConTeleop(Teleoperator):
         else:
             gripper_delta = -1.0 if grip_pressed else 1.0
 
+        # --- Scene hot-reset (Plus). Rising edge; independent of recording keys. ---
+        plus_pressed = self._read_button("plus")
+        if plus_pressed and not self._reset_btn_prev:
+            self._reset_requested = True
+        self._reset_btn_prev = plus_pressed
+
         # --- One-handed episode controls via Joy-Con buttons ---
         self._handle_recording_buttons()
 
@@ -362,6 +372,18 @@ class SO101JoyConTeleop(Teleoperator):
             "yaw_rate": yaw_rate,
             "gripper_delta": gripper_delta,
         }
+
+    def consume_reset_request(self) -> bool:
+        """Return True once per Plus press (teleop scene hot-reset)."""
+        if not self._reset_requested:
+            return False
+        self._reset_requested = False
+        return True
+
+    def on_scene_reset(self) -> None:
+        """Clear latch state after the sim scene is teleported home."""
+        self._gripper_closed = False
+        self._grip_prev_pressed = False
 
     def send_feedback(self, feedback: dict[str, Any]) -> None:
         pass
