@@ -90,7 +90,7 @@ EOF
 else
   GRIP_BTN="ZR"
   UP_BTN="R"
-  WRIST_FLEX="X / B"
+  WRIST_FLEX="B / X"
   WRIST_ROLL="Y / A"
   if [[ "$SIDE_ARG" == "left" ]]; then
     GRIP_BTN="ZL"
