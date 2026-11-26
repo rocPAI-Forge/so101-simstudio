@@ -22,12 +22,25 @@ class SO101JoyConTeleopConfig(TeleoperatorConfig):
     z_scale: float = 1.0  # Scale for z (up/down) translation
     rotation_scale: float = 0.5  # Scale for gyroscope (tilt) rotation rates
 
-    # Tilt->rotation rate conditioning. The wrist/base rotation is derived by
-    # differentiating the IMU orientation, which drifts and is noisy at rest.
-    # rotation_deadzone zeroes tiny rates so the arm does not creep when the
-    # controller is held still; rotation_max clamps spikes (e.g. IMU settling).
+    # Wrist orientation source:
+    #   imu     — tilt the controller (noisy; fine for casual use)
+    #   buttons — hold face buttons for a constant rate (recommended for demos)
+    # When wrist_control=buttons, disable enable_button_recording or remap A/Y
+    # so recording keys do not collide with wrist_roll.
+    wrist_control: str = "imu"
+    # Right Joy-Con diamond: X/B = wrist_flex ±, Y/A = wrist_roll ± (hold).
+    wrist_flex_pos_button: str = "x"
+    wrist_flex_neg_button: str = "b"
+    wrist_roll_pos_button: str = "y"
+    wrist_roll_neg_button: str = "a"
+    wrist_button_rate: float = 1.2  # rad/s while held (matches keyboard yaw_speed)
+
+    # Tilt->rotation rate conditioning (wrist_control=imu only).
+    # Differentiating IMU orientation drifts and is noisy at rest.
     rotation_deadzone: float = 0.06
     rotation_max: float = 3.0
+    # EMA on tilt rates after deadzone/clamp. 0 = off; ~0.25–0.4 softens twitchy IMU.
+    rotation_smooth: float = 0.0
     # Ignore tilt rotation for this long after connect while the IMU settles.
     rotation_settle_s: float = 0.7
 
@@ -37,9 +50,16 @@ class SO101JoyConTeleopConfig(TeleoperatorConfig):
     stick_center: int = 2047
     stick_deadzone: int = 600
 
+    # How the analog stick feeds robot vx/vy (before invert_*):
+    #   reach_swing  — stick forward/back -> vx, left/right -> vy
+    #                  (pairs with horizontal_control_mode: cylindrical)
+    #   operator_xy  — stick forward/back -> vy, left/right -> vx
+    #                  (pairs with world mode + a behind-arm overview camera)
+    stick_axis_map: str = "reach_swing"
+
     # Per-axis sign inversion. Flip if a direction feels reversed on your unit.
-    invert_x: bool = False  # forward/back stick -> vx (reach in/out)
-    invert_y: bool = False  # left/right stick -> vy (base swing)
+    invert_x: bool = False  # applied to the mapped vx channel
+    invert_y: bool = False  # applied to the mapped vy channel
     invert_z: bool = False  # up/down buttons -> vz
 
     # Gripper control style:

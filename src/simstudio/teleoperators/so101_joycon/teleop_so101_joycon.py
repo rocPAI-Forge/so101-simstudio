@@ -3,17 +3,17 @@
 Translation reads the analog stick + up/down buttons directly from the Joy-Con HID
 report and emits a constant velocity while deflected (bypassing the joycon-robotics
 position integration, which couples axes via a first-person pointing vector). The
-stick is mapped to an arm-centric scheme that pairs with the robot's
-``horizontal_control_mode: cylindrical``:
-- Stick forward/back -> vx : reach in/out (extend/retract the arm)
-- Stick left/right   -> vy : base swing (shoulder_pan arc, left/right)
-- R/L button / stick-press -> vz (+/- Z, up/down)
-- Controller tilt (IMU roll/yaw) -> wrist_flex_rate / yaw_rate
-- ZR/ZL hold -> close gripper, release -> open
+stick mapping is selected by ``stick_axis_map``:
 
-(With the robot in the default ``world`` mode, vx/vy are world X/Y instead.)
-Recording (episode) controls run through the project's focus-independent evdev
-keyboard listener (see record.py), not Joy-Con buttons.
+- ``reach_swing`` (default): forward/back -> vx, left/right -> vy — pairs with
+  ``horizontal_control_mode: cylindrical`` (reach / base swing).
+- ``operator_xy``: forward/back -> vy, left/right -> vx — pairs with ``world``
+  mode when the operator stands behind the arm (e.g. smart_drawer overview).
+
+Also: R/L / stick-press -> vz; ZR/ZL gripper. Wrist orientation is either
+controller tilt (``wrist_control: imu``) or face buttons
+(``wrist_control: buttons``, X/B flex and Y/A roll). Recording episode
+buttons are optional and collide with A/Y if both are enabled.
 """
 
 import logging
@@ -70,6 +70,9 @@ class SO101JoyConTeleop(Teleoperator):
         # Gripper toggle state (used when config.gripper_toggle is True).
         self._gripper_closed = False
         self._grip_prev_pressed = False
+        # EMA state for tilt-derived wrist rates (see rotation_smooth).
+        self._smooth_wrist_flex_rate = 0.0
+        self._smooth_yaw_rate = 0.0
         # Recording-control button state.
         self._recording_events: dict[str, bool] | None = None
         self._rec_btn_prev: dict[str, bool] = {}
@@ -124,11 +127,37 @@ class SO101JoyConTeleop(Teleoperator):
         self._prev_posture = list(posture)
         self._prev_time = time.time()
         self._connect_time = self._prev_time
+        self._smooth_wrist_flex_rate = 0.0
+        self._smooth_yaw_rate = 0.0
         print(f"Connected to {side} Joy-Con")
         up_btn = "R" if side == "right" else "L"
         grip_btn = "ZR" if side == "right" else "ZL"
-        print(f"  Stick: forward/back=reach in/out, left/right=base swing; {up_btn}=up, stick press=down")
-        print("  Tilt controller: wrist rotation (roll=flex, yaw=wrist roll)")
+        if self.config.stick_axis_map == "operator_xy":
+            print(
+                f"  Stick (operator view): forward/back=world Y, left/right=world X; "
+                f"{up_btn}=up, stick press=down"
+            )
+        else:
+            print(
+                f"  Stick: forward/back=reach in/out, left/right=base swing; "
+                f"{up_btn}=up, stick press=down"
+            )
+        if self.config.wrist_control == "buttons":
+            fp = self.config.wrist_flex_pos_button.upper()
+            fn = self.config.wrist_flex_neg_button.upper()
+            rp = self.config.wrist_roll_pos_button.upper()
+            rn = self.config.wrist_roll_neg_button.upper()
+            print(
+                f"  Wrist buttons (hold): {fp}/{fn}=wrist_flex ±, "
+                f"{rp}/{rn}=wrist_roll ± ({self.config.wrist_button_rate:.2f} rad/s)"
+            )
+            if self.config.enable_button_recording:
+                print(
+                    "  Warning: enable_button_recording uses A/Y by default and "
+                    "collides with wrist_roll buttons; remap or disable recording keys."
+                )
+        else:
+            print("  Tilt controller: wrist rotation (IMU roll=flex, yaw=wrist roll)")
         if self.config.gripper_toggle:
             print(f"  {grip_btn}: press to toggle gripper close/open (no need to hold)")
         else:
@@ -138,8 +167,10 @@ class SO101JoyConTeleop(Teleoperator):
             rb = self.config.restart_episode_button.upper()
             sb = self.config.stop_button.upper()
             print(f"  Recording (one-handed): {nb}=save & next, {rb}=re-record, {sb}=stop")
-        # Keyboard controls stay available in parallel (focus-independent evdev).
-        print("  Recording (keyboard, focus-independent): N/Right save & next, R/Left re-record, Q/ESC stop")
+            print(
+                "  Recording (keyboard, focus-independent): "
+                "N/Right save & next, R/Left re-record, Q/ESC stop"
+            )
 
     def calibrate(self) -> None:
         pass
@@ -168,6 +199,14 @@ class SO101JoyConTeleop(Teleoperator):
             return 0.0
         rmax = self.config.rotation_max
         return max(-rmax, min(rmax, rate))
+
+    def _smooth_rate(self, prev: float, rate: float) -> float:
+        """Optional EMA on tilt rates. alpha<=0 disables smoothing."""
+        alpha = float(self.config.rotation_smooth)
+        if alpha <= 0.0:
+            return rate
+        alpha = min(1.0, alpha)
+        return prev + alpha * (rate - prev)
 
     def _read_button(self, name: str) -> bool:
         getter = _BUTTON_GETTERS.get(name.lower())
@@ -223,9 +262,16 @@ class SO101JoyConTeleop(Teleoperator):
         xy_speed = self.config.lin_speed * self.config.translation_scale
         z_speed = self.config.lin_speed * self.config.z_scale
 
-        # forward/back stick -> vx (reach), left/right stick -> vy (base swing)
-        vx = self._stick_dir(stick_v) * xy_speed
-        vy = self._stick_dir(stick_h) * xy_speed
+        stick_fwd = self._stick_dir(stick_v) * xy_speed
+        stick_right = self._stick_dir(stick_h) * xy_speed
+        if self.config.stick_axis_map == "operator_xy":
+            # Behind-arm operator frame: stick forward -> vy, stick right -> vx.
+            vx = stick_right
+            vy = stick_fwd
+        else:
+            # Default reach/swing: stick forward -> vx, stick right -> vy.
+            vx = stick_fwd
+            vy = stick_right
         vz = (1.0 if up_pressed else (-1.0 if down_pressed else 0.0)) * z_speed
 
         if self.config.invert_x:
@@ -235,30 +281,52 @@ class SO101JoyConTeleop(Teleoperator):
         if self.config.invert_z:
             vz = -vz
 
-        # --- Rotation: derived from controller tilt (IMU), independent of sticks ---
+        current_time = time.time()
+        # Keep the joycon-robotics stack ticking (IMU/path state); wrist may ignore it.
         posture, _gripper_state, _button_control = self._jc.get_control()
         roll, yaw = posture[3], posture[5]
 
-        current_time = time.time()
-        dt = current_time - self._prev_time
-        if dt < 0.001:
-            dt = 0.001
-        self._prev_time = current_time
-
-        if self._prev_posture is not None:
-            droll = (roll - self._prev_posture[3]) / dt
-            dyaw = (yaw - self._prev_posture[5]) / dt
-        else:
-            droll = dyaw = 0.0
-        self._prev_posture = list(posture)
-
-        # Suppress rotation while the IMU settles right after connect.
-        if (current_time - self._connect_time) < self.config.rotation_settle_s:
+        if self.config.wrist_control == "buttons":
+            rate = float(self.config.wrist_button_rate)
             wrist_flex_rate = 0.0
             yaw_rate = 0.0
+            if self._read_button(self.config.wrist_flex_pos_button):
+                wrist_flex_rate += rate
+            if self._read_button(self.config.wrist_flex_neg_button):
+                wrist_flex_rate -= rate
+            if self._read_button(self.config.wrist_roll_pos_button):
+                yaw_rate += rate
+            if self._read_button(self.config.wrist_roll_neg_button):
+                yaw_rate -= rate
+            self._smooth_wrist_flex_rate = 0.0
+            self._smooth_yaw_rate = 0.0
         else:
-            wrist_flex_rate = self._condition_rate(droll * self.config.rotation_scale)
-            yaw_rate = self._condition_rate(dyaw * self.config.rotation_scale)
+            dt = current_time - self._prev_time
+            if dt < 0.001:
+                dt = 0.001
+            if self._prev_posture is not None:
+                droll = (roll - self._prev_posture[3]) / dt
+                dyaw = (yaw - self._prev_posture[5]) / dt
+            else:
+                droll = dyaw = 0.0
+            # Suppress rotation while the IMU settles right after connect.
+            if (current_time - self._connect_time) < self.config.rotation_settle_s:
+                wrist_flex_rate = 0.0
+                yaw_rate = 0.0
+                self._smooth_wrist_flex_rate = 0.0
+                self._smooth_yaw_rate = 0.0
+            else:
+                wrist_flex_rate = self._condition_rate(droll * self.config.rotation_scale)
+                yaw_rate = self._condition_rate(dyaw * self.config.rotation_scale)
+                self._smooth_wrist_flex_rate = self._smooth_rate(
+                    self._smooth_wrist_flex_rate, wrist_flex_rate
+                )
+                self._smooth_yaw_rate = self._smooth_rate(self._smooth_yaw_rate, yaw_rate)
+                wrist_flex_rate = self._smooth_wrist_flex_rate
+                yaw_rate = self._smooth_yaw_rate
+
+        self._prev_posture = list(posture)
+        self._prev_time = current_time
 
         # --- Gripper: ZR (right) or ZL (left) ---
         # toggle mode: each press flips closed/open (no holding needed);
@@ -280,9 +348,10 @@ class SO101JoyConTeleop(Teleoperator):
             self._last_debug_t = current_time
             logger.info(
                 "JOYCON stick_h=%d stick_v=%d up=%d down=%d -> vx=%.3f vy=%.3f vz=%.3f | "
-                "roll=%.2f yaw=%.2f wf=%.3f yr=%.3f grip=%.0f",
+                "roll=%.2f yaw=%.2f wf=%.3f yr=%.3f grip=%.0f mode=%s",
                 stick_h, stick_v, int(up_pressed), int(down_pressed),
                 vx, vy, vz, roll, yaw, wrist_flex_rate, yaw_rate, gripper_delta,
+                self.config.wrist_control,
             )
 
         return {

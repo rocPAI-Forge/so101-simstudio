@@ -8,6 +8,7 @@ Usage:
 """
 
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 
@@ -77,6 +78,10 @@ def teleoperate(cfg: TeleoperateConfig):
 
 def main():
     register_third_party_plugins()
+    # Prefer focus-independent keyboard on Wayland/desktop launches. pynput can
+    # report "alive" yet capture no keys when the MuJoCo window has focus.
+    # Same default as record.py; override with SO101_PREFER_EVDEV=0 if needed.
+    os.environ.setdefault("SO101_PREFER_EVDEV", "1")
     teleoperate()
 
 
