@@ -86,6 +86,10 @@ class SO101MujocoConfig(RobotConfig):
     # Leave at [0.0, 0.0] to auto-read the true shoulder_pan anchor each step;
     # set a non-zero override only if you need to shift the pivot manually.
     base_xy: list[float] = field(default_factory=lambda: [0.0, 0.0])
+    # Damped-least-squares joint weights for [shoulder_pan, shoulder_lift, elbow_flex].
+    # Larger weight → that joint moves less for the same EE velocity (stiffer).
+    # Lower elbow weight makes stick reach prefer elbow extension over base lift.
+    ik_joint_weights: list[float] = field(default_factory=lambda: [1.0, 1.0, 1.0])
 
     # Gripper joint value (rad) used at home/reset. MuJoCo gripper ctrlrange is
     # roughly (-0.17, 1.75): lower bound = fully closed, upper = fully open.

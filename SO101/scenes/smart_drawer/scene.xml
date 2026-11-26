@@ -51,12 +51,14 @@
     <!-- Control cameras: wrist on the gripper, overhead top, and side.
          top matches an Orbbec Gemini 336L depth/D2C stream: 1280x800, vertical
          field 65°, about 91° horizontal. side is the approved 640x480 color
-         view, 1.15 m away, vertical field 45°. front and overview are for
-         human viewing. -->
+         view, 1.15 m away, vertical field 45°. front is a near handle view.
+         overview is the teleop GLFW 4th pane: stand behind the arm (base at
+         y≈0.48), look from rear-upper toward the cabinet (−Y) so cube, arm,
+         and drawer share one operator view. -->
     <camera name="top" pos="0.18 0.22 0.75" quat="1 0 0 0" fovy="65"/>
     <camera name="side" pos="-0.8255 0.2800 0.3970" quat="0.564721 0.425547 -0.425547 -0.564721" fovy="45"/>
     <camera name="front" pos="0.3200 0.4000 0.2600" quat="0.138452 0.058333 0.383862 0.911086" fovy="65"/>
-    <camera name="overview" pos="0.95 0.55 0.70" quat="0.560986 0.430459 0.430459 0.560986" fovy="55"/>
+    <camera name="overview" pos="0.18 0.95 0.62" quat="-0.024539 -0.012114 0.442505 0.896348" fovy="55"/>
 
     <light name="key_light" pos="-1 -1 2.7" dir="0.3 0.4 -1" directional="true" castshadow="true"/>
     <light name="fill_light" pos="1.4 -0.2 1.8" dir="-0.8 0 -0.8" directional="true"

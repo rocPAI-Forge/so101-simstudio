@@ -617,8 +617,16 @@ class SO101MujocoRobot(Robot):
             vx_w = ux * vx + tx * vy
             vy_w = uy * vx + ty * vy
         v_des = np.array([vx_w, vy_w, vz])
-        A = J3 @ J3.T + (self.config.lambda_pos**2) * np.eye(3)
-        dq3 = J3.T @ np.linalg.solve(A, v_des)
+        # Weighted DLS: dq = W^{-1} J^T (J W^{-1} J^T + λ² I)^{-1} v
+        # so joints with smaller ik_joint_weights absorb more of the motion.
+        w = np.asarray(self.config.ik_joint_weights, dtype=float).reshape(-1)
+        if w.shape != (3,):
+            w = np.ones(3, dtype=float)
+        w = np.clip(w, 1e-3, None)
+        w_inv = 1.0 / w
+        jw = J3 * w_inv  # J @ diag(w_inv) via column scale
+        a = jw @ J3.T + (self.config.lambda_pos**2) * np.eye(3)
+        dq3 = w_inv * (J3.T @ np.linalg.solve(a, v_des))
         dq = np.zeros(self.model.nv)
         dq[arm_cols] = dq3
 
