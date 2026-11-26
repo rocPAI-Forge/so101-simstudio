@@ -811,6 +811,42 @@ class SO101MujocoRobot(Robot):
         self._render_glfw()
         logger.info(f"Episode {episode_index} sim reset complete")
 
+    def _reset_drawer_closed(self) -> bool:
+        """Close ``drawer_slide`` to 0 if the joint exists. Returns True when applied."""
+        jid = mj.mj_name2id(self.model, mj.mjtObj.mjOBJ_JOINT, "drawer_slide")
+        if jid < 0:
+            return False
+        qadr = int(self.model.jnt_qposadr[jid])
+        dadr = int(self.model.jnt_dofadr[jid])
+        self.data.qpos[qadr] = 0.0
+        self.data.qvel[dadr] = 0.0
+        self.q_des = self.data.qpos.copy()
+        logger.info("Drawer slide reset to closed (0)")
+        return True
+
+    def reset_teleop_scene(self, episode_index: int = 0) -> None:
+        """Hot-reset for live teleop demos: arm home, cube, drawer closed.
+
+        Does not disconnect the robot or teleoperator. Safe to call mid-session
+        when the operator presses Backspace (keyboard) or Plus (Joy-Con).
+        """
+        if not self.is_connected:
+            raise DeviceNotConnectedError(f"{self} is not connected")
+
+        self.reset_to_home_position()
+        try:
+            self.reset_block_position(episode_index)
+        except Exception as exc:
+            logger.info("Cube reset skipped during teleop scene reset: %s", exc)
+        self._reset_drawer_closed()
+
+        settle_steps = max(1, int(0.5 / self.physics_dt))
+        for _ in range(settle_steps):
+            mj.mj_step(self.model, self.data)
+        mj.mj_forward(self.model, self.data)
+        self._render_glfw()
+        logger.info("Teleop scene reset complete (episode_index=%s)", episode_index)
+
     def get_block_position(self) -> tuple[float, float, float] | None:
         """Get current block position for episode metadata."""
         if not self.is_connected:

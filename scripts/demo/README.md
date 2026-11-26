@@ -23,8 +23,10 @@ make demo-drawer DEVICE=joycon SIDE=left
 ```
 
 **Talk track:** grasp the lower handle → close gripper → pull toward the arm
-(+Y) to open (~8 cm). Green button is decorative. Stuck arm: Ctrl+C and
-re-run (home pose).
+(+Y) to open (~8 cm). Green button is decorative.
+
+**Scene reset (no restart):** keyboard **Backspace**, Joy-Con **Plus** — arm
+home, cube to episode-0 pose, drawer closed. Debounced ~0.4 s.
 
 **Keyboard from the Desktop icon:** the launcher sets `SO101_PREFER_EVDEV=1`
 so keys work without focusing the terminal or MuJoCo window (user must be in
@@ -58,7 +60,7 @@ buttons differ (d-pad).
 | `shoulder_pan` | Stick L/R ≈ swing | same |
 | `shoulder_lift` | Stick F/B + R / stick-press (weighted IK) | same + **L** / stick-press |
 | `elbow_flex` | Same reach channel (IK prefers elbow) | same |
-| `wrist_flex` | Hold **X** / **B** | Hold **Up** / **Down** |
+| `wrist_flex` | Hold **B** / **X** | Hold **Up** / **Down** |
 | `wrist_roll` | Hold **Y** / **A** | Hold **Left** / **Right** |
 | `gripper` | **ZR** toggle | **ZL** toggle |
 

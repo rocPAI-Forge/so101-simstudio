@@ -3,7 +3,7 @@
 #         ./scripts/demo/drawer_teleop.cmd joycon right
 # Left twin: configs/so101_mujoco_joycon_teleop_smart_drawer_left.yaml
 #
-# Stick: cylindrical IK (reach / base swing). Wrist: face buttons X/B, Y/A.
+# Stick: cylindrical IK (reach / base swing). Wrist: face buttons B/X, Y/A.
 
 robot:
   type: so101_mujoco
@@ -50,10 +50,10 @@ teleop:
   stick_axis_map: reach_swing          # stick fwd/back -> reach (vx), left/right -> swing (vy)
   invert_x: false                      # stick forward = extend toward cabinet
   invert_y: true                       # stick left = operator left (CCW when facing −Y)
-  # Face-button wrists (hold). Right Joy-Con diamond: X/B flex, Y/A roll.
+  # Face-button wrists (hold). Right Joy-Con diamond: B/X flex, Y/A roll.
   wrist_control: buttons
-  wrist_flex_pos_button: x
-  wrist_flex_neg_button: b
+  wrist_flex_pos_button: b
+  wrist_flex_neg_button: x
   wrist_roll_pos_button: y
   wrist_roll_neg_button: a
   wrist_button_rate: 2.0

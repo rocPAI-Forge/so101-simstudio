@@ -85,11 +85,12 @@ Keyboard (evdev — works without focusing this terminal or the MuJoCo window):
   [/]  wrist rotate
   C    close gripper (hold while pulling)
   O    open gripper
+  Backspace  reset scene (arm home, cube, drawer closed)
 EOF
 else
   GRIP_BTN="ZR"
   UP_BTN="R"
-  WRIST_FLEX="X / B"
+  WRIST_FLEX="B / X"
   WRIST_ROLL="Y / A"
   if [[ "$SIDE_ARG" == "left" ]]; then
     GRIP_BTN="ZL"
@@ -105,6 +106,7 @@ Joy-Con ($SIDE_ARG) — cylindrical stick (stand behind the arm; same scheme as 
   ${WRIST_FLEX}       wrist_flex ± (hold)
   ${WRIST_ROLL}       wrist_roll ± (hold)
   ${GRIP_BTN}                 toggle gripper close/open
+  Plus                reset scene (arm home, cube, drawer closed)
 EOF
   echo ""
   echo "If connect fails: make joycon-sync, pair over Bluetooth, and fix hidraw perms"

@@ -52,7 +52,11 @@ def teleoperate(cfg: TeleoperateConfig):
     robot.connect(calibrate=False)
 
     print("Teleoperation started. Press Ctrl+C to stop.")
+    if hasattr(teleop, "consume_reset_request"):
+        print("Scene reset: Backspace (keyboard) or Plus (Joy-Con).")
     dt = 1.0 / cfg.fps
+    last_reset_t = 0.0
+    reset_debounce_s = 0.4
 
     try:
         while True:
@@ -60,6 +64,27 @@ def teleoperate(cfg: TeleoperateConfig):
 
             # Leader arm get_action() already outputs MuJoCo radians
             action = teleop.get_action()
+
+            consume_reset = getattr(teleop, "consume_reset_request", None)
+            if callable(consume_reset) and consume_reset():
+                now = time.perf_counter()
+                if now - last_reset_t >= reset_debounce_s:
+                    last_reset_t = now
+                    reset_fn = getattr(robot, "reset_teleop_scene", None)
+                    if callable(reset_fn):
+                        print("Resetting scene (arm / cube / drawer)...")
+                        reset_fn(0)
+                        on_reset = getattr(teleop, "on_scene_reset", None)
+                        if callable(on_reset):
+                            on_reset()
+                        print("Scene reset done.")
+                    else:
+                        print("Reset requested, but this robot has no reset_teleop_scene().")
+                # Skip applying this frame's action after a teleport.
+                elapsed = time.perf_counter() - start
+                if elapsed < dt:
+                    time.sleep(dt - elapsed)
+                continue
 
             # Send to MuJoCo robot (position-based)
             robot.send_action(action)
