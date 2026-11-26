@@ -11,9 +11,9 @@ stick mapping is selected by ``stick_axis_map``:
   mode when the operator stands behind the arm (e.g. smart_drawer overview).
 
 Also: R/L / stick-press -> vz; ZR/ZL gripper. Wrist orientation is either
-controller tilt (``wrist_control: imu``) or face buttons
-(``wrist_control: buttons``, X/B flex and Y/A roll). Recording episode
-buttons are optional and collide with A/Y if both are enabled.
+face buttons (``wrist_control: buttons``, B/X flex and Y/A roll; left uses
+d-pad) or controller tilt (``wrist_control: imu``). Recording episode
+buttons must be remapped off A/Y (right) / d-pad (left) when using buttons.
 """
 
 import logging
@@ -155,10 +155,22 @@ class SO101JoyConTeleop(Teleoperator):
                 f"{rp}/{rn}=wrist_roll ± ({self.config.wrist_button_rate:.2f} rad/s)"
             )
             if self.config.enable_button_recording:
-                print(
-                    "  Warning: enable_button_recording uses A/Y by default and "
-                    "collides with wrist_roll buttons; remap or disable recording keys."
-                )
+                wrist_btns = {
+                    self.config.wrist_flex_pos_button.lower(),
+                    self.config.wrist_flex_neg_button.lower(),
+                    self.config.wrist_roll_pos_button.lower(),
+                    self.config.wrist_roll_neg_button.lower(),
+                }
+                rec_btns = {
+                    self.config.next_episode_button.lower(),
+                    self.config.restart_episode_button.lower(),
+                    self.config.stop_button.lower(),
+                }
+                if wrist_btns & rec_btns:
+                    print(
+                        "  Warning: recording buttons overlap wrist buttons; "
+                        "remap episode keys or disable enable_button_recording."
+                    )
         else:
             print("  Tilt controller: wrist rotation (IMU roll=flex, yaw=wrist roll)")
         if self.config.gripper_toggle:

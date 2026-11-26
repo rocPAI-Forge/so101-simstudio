@@ -1,9 +1,11 @@
-# Joy-Con teleop only (live control, no recording)
+# Joy-Con teleop only (live control, no recording) — simple_pick
+# Control scheme matches frozen drawer reference (buttons wrists + cylindrical IK).
 
 robot:
   type: so101_mujoco
   action_mode: velocity
   horizontal_control_mode: cylindrical
+  ik_joint_weights: [1.15, 0.90, 0.55]
   xml_path: SO101/scenes/simple_pick/scene.xml
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json
   record_fps: 30
@@ -20,7 +22,7 @@ robot:
   ori_gain: 6.0
   tilt_deadzone: 0.03
   tilt_wmax: 6.0
-  lambda_pos: 0.01
+  lambda_pos: 0.008
   lambda_tilt: 0.0001
   vel_limit: 0.5
   vel_limit_wrist: 8.0
@@ -38,9 +40,14 @@ teleop:
   device: auto
   translation_scale: 1.5
   z_scale: 1.0
-  rotation_scale: 0.8
-  gripper_toggle: true                     # true=toggle ZR/ZL; false=hold to close
-  enable_button_recording: true            # A=next, Y=re-record, +=stop (right Joy-Con)
-  next_episode_button: a
-  restart_episode_button: y
-  stop_button: plus
+  stick_axis_map: reach_swing
+  invert_x: false
+  invert_y: false                      # simple_pick faces +Y; drawer uses invert_y: true
+  wrist_control: buttons
+  wrist_flex_pos_button: b
+  wrist_flex_neg_button: x
+  wrist_roll_pos_button: y
+  wrist_roll_neg_button: a
+  wrist_button_rate: 2.0
+  gripper_toggle: true                 # press ZR to latch close/open
+  enable_button_recording: false       # A/Y are wrist_roll; Plus = scene hot-reset

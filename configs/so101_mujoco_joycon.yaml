@@ -16,6 +16,7 @@ robot:
   type: so101_mujoco
   action_mode: velocity                    # velocity | position
   horizontal_control_mode: cylindrical     # stick forward/back=reach, left/right=base swing
+  ik_joint_weights: [1.15, 0.90, 0.55]     # prefer elbow for reach (pan, lift, elbow)
   xml_path: SO101/scenes/simple_pick/scene.xml           # MuJoCo scene XML
   cube_positions_path: configs/scenes/simple_pick/cube_positions.json  # Cube initial positions JSON
   
@@ -42,7 +43,7 @@ robot:
   tilt_wmax: 6.0                           # Max tilt angular rate
   
   # IK parameters
-  lambda_pos: 0.01                         # Position IK damping
+  lambda_pos: 0.008                        # Position IK damping
   lambda_tilt: 0.0001                      # Tilt IK damping
   vel_limit: 0.5                           # Joint velocity limit
   vel_limit_wrist: 8.0                     # Wrist velocity limit
@@ -69,13 +70,23 @@ teleop:
   device: auto                             # auto | left | right
   translation_scale: 1.5                   # XY reach/swing speed scale
   z_scale: 1.0                             # Z speed scale
-  rotation_scale: 0.8                      # IMU tilt rotation scale
+  stick_axis_map: reach_swing              # stick fwd/back -> reach, left/right -> swing
+  invert_x: false
+  invert_y: false                          # simple_pick faces +Y
+  # Face-button wrists (same scheme as smart_drawer teleop). A/Y are roll, not episodes.
+  wrist_control: buttons
+  wrist_flex_pos_button: b
+  wrist_flex_neg_button: x
+  wrist_roll_pos_button: y
+  wrist_roll_neg_button: a
+  wrist_button_rate: 2.0
   gripper_toggle: true                     # true=toggle ZR/ZL; false=hold to close
-  # One-handed recording (right: A/Y/+; keyboard N/R/Q still works)
-  enable_button_recording: true            # Joy-Con buttons drive episode controls
-  next_episode_button: a                   # A = save & next episode
-  restart_episode_button: y                # Y = cancel & re-record
+  # One-handed recording remapped off A/Y (keyboard N/R/Q still works)
+  enable_button_recording: true
+  next_episode_button: home                # Home = save & next episode
+  restart_episode_button: capture          # Capture = cancel & re-record
   stop_button: plus                        # + = stop session
+
 
 # -----------------------------------------------------------------------------
 # Dataset Configuration

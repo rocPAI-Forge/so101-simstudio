@@ -93,6 +93,7 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | MuJoCo preview | `.venv-rocm/bin/python -m mujoco.viewer --mjcf=SO101/scenes/simple_pick/scene.xml` |
 | Smoke: kitchen teleop | `make smoke-keyboard-teleop-kitchen` |
 | Smoke: smart-drawer teleop | `make smoke-keyboard-teleop-smart-drawer` |
+| Demo: smart-drawer teleop | `make demo-drawer` / `DEVICE=joycon SIDE=right\|left` — [docs/joycon-teleop.md](docs/joycon-teleop.md) |
 | Smoke: keyboard record | `make smoke-keyboard-record VIEW_MODE=mujoco` |
 | Smoke: keyboard replay | `make smoke-keyboard-replay` |
 | Smoke: keyboard teleop | `make smoke-keyboard-teleop` |
@@ -110,7 +111,7 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
 | Dataset visualization | `.venv-rocm/bin/python -m simstudio.scripts.dataset_viz --repo-id <repo_id> --root <root> --episode 0` |
 | Dataset validation | `.venv-rocm/bin/python -m simstudio.scripts.validate_dataset --root <dataset_root>` |
 | VLA training (SmolVLA) | `.venv-rocm/bin/lerobot-train ...` (see [QUICKSTART.md](QUICKSTART.md)) |
-| Joy-Con setup | `make joycon-sync` |
+| Joy-Con setup | `make joycon-sync` — guide: [docs/joycon-teleop.md](docs/joycon-teleop.md) |
 | MolmoAct2 extras (ROCm-safe) | `./scripts/install-molmoact2-deps.sh` — **not** `uv pip install 'lerobot[molmoact2]'` |
 | MolmoAct2 eval processor patch | `git -C lerobot apply ../patches/lerobot-molmoact2-eval.patch` (do not commit inside `lerobot/`) |
 | LingBot-VLA v2 side tree + patch | `./labs/lab01_pnp/setup_lingbot_vla_v2_side_tree.cmd` then `./labs/lab01_pnp/eval_lingbot_vla_v2_home20.cmd` (Home20 25/60; Hub: `alexhegit/so101-simstudio-lab01-pnp-lingbot-vla-v2-agent193-20k`) |
@@ -128,7 +129,7 @@ This runs `uv pip install -e third_party/joycon-robotics` and `git apply patches
   - **Position** (leader arm): `{joint.pos: float}` — direct joint position mapping, 1:1 from leader to follower.
   - MuJoCo robot's `send_action` auto-detects format via key names.
 - **Observation state (Lab 01 / sim2real):** recorded `observation.state` is **15-D** (joint pos+vel+EE) for sim. That layout is **not** real-follower IL. Policies meant as a **sim2real foundation** should train on **6-D** joint `.pos` only (see `labs/lab01_pnp/lab01_pnp.md` §5). Keep 15-D ACT for sim2sim reference only.
-- **Joy-Con velocity mapping**: Stick is read directly from HID (not joycon-robotics position integration). With `robot.horizontal_control_mode: cylindrical` (Joy-Con configs): stick forward/back → reach in/out, left/right → base swing; radial uses the true `shoulder_pan` world anchor. Gripper: `gripper_toggle: true` (press ZR/ZL to latch) or `false` (hold to close). One-handed recording via `enable_button_recording` + `next_episode_button` / `restart_episode_button` / `stop_button` (right: A/Y/+; left: d-pad Down/Up, Minus).
+- **Joy-Con velocity mapping**: Stick is read directly from HID (not joycon-robotics position integration). With `robot.horizontal_control_mode: cylindrical` (Joy-Con configs): stick forward/back → reach in/out, left/right → base swing; radial uses the true `shoulder_pan` world anchor. Wrist default is `wrist_control: buttons` (right: B/X flex, Y/A roll; left: d-pad Up/Down/Left/Right). Gripper: `gripper_toggle: true` (press ZR/ZL to latch) or `false` (hold to close). Plus = scene hot-reset in teleop. One-handed recording remaps off wrist keys: right Home/Capture/Plus; left Capture/Home/Minus (keyboard N/R/Q still works). Reference freeze: `configs/so101_mujoco_joycon_teleop_smart_drawer.yaml`.
 - **Window visibility**: The MuJoCo recording window uses GLFW default hints. On Ubuntu 24.04 / GNOME, do **not** set `FOCUSED=FALSE` or `FOCUS_ON_SHOW=FALSE`, or the window may be invisible. Set `render_window: false` in the robot config to disable the GLFW window for headless/CI runs.
 - **Teleop view_mode**: Use `--view_mode rerun` for LeRobot Rerun camera feeds, or `--view_mode mujoco` (default) for the MuJoCo GLFW window. Both modes record the same LeRobot v3.0 dataset. Recording controls are identical for keyboard, Joy-Con and leader in both modes and run through the project's focus-independent evdev backend (no terminal focus needed): Left/R cancel & rerecord, Right/N save & next, ESC/Q stop. The startup log prints `SO101 recording controls via evdev, focus-independent`; if evdev is unavailable (user not in the `input` group) it falls back to LeRobot's terminal listener, which needs the terminal focused.
 - **Episode reset (sim)**: `robot.reset_mode: auto` (default) resets before each recorded episode; `manual` leaves state unchanged (real-hardware style). Under `auto`, `robot.reset_arm` (`home` teleport vs `follow` = stay put, for the passive leader arm) and `robot.reset_cube` (`fixed` predefined / `random` within `cube_random_*` bounds / `none`) control arm and cube independently. Keyboard/replay default to `home`+`fixed`; leader configs default to `follow`+`random`. `dataset.reset_time_s` still allows a short teleop window between episodes.
@@ -157,6 +158,7 @@ Project-agnostic development knowledge lives in `llm-wiki/`:
 | ROCm setup | `llm-wiki/gpu-compute/rocm-setup.md` |
 | PyTorch backends | `llm-wiki/gpu-compute/torch-backends.md` |
 | Input listeners | `llm-wiki/platform-quirks/input-listeners.md` |
+| Joy-Con Bluetooth + controls | [docs/joycon-teleop.md](docs/joycon-teleop.md) |
 | GLFW window | `llm-wiki/platform-quirks/glfw-window.md` |
 | MuJoCo | `llm-wiki/robot-sim/mujoco-setup.md` |
 | LeRobot plugins | `llm-wiki/robot-sim/lerobot-plugin.md` |

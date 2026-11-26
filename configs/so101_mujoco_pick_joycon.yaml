@@ -6,8 +6,8 @@
 #   source .venv-rocm/bin/activate
 #   python -m simstudio.scripts.record --config configs/so101_mujoco_pick_joycon.yaml
 #
-# Controls: stick = reach/swing, tilt = wrist, ZR/ZL = gripper toggle
-# Episode: A = save & next, Y = re-record, + = stop session
+# Controls: stick = reach/swing, B/X Y/A = wrist, ZR = gripper toggle
+# Episode: Home = save & next, Capture = re-record, + = stop session
 # Also: N/Right = save, R/Left = re-record, ESC/Q = stop (evdev, no terminal focus)
 # =============================================================================
 
@@ -15,6 +15,7 @@ robot:
   type: so101_mujoco
   action_mode: velocity
   horizontal_control_mode: cylindrical
+  ik_joint_weights: [1.15, 0.90, 0.55]
   reset_mode: auto
   reset_arm: home
   reset_cube: fixed
@@ -34,7 +35,7 @@ robot:
   ori_gain: 6.0
   tilt_deadzone: 0.03
   tilt_wmax: 6.0
-  lambda_pos: 0.01
+  lambda_pos: 0.008
   lambda_tilt: 0.0001
   vel_limit: 0.5
   vel_limit_wrist: 8.0
@@ -52,11 +53,19 @@ teleop:
   device: auto
   translation_scale: 1.5
   z_scale: 1.0
-  rotation_scale: 0.8
+  stick_axis_map: reach_swing
+  invert_x: false
+  invert_y: false
+  wrist_control: buttons
+  wrist_flex_pos_button: b
+  wrist_flex_neg_button: x
+  wrist_roll_pos_button: y
+  wrist_roll_neg_button: a
+  wrist_button_rate: 2.0
   gripper_toggle: true
   enable_button_recording: true
-  next_episode_button: a
-  restart_episode_button: y
+  next_episode_button: home
+  restart_episode_button: capture
   stop_button: plus
 
 dataset:

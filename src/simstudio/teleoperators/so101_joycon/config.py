@@ -23,17 +23,18 @@ class SO101JoyConTeleopConfig(TeleoperatorConfig):
     rotation_scale: float = 0.5  # Scale for gyroscope (tilt) rotation rates
 
     # Wrist orientation source:
-    #   imu     — tilt the controller (noisy; fine for casual use)
-    #   buttons — hold face buttons for a constant rate (recommended for demos)
-    # When wrist_control=buttons, disable enable_button_recording or remap A/Y
-    # so recording keys do not collide with wrist_roll.
-    wrist_control: str = "imu"
-    # Right Joy-Con diamond: X/B = wrist_flex ±, Y/A = wrist_roll ± (hold).
-    wrist_flex_pos_button: str = "x"
-    wrist_flex_neg_button: str = "b"
+    #   buttons — hold face buttons for a constant rate (project default)
+    #   imu     — tilt the controller (legacy; noisy)
+    # When wrist_control=buttons, disable enable_button_recording or remap
+    # episode keys off A/Y (right) / d-pad (left) so they do not collide.
+    wrist_control: str = "buttons"
+    # Right Joy-Con diamond: B/X = wrist_flex ±, Y/A = wrist_roll ± (hold).
+    # Left Joy-Con: override to d-pad up/down/left/right in YAML.
+    wrist_flex_pos_button: str = "b"
+    wrist_flex_neg_button: str = "x"
     wrist_roll_pos_button: str = "y"
     wrist_roll_neg_button: str = "a"
-    wrist_button_rate: float = 1.2  # rad/s while held (matches keyboard yaw_speed)
+    wrist_button_rate: float = 2.0  # rad/s while held
 
     # Tilt->rotation rate conditioning (wrist_control=imu only).
     # Differentiating IMU orientation drifts and is noisy at rest.
@@ -73,8 +74,9 @@ class SO101JoyConTeleopConfig(TeleoperatorConfig):
     # One-handed recording controls driven by Joy-Con buttons (coexist with the
     # keyboard evdev controls). Set enable_button_recording: false to disable.
     # Button names: a/b/x/y, plus, minus, home, capture, up/down/left/right.
-    # Right Joy-Con has A/Y/Plus; left Joy-Con uses the d-pad + Minus instead.
+    # Defaults keep Home/Capture/Plus off the wrist face buttons (A/Y/B/X).
+    # Left Joy-Con YAMLs remap to Capture/Home/Minus (d-pad is wrist).
     enable_button_recording: bool = True
-    next_episode_button: str = "a"  # save current episode & go to next (keyboard N/Right)
-    restart_episode_button: str = "y"  # cancel current episode & re-record (keyboard R/Left)
+    next_episode_button: str = "home"  # save current episode & go to next (keyboard N/Right)
+    restart_episode_button: str = "capture"  # cancel & re-record (keyboard R/Left)
     stop_button: str = "plus"  # stop the whole recording session (keyboard Q/Esc)

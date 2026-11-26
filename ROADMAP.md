@@ -70,7 +70,7 @@
 - [x] True `shoulder_pan` anchor for radial direction (fixes inconsistent extend vs swing)
 - [x] IMU rotation deadzone / clamp / settle window
 - [x] Gripper toggle mode (`gripper_toggle: true`, press ZR/ZL to latch)
-- [x] One-handed recording: A/Y/+ (right), d-pad/Minus (left); coexists with keyboard evdev
+- [x] One-handed recording: Home/Capture/+ (right), Capture/Home/Minus (left); coexists with keyboard evdev (A/Y and d-pad reserved for button wrists)
 
 ### Project hygiene
 
@@ -157,6 +157,15 @@
 - [x] Closed-loop test20: RGB 7/20 → RGB-D **11/20** (+20 pp); paired comparison docs + GIF
 - [x] Hub: dataset + ACT RGB + ACT RGB-D (`labs/rax_drawer/vla/DEPTH_ABLATION.md`)
 
+## v0.1.7 ✅ (`release-v0.1.7`)
+
+### smart_drawer live teleop + Joy-Con button scheme
+
+- [x] Live demo entry: `scripts/demo/drawer_teleop.cmd` / `make demo-drawer` (MuJoCo GLFW)
+- [x] Frozen Joy-Con feel: cylindrical stick + `ik_joint_weights`, face-button wrists (B/X, Y/A; left d-pad), Plus/Backspace scene hot-reset
+- [x] All Joy-Con record/teleop configs aligned to that scheme; recording remapped off wrist keys
+- [x] Guide: Bluetooth pair, hidraw udev, controls — [docs/joycon-teleop.md](docs/joycon-teleop.md)
+
 ## Evolution
 
 ```
@@ -168,8 +177,9 @@ v0.0.x: so101-mujoco-teleop
         ↓ v0.1.4 (`release-v0.1.4`) 193-episode agent set, per-model finetune trials, Home20
         ↓ v0.1.5 (`release-v0.1.5`) RAX drawer tool-only practice (16/20 open-close, 15/20 place)
         ↓ v0.1.6 (`release-v0.1.6`) RAX drawer ACT RGB vs RGB-D depth ablation + Hub assets
-Current: so101-simstudio @ v0.1.6
-        Expert trajectories + Lab 01 closed-loop train/eval + RAX drawer ACT depth ablation (ROCm)
+        ↓ v0.1.7 (`release-v0.1.7`) smart_drawer live teleop + Joy-Con button wrists + guide
+Current: so101-simstudio @ v0.1.7
+        Expert trajectories + Lab 01 train/eval + RAX drawer ablation + live drawer teleop demo (ROCm)
         Future: domain randomization, broader automated pipeline, real follower, CUDA/macOS
 ```
 
@@ -180,7 +190,7 @@ Current: so101-simstudio @ v0.1.6
 - [ ] **NVIDIA CUDA (Linux)** — not supported yet (unverified); needs documented install path, PyTorch CUDA wheels, smoke tests
 - [ ] **macOS / Apple Silicon (MPS)** — not supported yet (unverified); needs documented install path, GLFW / input quirks, smoke tests
 
-**Current release (v0.1.6):** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, VLA training, and the RAX drawer lab.
+**Current release (v0.1.7):** only **Ubuntu 24.04 + AMD ROCm** (`make rocm-sync` → `.venv-rocm`) is supported for simulation, recording, validation, VLA training, the RAX drawer lab, and the smart_drawer live teleop demo.
 
 ### Automated data pipeline
 

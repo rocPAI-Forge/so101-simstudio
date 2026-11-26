@@ -64,13 +64,18 @@ If HIP is `None` or the version shows `+cu128`, delete `.venv-rocm` and re-run `
 
 `make rocm-sync` also installs **SmolVLA training dependencies** (`transformers`, `accelerate`, `lerobot-train` CLI) for VLA fine-tuning.
 
-**Joy-Con (optional):** Submodule `third_party/joycon-robotics` is pinned to upstream box2ai-robotics; project-specific fixes ship as `patches/joycon-robotics.patch` and are applied **locally at install time** (not committed inside the submodule):
+**Joy-Con (optional):** Full Bluetooth pairing, hidraw udev, and the current
+button map: **[docs/joycon-teleop.md](docs/joycon-teleop.md)**.
 
 ```bash
 make joycon-sync
 ```
 
-This editable-installs joycon-robotics into the venv and runs `git apply patches/joycon-robotics.patch` (serial compatibility + English connect messages). Re-run after resetting the submodule or if Joy-Con connect fails. Pair the controller over Bluetooth first.
+This editable-installs the pinned `third_party/joycon-robotics` submodule into
+`.venv-rocm`, applies `patches/joycon-robotics.patch` locally (not committed
+inside the submodule), and installs a hidraw udev rule when sudo is available.
+Re-run after a submodule reset or if connect fails. Pair over Bluetooth first;
+install `libhidapi-hidraw0` if HID open fails.
 
 **License note:** `make joycon-sync` installs only the **MIT-licensed Python package**
 from the submodule. The same repository also contains optional **GPL-2.0 / GPL-3.0**
@@ -136,10 +141,10 @@ only — see [SO101/scenes/README.md](SO101/scenes/README.md#cameras-record-vs-t
 | Scene | Smoke | Config | Notes |
 |-------|-------|--------|-------|
 | `kitchen_counter` (T2M 01) | `make smoke-keyboard-teleop-kitchen` | `configs/so101_mujoco_keyboard_teleop_kitchen.yaml` | Cube, button, place box — [scene README](SO101/scenes/kitchen_counter/README.md) |
-| `smart_drawer` (T2M 02) | `make smoke-keyboard-teleop-smart-drawer` | `configs/so101_mujoco_keyboard_teleop_smart_drawer.yaml` | Grasp handle, hold **C**, hold **W** to open drawer — [scene README](SO101/scenes/smart_drawer/README.md) |
+| `smart_drawer` (T2M 02) | `make smoke-keyboard-teleop-smart-drawer` or `make demo-drawer` | `configs/so101_mujoco_*_teleop_smart_drawer*.yaml` | Grasp handle, close gripper, pull toward arm to open (~8 cm). Live demo: [scripts/demo/README.md](scripts/demo/README.md). Joy-Con: [docs/joycon-teleop.md](docs/joycon-teleop.md) |
 
-Run on a machine with a local display (`DISPLAY=:0`, `MUJOCO_GL=glfw`). Teleop-only
-has no mid-session reset — restart the smoke script to return to home.
+Run on a machine with a local display (`DISPLAY=:0`, `MUJOCO_GL=glfw`). Mid-session
+reset: keyboard **Backspace**, Joy-Con **Plus** (arm home, cube, drawer closed).
 
 **Record:**
 
@@ -168,12 +173,17 @@ Robot uses **world-frame** velocity (`horizontal_control_mode: world`, default).
 
 ## 2. Joy-Con teleop
 
-Requires `make joycon-sync` (see **Install** above) so the submodule patch is applied and the package is installed in your venv.
+**Setup + full control tables + troubleshooting:** [docs/joycon-teleop.md](docs/joycon-teleop.md)
+(Bluetooth pair, hidraw udev, button wrists, recording remap). Requires
+`make joycon-sync` after `make rocm-sync`.
 
 ```bash
+# simple_pick live teleop
 .venv-rocm/bin/python -m simstudio.scripts.teleoperate \
-    --config configs/so101_mujoco_joycon_teleop.yaml \
-    --view_mode mujoco
+    --config configs/so101_mujoco_joycon_teleop.yaml
+
+# smart_drawer live demo (frozen reference)
+./scripts/demo/drawer_teleop.cmd joycon
 ```
 
 **Record (right Joy-Con):**
@@ -185,7 +195,7 @@ Requires `make joycon-sync` (see **Install** above) so the submodule patch is ap
 # left: configs/so101_mujoco_joycon_left.yaml
 ```
 
-**Movement (right Joy-Con)** — cylindrical arm-centric control (`horizontal_control_mode: cylindrical`):
+**Movement (right Joy-Con)** — cylindrical reach/swing; button wrists (not IMU):
 
 | Input | Action |
 |-------|--------|
@@ -193,20 +203,16 @@ Requires `make joycon-sync` (see **Install** above) so the submodule patch is ap
 | Stick left / right | Base swing (shoulder_pan arc) |
 | R | Move up (+Z) |
 | Stick press | Move down (−Z) |
-| Tilt controller | Wrist flex (roll) / wrist roll (yaw) |
-| ZR | Toggle gripper close/open (`gripper_toggle: true`, default) |
+| B / X (hold) | Wrist flex ± |
+| Y / A (hold) | Wrist roll ± |
+| ZR | Toggle gripper close/open |
+| + (Plus) | Teleop scene hot-reset |
 
-**One-handed recording (right Joy-Con)** — in addition to keyboard:
+**Recording (right):** **Home** = save & next, **Capture** = re-record, **+** = stop.
+**Left:** d-pad = wrists; **Capture** / **Home** / **Minus** for episodes; **ZL** = gripper.
 
-| Button | Action |
-|--------|--------|
-| A | Save episode, next |
-| Y | Cancel episode, re-record |
-| + (Plus) | Stop session |
-
-**Left Joy-Con** (no A/Y/+): d-pad **Down** = save & next, **Up** = re-record, **Minus** = stop.
-
-Flip a direction in YAML: `invert_x` (reach), `invert_y` (swing), `invert_z` (up/down). Hold-to-close gripper: `gripper_toggle: false`.
+Flip axes in YAML: `invert_x` / `invert_y` / `invert_z`. Hold-to-close:
+`gripper_toggle: false`. Legacy tilt wrists: `wrist_control: imu`.
 
 ---
 
@@ -276,7 +282,10 @@ robot:
 | `so101_mujoco_keyboard_teleop.yaml` | Keyboard live teleop |
 | `so101_mujoco_joycon.yaml` | Joy-Con record (right) |
 | `so101_mujoco_joycon_left.yaml` | Joy-Con record (left) |
-| `so101_mujoco_joycon_teleop.yaml` | Joy-Con live teleop |
+| `so101_mujoco_joycon_teleop.yaml` | Joy-Con live teleop (simple_pick) |
+| `so101_mujoco_joycon_teleop_smart_drawer.yaml` | Joy-Con drawer demo (right, reference) |
+| `so101_mujoco_joycon_teleop_smart_drawer_left.yaml` | Joy-Con drawer demo (left) |
+| `so101_mujoco_keyboard_teleop_smart_drawer.yaml` | Keyboard drawer teleop |
 | `so101_mujoco_leader.yaml` | Leader record |
 | `so101_mujoco_leader_teleop.yaml` | Leader live teleop |
 
